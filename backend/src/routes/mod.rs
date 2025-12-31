@@ -1,2 +1,6 @@
-// Routes module
-// TODO: Add route handlers as needed
+pub mod rooms;
+pub mod shelving_units;
+
+// Re-export for convenience
+pub use rooms::*;
+pub use shelving_units::*;

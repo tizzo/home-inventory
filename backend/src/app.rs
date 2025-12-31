@@ -59,6 +59,8 @@ pub fn create_app(db: PgPool) -> Router {
 
     Router::new()
         .route("/health", get(health_check))
+        .merge(crate::routes::room_routes())
+        .merge(crate::routes::shelving_unit_routes())
         .with_state(state)
         .layer(cors)
 }

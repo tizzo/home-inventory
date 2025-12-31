@@ -1,9 +1,10 @@
-.PHONY: help up down logs db-shell backend-shell test clean
+.PHONY: help up down logs db-shell backend-shell test clean dev frontend backend
 
 help: ## Show this help message
 	@echo "Available commands:"
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2}'
 
+# Docker commands
 up: ## Start all services
 	docker-compose up -d
 
@@ -46,5 +47,28 @@ fmt: ## Format backend code
 clippy: ## Run clippy linter
 	docker-compose exec backend cargo clippy -- -D warnings
 
-dev: ## Start services and show logs
-	docker-compose up
+# Local development commands
+dev: ## Start both backend and frontend in development mode
+	./dev.sh
+
+frontend: ## Start frontend development server
+	cd frontend && npm run dev
+
+backend: ## Start backend development server
+	cd backend && cargo run
+
+backend-watch: ## Start backend with auto-reload
+	cd backend && cargo watch -x run
+
+generate-types: ## Generate TypeScript types from Rust
+	cd frontend && npm run generate-types
+
+install: ## Install all dependencies
+	cd backend && cargo build
+	cd frontend && npm install
+
+migrate: ## Run database migrations
+	cd backend && sqlx migrate run
+
+migrate-revert: ## Revert last migration
+	cd backend && sqlx migrate revert

@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom';
+
 export default function HomePage() {
   return (
     <div className="page">
@@ -47,15 +49,15 @@ export default function HomePage() {
       <div className="quick-actions">
         <h2>Quick Actions</h2>
         <div className="actions">
-          <a href="/rooms" className="btn btn-primary">
+          <Link to="/rooms" className="btn btn-primary">
             Manage Rooms
-          </a>
-          <a href="/scan" className="btn btn-secondary">
+          </Link>
+          <Link to="/scan" className="btn btn-secondary">
             Scan QR Code
-          </a>
-          <a href="/search" className="btn btn-secondary">
+          </Link>
+          <Link to="/search" className="btn btn-secondary">
             Search Items
-          </a>
+          </Link>
         </div>
       </div>
     </div>

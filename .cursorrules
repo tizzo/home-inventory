@@ -46,6 +46,18 @@
   - Good: "Support tracking room dimensions for space planning"
 - **Prompt for commits regularly**: After completing a logical unit of work (feature, fix, refactor), remind the user that we may want to commit before moving on
 
+## Deep Linking & URL Structure
+- **Every discrete UI state must have a deep linkable URL path**
+- All navigation should update the browser URL
+- Users should be able to bookmark and share any UI state
+- Use React Router (or equivalent) for client-side routing
+- Examples:
+  - `/rooms` - Rooms list page
+  - `/rooms/:id` - Specific room detail page
+  - `/rooms/:id/units` - Units within a room
+  - `/search?q=term` - Search results
+  - Modal states, filters, and tabs should be reflected in URL when possible
+
 ## General Principles
 - Ask for clarification rather than making assumptions
 - Provide context for changes in discussion, not in commits

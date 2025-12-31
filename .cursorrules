@@ -1,0 +1,53 @@
+# Development Guidelines for AI Agents
+
+## Test-Driven Development (TDD)
+- Follow red-green-refactor cycle where possible
+- Write failing tests first, then implement to pass
+- Refactor after tests pass
+
+## Code Quality - Before Any Commit
+1. **TypeScript**: 
+   - Use strict typing (no `any` types)
+   - Run `npm run type-check` and resolve all issues
+   - Run `prettier --write .` for formatting
+   - Run `npm run lint` and fix all issues
+
+2. **Rust**:
+   - Run `cargo fmt` for formatting
+   - Run `cargo clippy -- -D warnings` and resolve all issues
+   - Fix all clippy warnings before proceeding
+
+3. **Tests**: 
+   - Run all tests (`cargo test` for backend, `npm test` for frontend)
+   - Ensure all tests pass before committing
+
+## Git Commits
+- NEVER commit until explicitly instructed by the user
+- Use conventional commit format: `type: description`
+- Author commits as the human developer (not as AI/Cursor/robot)
+- Do not mention AI assistance in commit messages
+- **Commit message format**:
+  - Single line summary (50 chars or less)
+  - Two blank lines
+  - Full summary explaining WHY (not WHAT) the change was made
+  - Example:
+    ```
+    feat: add user authentication system
+
+
+    Enable secure access control to prevent unauthorized data access.
+    Implements session-based auth with httpOnly cookies to protect
+    against XSS attacks.
+    ```
+- **Commit messages should explain WHY the change was made, not WHAT was changed**
+  - Bad: "Added error handling to user service"
+  - Good: "Prevent crashes when API returns malformed user data"
+  - Bad: "Updated Room model with new fields"
+  - Good: "Support tracking room dimensions for space planning"
+- **Prompt for commits regularly**: After completing a logical unit of work (feature, fix, refactor), remind the user that we may want to commit before moving on
+
+## General Principles
+- Ask for clarification rather than making assumptions
+- Provide context for changes in discussion, not in commits
+- Run linters and formatters before proposing code as complete
+

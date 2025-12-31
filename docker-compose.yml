@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: home-inventory-db
+    environment:
+      POSTGRES_DB: inventory
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: devpass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./schema.sql:/docker-entrypoint-initdb.d/001-schema.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d inventory"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - inventory-network
+
+  # Backend API (Rust)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: home-inventory-backend
+    environment:
+      DATABASE_URL: postgresql://postgres:devpass@postgres:5432/inventory
+      RUST_LOG: debug
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - inventory-network
+    volumes:
+      - ./backend:/app
+      - cargo_cache:/usr/local/cargo/registry
+      - target_cache:/app/target
+
+volumes:
+  postgres_data:
+  cargo_cache:
+  target_cache:
+
+networks:
+  inventory-network:
+    driver: bridge

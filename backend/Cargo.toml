@@ -48,6 +48,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 # Error handling
 thiserror = "1"
 anyhow = "1"
+cargo-watch = "8.5.3"
 
 [dev-dependencies]
 tokio-test = "0.4"

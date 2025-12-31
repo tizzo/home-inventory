@@ -121,15 +121,19 @@ typeshare --lang=typescript --output-file=../frontend/src/types/generated.ts src
 6. Create page component in `frontend/src/pages/MyEntityPage.tsx`
 
 ### Adding Routes
-Currently using simple state-based routing. To add:
-1. Add page to `src/pages/`
-2. Import in `App.tsx`
-3. Add to nav menu and conditional rendering
+The application uses React Router for client-side routing. To add a new route:
 
-For a real router, install:
-```bash
-npm install react-router-dom
-```
+1. Create page component in `src/pages/`
+2. Add route in `App.tsx`:
+   ```tsx
+   <Route path="/my-page" element={<MyPage />} />
+   ```
+3. Add navigation link:
+   ```tsx
+   <Link to="/my-page">My Page</Link>
+   ```
+
+**Deep Linking Principle**: Every discrete UI state must have a deep linkable URL path. Users should be able to bookmark and share any UI state (pages, filters, modals, search results, etc.).
 
 ## Next Steps
 

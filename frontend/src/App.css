@@ -66,7 +66,7 @@ body {
   list-style: none;
 }
 
-.nav-menu button {
+.nav-menu a {
   background: none;
   border: none;
   padding: 0.5rem 1rem;
@@ -75,14 +75,16 @@ body {
   border-radius: 0.5rem;
   transition: all 0.2s;
   color: var(--text-secondary);
+  text-decoration: none;
+  display: inline-block;
 }
 
-.nav-menu button:hover {
+.nav-menu a:hover {
   background: var(--bg-color);
   color: var(--text-color);
 }
 
-.nav-menu button.active {
+.nav-menu a.active {
   background: var(--primary-color);
   color: white;
 }

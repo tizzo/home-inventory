@@ -1,8 +1,10 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
+use typeshare::typeshare;
 use uuid::Uuid;
 
+#[typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct Room {
     pub id: Uuid,
@@ -14,6 +16,7 @@ pub struct Room {
     pub created_by: Uuid,
 }
 
+#[typeshare]
 #[derive(Debug, Deserialize)]
 #[allow(dead_code)] // Will be used when we implement room CRUD routes
 pub struct CreateRoomRequest {
@@ -21,6 +24,7 @@ pub struct CreateRoomRequest {
     pub description: Option<String>,
 }
 
+#[typeshare]
 #[derive(Debug, Deserialize)]
 #[allow(dead_code)] // Will be used when we implement room CRUD routes
 pub struct UpdateRoomRequest {
@@ -28,6 +32,7 @@ pub struct UpdateRoomRequest {
     pub description: Option<String>,
 }
 
+#[typeshare]
 #[derive(Debug, Serialize)]
 pub struct RoomResponse {
     pub id: Uuid,

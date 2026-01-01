@@ -3,6 +3,7 @@ pub mod room;
 pub mod shelving_unit;
 pub mod shelf;
 pub mod container;
+pub mod item;
 pub mod user;
 pub mod photo;
 
@@ -18,6 +19,8 @@ pub use shelving_unit::*;
 pub use shelf::*;
 #[allow(unused_imports)]
 pub use container::*;
+#[allow(unused_imports)]
+pub use item::*;
 #[allow(unused_imports)]
 pub use user::*;
 #[allow(unused_imports)]

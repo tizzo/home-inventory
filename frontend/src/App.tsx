@@ -5,6 +5,7 @@ import {
   RoomsPage,
   ShelvesPage,
   ContainersPage,
+  ItemsPage,
   LabelsPage,
 } from './pages';
 import './App.css';
@@ -97,6 +98,21 @@ function App() {
               <Route
                 path="/containers/:parentId/children/:containerId/edit"
                 element={<ContainersPage />}
+              />
+              <Route path="/items" element={<ItemsPage />} />
+              <Route path="/items/:itemId/edit" element={<ItemsPage />} />
+              <Route path="/shelves/:shelfId/items" element={<ItemsPage />} />
+              <Route
+                path="/shelves/:shelfId/items/:itemId/edit"
+                element={<ItemsPage />}
+              />
+              <Route
+                path="/containers/:containerId/items"
+                element={<ItemsPage />}
+              />
+              <Route
+                path="/containers/:containerId/items/:itemId/edit"
+                element={<ItemsPage />}
               />
               <Route path="/labels" element={<LabelsPage />} />
             </Routes>

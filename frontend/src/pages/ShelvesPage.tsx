@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams, Link } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
   useShelves,
   useShelvesByUnit,
@@ -11,7 +11,7 @@ import {
   useRoom,
   usePhotos,
 } from '../hooks';
-import { Modal, PhotoUpload, PhotoGallery } from '../components';
+import { Modal, PhotoUpload, PhotoGallery, Breadcrumb } from '../components';
 import type {
   CreateShelfRequest,
   UpdateShelfRequest,
@@ -238,14 +238,14 @@ export default function ShelvesPage() {
       <div className="page-header">
         <div>
           {room && unit && (
-            <nav className="breadcrumb">
-              <Link to="/rooms">Rooms</Link>
-              {' → '}
-              <Link to={`/rooms/${room.id}`}>{room.name}</Link>
-              {' → '}
-              <Link to={`/units/${unit.id}`}>{unit.name}</Link>
-              {' → Shelves'}
-            </nav>
+            <Breadcrumb
+              items={[
+                { name: 'Rooms', url: '/rooms' },
+                { name: room.name, url: `/rooms/${room.id}` },
+                { name: unit.name, url: `/units/${unit.id}` },
+                { name: 'Shelves' },
+              ]}
+            />
           )}
           <h1>
             {unit ? `Shelves in ${unit.name}` : 'All Shelves'}

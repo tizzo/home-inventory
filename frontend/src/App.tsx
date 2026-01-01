@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
-import { HomePage, RoomsPage } from './pages';
+import { HomePage, RoomsPage, LabelsPage } from './pages';
 import './App.css';
 
 const queryClient = new QueryClient({
@@ -38,6 +38,14 @@ function NavBar() {
               Rooms
             </Link>
           </li>
+          <li>
+            <Link
+              to="/labels"
+              className={location.pathname.startsWith('/labels') ? 'active' : ''}
+            >
+              Labels
+            </Link>
+          </li>
         </ul>
       </div>
     </nav>
@@ -55,6 +63,8 @@ function App() {
             <Routes>
               <Route path="/" element={<HomePage />} />
               <Route path="/rooms" element={<RoomsPage />} />
+              <Route path="/rooms/:roomId/edit" element={<RoomsPage />} />
+              <Route path="/labels" element={<LabelsPage />} />
             </Routes>
           </main>
 

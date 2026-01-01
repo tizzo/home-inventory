@@ -121,3 +121,41 @@ export interface PresignedUploadUrl {
   s3_key: string;
   expires_in: number;
 }
+
+export interface Label {
+  id: string;
+  number: number;
+  qr_data: string;
+  batch_id?: string;
+  assigned_to_type?: string;
+  assigned_to_id?: string;
+  created_at: string;
+  assigned_at?: string;
+}
+
+export interface GenerateLabelsRequest {
+  count: number;
+  template?: string;
+}
+
+export interface GenerateLabelsResponse {
+  batch_id: string;
+  labels: LabelResponse[];
+  count: number;
+}
+
+export interface LabelResponse {
+  id: string;
+  number: number;
+  qr_data: string;
+  batch_id?: string;
+  assigned_to_type?: string;
+  assigned_to_id?: string;
+  created_at: string;
+  assigned_at?: string;
+}
+
+export interface AssignLabelRequest {
+  assigned_to_type: string;
+  assigned_to_id: string;
+}

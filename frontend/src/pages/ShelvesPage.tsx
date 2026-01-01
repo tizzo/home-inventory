@@ -6,6 +6,7 @@ import {
   useCreateShelf,
   useUpdateShelf,
   useDeleteShelf,
+  useMoveShelf,
   useShelvingUnit,
   useShelvingUnits,
   useRoom,
@@ -31,6 +32,7 @@ export default function ShelvesPage() {
   const createShelf = useCreateShelf();
   const updateShelf = useUpdateShelf();
   const deleteShelf = useDeleteShelf();
+  const moveShelf = useMoveShelf();
 
   const shelves = unitId ? unitShelves : allShelves;
   const isLoading = unitId ? isLoadingByUnit : isLoadingAll;
@@ -157,19 +159,45 @@ export default function ShelvesPage() {
 
   if (isLoading) return <div className="loading">Loading shelves...</div>;
 
+  const [moveModalShelf, setMoveModalShelf] = useState<ShelfResponse | null>(null);
+  const [moveTargetUnit, setMoveTargetUnit] = useState<string>('');
+
+  const handleMove = async (shelf: ShelfResponse) => {
+    if (!moveTargetUnit) {
+      alert('Please select a target shelving unit');
+      return;
+    }
+    try {
+      await moveShelf.mutateAsync({
+        shelfId: shelf.id,
+        data: { target_unit_id: moveTargetUnit },
+      });
+      setMoveModalShelf(null);
+      setMoveTargetUnit('');
+      alert('Shelf moved successfully');
+    } catch (err) {
+      console.error('Failed to move shelf:', err);
+      alert('Failed to move shelf. Please try again.');
+    }
+  };
+
   // Shelf card component with photos
   function ShelfCard({
     shelf,
     onEdit,
     onDelete,
+    onMove,
     updateShelfPending,
     deleteShelfPending,
+    moveShelfPending,
   }: {
     shelf: ShelfResponse;
     onEdit: () => void;
     onDelete: () => void;
+    onMove: () => void;
     updateShelfPending: boolean;
     deleteShelfPending: boolean;
+    moveShelfPending: boolean;
   }) {
     const { data: photos } = usePhotos('shelf', shelf.id);
     const firstPhoto = photos && photos.length > 0 ? photos[0] : null;
@@ -190,6 +218,13 @@ export default function ShelvesPage() {
               disabled={updateShelfPending}
             >
               Edit
+            </button>
+            <button
+              className="btn btn-secondary btn-sm"
+              onClick={onMove}
+              disabled={moveShelfPending}
+            >
+              Move
             </button>
             <button
               className="btn btn-danger btn-sm"
@@ -443,6 +478,75 @@ export default function ShelvesPage() {
         </form>
       </Modal>
 
+      {/* Move Modal */}
+      <Modal
+        isOpen={!!moveModalShelf}
+        onClose={() => {
+          setMoveModalShelf(null);
+          setMoveTargetUnit('');
+        }}
+        title="Move Shelf"
+      >
+        {moveModalShelf && (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleMove(moveModalShelf);
+            }}
+          >
+            <div className="form-group">
+              <label htmlFor="move-current">Current Location</label>
+              <input
+                id="move-current"
+                type="text"
+                value={unit?.name || 'Unknown'}
+                disabled
+                style={{ background: 'var(--bg-color)' }}
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="move-target">Target Shelving Unit *</label>
+              <select
+                id="move-target"
+                value={moveTargetUnit}
+                onChange={(e) => setMoveTargetUnit(e.target.value)}
+                required
+              >
+                <option value="">Select a shelving unit</option>
+                {allUnits
+                  ?.filter((u) => u.id !== moveModalShelf.shelving_unit_id)
+                  .map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.name}
+                    </option>
+                  ))}
+              </select>
+            </div>
+
+            <div className="form-actions">
+              <button
+                type="submit"
+                className="btn btn-primary"
+                disabled={moveShelf.isPending}
+              >
+                {moveShelf.isPending ? 'Moving...' : 'Move Shelf'}
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => {
+                  setMoveModalShelf(null);
+                  setMoveTargetUnit('');
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        )}
+      </Modal>
+
       {/* Shelves Grid */}
       <div className="rooms-grid">
         {shelves?.length === 0 ? (
@@ -458,8 +562,10 @@ export default function ShelvesPage() {
               shelf={shelf}
               onEdit={() => openEditModal(shelf.id)}
               onDelete={() => handleDelete(shelf.id, shelf.name)}
+              onMove={() => setMoveModalShelf(shelf)}
               updateShelfPending={updateShelf.isPending}
               deleteShelfPending={deleteShelf.isPending}
+              moveShelfPending={moveShelf.isPending}
             />
           ))
         )}

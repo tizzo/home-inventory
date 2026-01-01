@@ -48,6 +48,38 @@ function NavBar() {
           </li>
           <li>
             <Link
+              to="/units"
+              className={location.pathname.startsWith('/units') ? 'active' : ''}
+            >
+              Units
+            </Link>
+          </li>
+          <li>
+            <Link
+              to="/shelves"
+              className={location.pathname.startsWith('/shelves') ? 'active' : ''}
+            >
+              Shelves
+            </Link>
+          </li>
+          <li>
+            <Link
+              to="/containers"
+              className={location.pathname.startsWith('/containers') ? 'active' : ''}
+            >
+              Containers
+            </Link>
+          </li>
+          <li>
+            <Link
+              to="/items"
+              className={location.pathname.startsWith('/items') ? 'active' : ''}
+            >
+              Items
+            </Link>
+          </li>
+          <li>
+            <Link
               to="/labels"
               className={location.pathname.startsWith('/labels') ? 'active' : ''}
             >

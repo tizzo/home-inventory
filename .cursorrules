@@ -6,9 +6,10 @@
 - Refactor after tests pass
 
 ## Code Quality - Before Any Commit
-1. **TypeScript**: 
+1. **TypeScript/Frontend**: 
    - Use strict typing (no `any` types)
    - Run `npm run type-check` and resolve all issues
+   - **ALWAYS run `npm run build` before declaring frontend work complete**
    - Run `prettier --write .` for formatting
    - Run `npm run lint` and fix all issues
 

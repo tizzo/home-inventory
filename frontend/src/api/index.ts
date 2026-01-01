@@ -6,3 +6,5 @@ export { containersApi } from './containers';
 export { itemsApi } from './items';
 export { photosApi } from './photos';
 export { labelsApi } from './labels';
+export { auditApi } from './audit';
+export type { AuditLogsQuery } from './audit';

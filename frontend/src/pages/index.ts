@@ -5,3 +5,4 @@ export { default as ShelvesPage } from './ShelvesPage';
 export { default as ContainersPage } from './ContainersPage';
 export { default as ItemsPage } from './ItemsPage';
 export { default as LabelsPage } from './LabelsPage';
+export { default as AuditLogPage } from './AuditLogPage';

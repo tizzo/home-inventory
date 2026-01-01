@@ -157,8 +157,29 @@ pub async fn update_shelving_unit(
     };
 
     // Update fields if provided
-    let name = payload.name.unwrap_or(existing.name);
-    let description = payload.description.or(existing.description);
+    let name = payload.name.unwrap_or(existing.name.clone());
+    let description = payload.description.or(existing.description.clone());
+
+    // Track changes for audit
+    let mut changes = serde_json::Map::new();
+    if payload.name.is_some() && payload.name.as_ref() != Some(&existing.name) {
+        changes.insert("name".to_string(), serde_json::json!({
+            "from": existing.name,
+            "to": name
+        }));
+    }
+    if payload.description != existing.description {
+        changes.insert("description".to_string(), serde_json::json!({
+            "from": existing.description,
+            "to": description
+        }));
+    }
+    if payload.room_id.is_some() && payload.room_id != Some(existing.room_id) {
+        changes.insert("room_id".to_string(), serde_json::json!({
+            "from": existing.room_id,
+            "to": room_id
+        }));
+    }
 
     let unit = sqlx::query_as::<_, ShelvingUnit>(
         r#"
@@ -178,6 +199,12 @@ pub async fn update_shelving_unit(
         tracing::error!("Failed to update shelving unit: {:?}", e);
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
+
+    // Log audit
+    if !changes.is_empty() {
+        let user_id = Uuid::new_v4(); // TODO: get from auth
+        state.audit.log_update("shelving_unit", id, Some(user_id), serde_json::Value::Object(changes), None).await.ok();
+    }
 
     Ok(Json(ShelvingUnitResponse::from(unit)))
 }

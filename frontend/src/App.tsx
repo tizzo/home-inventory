@@ -8,6 +8,7 @@ import {
   ContainersPage,
   ItemsPage,
   LabelsPage,
+  AuditLogPage,
 } from './pages';
 import './App.css';
 
@@ -155,6 +156,7 @@ function App() {
                 element={<ItemsPage />}
               />
               <Route path="/labels" element={<LabelsPage />} />
+              <Route path="/audit" element={<AuditLogPage />} />
             </Routes>
           </main>
 

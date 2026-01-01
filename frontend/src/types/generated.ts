@@ -278,3 +278,25 @@ export interface AssignLabelRequest {
   assigned_to_type: string;
   assigned_to_id: string;
 }
+
+export interface AuditLog {
+  id: string;
+  entity_type: string;
+  entity_id: string;
+  action: string;
+  user_id?: string;
+  changes?: any;
+  metadata?: any;
+  created_at: string;
+}
+
+export interface AuditLogResponse {
+  id: string;
+  entity_type: string;
+  entity_id: string;
+  action: string;
+  user_id?: string;
+  changes?: any;
+  metadata?: any;
+  created_at: string;
+}

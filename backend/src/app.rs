@@ -10,9 +10,12 @@ use sqlx::PgPool;
 use std::sync::Arc;
 use tower_http::cors::{Any, CorsLayer};
 
+use crate::services::s3::S3Service;
+
 #[derive(Clone)]
 pub struct AppState {
     pub db: PgPool,
+    pub s3: Arc<S3Service>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -48,8 +51,21 @@ pub async fn health_check(
 }
 
 /// Create the Axum application router
-pub fn create_app(db: PgPool) -> Router {
-    let state = Arc::new(AppState { db });
+pub async fn create_app(db: PgPool) -> anyhow::Result<Router> {
+    tracing::info!("Initializing S3 service...");
+    let s3_service = match S3Service::new().await {
+        Ok(service) => {
+            tracing::info!("S3 service initialized successfully");
+            Arc::new(service)
+        }
+        Err(e) => {
+            tracing::error!("Failed to initialize S3 service: {:?}", e);
+            tracing::error!("Make sure MinIO is running and environment variables are set");
+            tracing::error!("Bucket should be auto-created by MinIO via MINIO_BUCKETS env var");
+            return Err(anyhow::anyhow!("Failed to initialize S3 service: {:?}", e));
+        }
+    };
+    let state = Arc::new(AppState { db, s3: s3_service });
 
     // Configure CORS for local development
     let cors = CorsLayer::new()
@@ -57,12 +73,13 @@ pub fn create_app(db: PgPool) -> Router {
         .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE])
         .allow_headers([header::CONTENT_TYPE, header::AUTHORIZATION]);
 
-    Router::new()
+    Ok(Router::new()
         .route("/health", get(health_check))
         .merge(crate::routes::room_routes())
         .merge(crate::routes::shelving_unit_routes())
+        .merge(crate::routes::photo_routes())
         .with_state(state)
-        .layer(cors)
+        .layer(cors))
 }
 
 #[cfg(test)]

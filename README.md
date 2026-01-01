@@ -305,6 +305,7 @@ npx wrangler pages deploy dist --project-name=home-inventory
 **Backend:**
 ```bash
 DATABASE_URL=postgresql://...           # Database connection
+APP_BASE_URL=https://app.yourdomain.com # Base URL for QR code labels (defaults to http://localhost:5173)
 AWS_REGION=us-east-1                    # AWS region
 COGNITO_USER_POOL_ID=us-east-1_xxx      # Cognito pool
 COGNITO_CLIENT_ID=xxx                   # Cognito app client

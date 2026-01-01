@@ -1,68 +1,92 @@
-mod app;
 mod db;
-mod error;
 mod models;
 mod routes;
 
-use std::env;
+use axum::{
+    response::Json,
+    routing::{delete, get, post, put},
+    Router,
+};
+use routes::{create_room, delete_room, get_room, list_rooms, update_room, AppState};
+use serde::Serialize;
+use std::net::SocketAddr;
+use tower_http::cors::{Any, CorsLayer};
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+
+#[derive(Serialize)]
+struct HealthResponse {
+    status: String,
+    version: String,
+}
+
+async fn health_check() -> Json<HealthResponse> {
+    Json(HealthResponse {
+        status: "healthy".to_string(),
+        version: env!("CARGO_PKG_VERSION").to_string(),
+    })
+}
 
 #[tokio::main]
-async fn main() -> anyhow::Result<()> {
-    // Initialize tracing/logging
-    tracing_subscriber::fmt()
-        .with_env_filter(
-            tracing_subscriber::EnvFilter::from_default_env()
-                .add_directive(tracing::Level::INFO.into()),
-        )
-        .init();
-
-    // Load environment variables from .env file (for local development)
+async fn main() {
+    // Load environment variables
     dotenvy::dotenv().ok();
 
+    // Initialize tracing
+    tracing_subscriber::registry()
+        .with(
+            tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| {
+                "home_inventory_backend=debug,tower_http=debug,sqlx=debug".into()
+            }),
+        )
+        .with(tracing_subscriber::fmt::layer())
+        .init();
+
     // Get database URL from environment
-    let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+    let database_url = std::env::var("DATABASE_URL")
+        .unwrap_or_else(|_| "postgresql://postgres:devpass@localhost:5432/inventory".to_string());
 
-    tracing::info!("Initializing database connection pool...");
+    tracing::info!("Connecting to database...");
 
-    // Initialize database connection pool
-    let pool = db::init_pool(&database_url)
+    // Create database pool
+    let db_pool = db::create_pool(&database_url)
         .await
         .expect("Failed to create database pool");
 
-    tracing::info!("Running database migrations...");
+    tracing::info!("Database connection established");
 
-    // Run migrations (includes conditional logic for PostgreSQL vs DSQL)
-    db::run_migrations(&pool)
+    // Create app state
+    let state = AppState { db: db_pool };
+
+    // Configure CORS
+    let cors = CorsLayer::new()
+        .allow_origin(Any)
+        .allow_methods(Any)
+        .allow_headers(Any);
+
+    // Build router with API routes
+    let app = Router::new()
+        .route("/health", get(health_check))
+        // Room routes
+        .route("/api/rooms", get(list_rooms).post(create_room))
+        .route(
+            "/api/rooms/:id",
+            get(get_room).put(update_room).delete(delete_room),
+        )
+        .with_state(state)
+        .layer(cors)
+        .layer(tower_http::trace::TraceLayer::new_for_http());
+
+    // Start server
+    let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
+    tracing::info!("Starting server on {}", addr);
+
+    let listener = tokio::net::TcpListener::bind(addr)
         .await
-        .expect("Failed to run migrations");
+        .expect("Failed to bind to address");
 
-    tracing::info!("Creating Axum application...");
+    tracing::info!("Server listening on http://{}", addr);
 
-    // Create the Axum application
-    let app = app::create_app(pool);
-
-    // Check if we're running in AWS Lambda or locally
-    if env::var("AWS_LAMBDA_FUNCTION_NAME").is_ok() {
-        tracing::info!("Running in AWS Lambda environment");
-
-        // Run in Lambda using lambda_http
-        // TODO: Fix error type conversion for lambda_http
-        match lambda_http::run(app).await {
-            Ok(_) => Ok(()),
-            Err(e) => {
-                tracing::error!("Lambda error: {:?}", e);
-                Err(anyhow::anyhow!("Lambda runtime error"))
-            }
-        }
-    } else {
-        tracing::info!("Running in local development mode");
-
-        // Run locally with Tokio
-        let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await?;
-
-        tracing::info!("Server listening on http://0.0.0.0:3000");
-
-        axum::serve(listener, app).await?;
-        Ok(())
-    }
+    axum::serve(listener, app)
+        .await
+        .expect("Failed to start server");
 }

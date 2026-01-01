@@ -152,6 +152,51 @@ export interface ContainerResponse {
   updated_at: string;
 }
 
+export interface Item {
+  id: string;
+  shelf_id?: string;
+  container_id?: string;
+  name: string;
+  description?: string;
+  barcode?: string;
+  barcode_type?: string;
+  label_id?: string;
+  created_at: string;
+  updated_at: string;
+  created_by: string;
+}
+
+export interface CreateItemRequest {
+  shelf_id?: string;
+  container_id?: string;
+  name: string;
+  description?: string;
+  barcode?: string;
+  barcode_type?: string;
+}
+
+export interface UpdateItemRequest {
+  name?: string;
+  description?: string;
+  shelf_id?: string;
+  container_id?: string;
+  barcode?: string;
+  barcode_type?: string;
+}
+
+export interface ItemResponse {
+  id: string;
+  shelf_id?: string;
+  container_id?: string;
+  name: string;
+  description?: string;
+  barcode?: string;
+  barcode_type?: string;
+  label_id?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Photo {
   id: string;
   entity_type: string;

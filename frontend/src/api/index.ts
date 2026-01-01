@@ -3,5 +3,6 @@ export { roomsApi } from './rooms';
 export { shelvingUnitsApi } from './shelvingUnits';
 export { shelvesApi } from './shelves';
 export { containersApi } from './containers';
+export { itemsApi } from './items';
 export { photosApi } from './photos';
 export { labelsApi } from './labels';

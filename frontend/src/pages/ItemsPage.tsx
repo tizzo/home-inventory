@@ -7,6 +7,7 @@ import {
   useCreateItem,
   useUpdateItem,
   useDeleteItem,
+  useMoveItem,
   useShelf,
   useContainer,
   useShelves,
@@ -65,8 +66,14 @@ export default function ItemsPage() {
   const createItem = useCreateItem();
   const updateItem = useUpdateItem();
   const deleteItem = useDeleteItem();
+  const moveItem = useMoveItem();
 
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [moveModalItem, setMoveModalItem] = useState<ItemResponse | null>(null);
+  const [moveLocationType, setMoveLocationType] = useState<'shelf' | 'container'>('shelf');
+  const [moveTargetShelf, setMoveTargetShelf] = useState<string>('');
+  const [moveTargetContainer, setMoveTargetContainer] = useState<string>('');
+
   const [locationType, setLocationType] = useState<'shelf' | 'container'>(
     shelfId ? 'shelf' : 'container'
   );
@@ -234,6 +241,33 @@ export default function ItemsPage() {
     });
   };
 
+  const handleMove = async (item: ItemResponse) => {
+    if (moveLocationType === 'shelf' && !moveTargetShelf) {
+      alert('Please select a target shelf');
+      return;
+    }
+    if (moveLocationType === 'container' && !moveTargetContainer) {
+      alert('Please select a target container');
+      return;
+    }
+    try {
+      await moveItem.mutateAsync({
+        itemId: item.id,
+        data: {
+          target_shelf_id: moveLocationType === 'shelf' ? moveTargetShelf : undefined,
+          target_container_id: moveLocationType === 'container' ? moveTargetContainer : undefined,
+        },
+      });
+      setMoveModalItem(null);
+      setMoveTargetShelf('');
+      setMoveTargetContainer('');
+      alert('Item moved successfully');
+    } catch (err) {
+      console.error('Failed to move item:', err);
+      alert('Failed to move item. Please try again.');
+    }
+  };
+
   if (isLoading) return <div className="loading">Loading items...</div>;
 
   // Item card component with photos
@@ -241,14 +275,18 @@ export default function ItemsPage() {
     item,
     onEdit,
     onDelete,
+    onMove,
     updateItemPending,
     deleteItemPending,
+    moveItemPending,
   }: {
     item: ItemResponse;
     onEdit: () => void;
     onDelete: () => void;
+    onMove: () => void;
     updateItemPending: boolean;
     deleteItemPending: boolean;
+    moveItemPending: boolean;
   }) {
     const { data: photos } = usePhotos('item', item.id);
     const firstPhoto = photos && photos.length > 0 ? photos[0] : null;
@@ -623,6 +661,119 @@ export default function ItemsPage() {
         </form>
       </Modal>
 
+      {/* Move Modal */}
+      <Modal
+        isOpen={!!moveModalItem}
+        onClose={() => {
+          setMoveModalItem(null);
+          setMoveTargetShelf('');
+          setMoveTargetContainer('');
+        }}
+        title="Move Item"
+      >
+        {moveModalItem && (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleMove(moveModalItem);
+            }}
+          >
+            <div className="form-group">
+              <label>Location Type</label>
+              <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+                <label>
+                  <input
+                    type="radio"
+                    value="shelf"
+                    checked={moveLocationType === 'shelf'}
+                    onChange={() => {
+                      setMoveLocationType('shelf');
+                      setMoveTargetContainer('');
+                    }}
+                  />
+                  {' '}On Shelf
+                </label>
+                <label>
+                  <input
+                    type="radio"
+                    value="container"
+                    checked={moveLocationType === 'container'}
+                    onChange={() => {
+                      setMoveLocationType('container');
+                      setMoveTargetShelf('');
+                    }}
+                  />
+                  {' '}In Container
+                </label>
+              </div>
+            </div>
+
+            {moveLocationType === 'shelf' && (
+              <div className="form-group">
+                <label htmlFor="move-target-shelf">Target Shelf *</label>
+                <select
+                  id="move-target-shelf"
+                  value={moveTargetShelf}
+                  onChange={(e) => setMoveTargetShelf(e.target.value)}
+                  required
+                >
+                  <option value="">Select a shelf</option>
+                  {allShelves
+                    ?.filter((s) => s.id !== moveModalItem.shelf_id)
+                    .map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name}
+                      </option>
+                    ))}
+                </select>
+              </div>
+            )}
+
+            {moveLocationType === 'container' && (
+              <div className="form-group">
+                <label htmlFor="move-target-container">Target Container *</label>
+                <select
+                  id="move-target-container"
+                  value={moveTargetContainer}
+                  onChange={(e) => setMoveTargetContainer(e.target.value)}
+                  required
+                >
+                  <option value="">Select a container</option>
+                  {allContainers
+                    ?.filter((c) => c.id !== moveModalItem.container_id)
+                    .map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                </select>
+              </div>
+            )}
+
+            <div className="form-actions">
+              <button
+                type="submit"
+                className="btn btn-primary"
+                disabled={moveItem.isPending}
+              >
+                {moveItem.isPending ? 'Moving...' : 'Move Item'}
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => {
+                  setMoveModalItem(null);
+                  setMoveTargetShelf('');
+                  setMoveTargetContainer('');
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        )}
+      </Modal>
+
       {/* Items Grid */}
       <div className="rooms-grid">
         {items?.length === 0 ? (
@@ -638,8 +789,10 @@ export default function ItemsPage() {
               item={item}
               onEdit={() => openEditModal(item.id)}
               onDelete={() => handleDelete(item.id, item.name)}
+              onMove={() => setMoveModalItem(item)}
               updateItemPending={updateItem.isPending}
               deleteItemPending={deleteItem.isPending}
+              moveItemPending={moveItem.isPending}
             />
           ))
         )}

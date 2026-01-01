@@ -7,6 +7,7 @@ import {
   useCreateContainer,
   useUpdateContainer,
   useDeleteContainer,
+  useMoveContainer,
   useShelf,
   useContainer,
   useShelves,
@@ -60,8 +61,13 @@ export default function ContainersPage() {
   const createContainer = useCreateContainer();
   const updateContainer = useUpdateContainer();
   const deleteContainer = useDeleteContainer();
+  const moveContainer = useMoveContainer();
 
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [moveModalContainer, setMoveModalContainer] = useState<ContainerResponse | null>(null);
+  const [moveLocationType, setMoveLocationType] = useState<'shelf' | 'container'>('shelf');
+  const [moveTargetShelf, setMoveTargetShelf] = useState<string>('');
+  const [moveTargetParent, setMoveTargetParent] = useState<string>('');
   const [locationType, setLocationType] = useState<'shelf' | 'container'>(
     shelfId ? 'shelf' : 'container'
   );
@@ -219,19 +225,50 @@ export default function ContainersPage() {
 
   if (isLoading) return <div className="loading">Loading containers...</div>;
 
+  const handleMove = async (container: ContainerResponse) => {
+    if (moveLocationType === 'shelf' && !moveTargetShelf) {
+      alert('Please select a target shelf');
+      return;
+    }
+    if (moveLocationType === 'container' && !moveTargetParent) {
+      alert('Please select a target parent container');
+      return;
+    }
+    try {
+      await moveContainer.mutateAsync({
+        containerId: container.id,
+        data: {
+          target_shelf_id: moveLocationType === 'shelf' ? moveTargetShelf : undefined,
+          target_parent_id: moveLocationType === 'container' ? moveTargetParent : undefined,
+        },
+      });
+      setMoveModalContainer(null);
+      setMoveTargetShelf('');
+      setMoveTargetParent('');
+      alert('Container moved successfully');
+    } catch (err) {
+      console.error('Failed to move container:', err);
+      alert('Failed to move container. Please try again.');
+    }
+  };
+
   // Container card component with photos
   function ContainerCard({
     container,
     onEdit,
     onDelete,
+    onMove,
     updateContainerPending,
     deleteContainerPending,
+    moveContainerPending,
   }: {
     container: ContainerResponse;
     onEdit: () => void;
     onDelete: () => void;
+    onMove: () => void;
     updateContainerPending: boolean;
     deleteContainerPending: boolean;
+    moveContainerPending: boolean;
   }) {
     const { data: photos } = usePhotos('container', container.id);
     const firstPhoto = photos && photos.length > 0 ? photos[0] : null;
@@ -247,6 +284,13 @@ export default function ContainersPage() {
               disabled={updateContainerPending}
             >
               Edit
+            </button>
+            <button
+              className="btn btn-secondary btn-sm"
+              onClick={onMove}
+              disabled={moveContainerPending}
+            >
+              Move
             </button>
             <button
               className="btn btn-danger btn-sm"
@@ -553,6 +597,119 @@ export default function ContainersPage() {
         </form>
       </Modal>
 
+      {/* Move Modal */}
+      <Modal
+        isOpen={!!moveModalContainer}
+        onClose={() => {
+          setMoveModalContainer(null);
+          setMoveTargetShelf('');
+          setMoveTargetParent('');
+        }}
+        title="Move Container"
+      >
+        {moveModalContainer && (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleMove(moveModalContainer);
+            }}
+          >
+            <div className="form-group">
+              <label>Location Type</label>
+              <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+                <label>
+                  <input
+                    type="radio"
+                    value="shelf"
+                    checked={moveLocationType === 'shelf'}
+                    onChange={() => {
+                      setMoveLocationType('shelf');
+                      setMoveTargetParent('');
+                    }}
+                  />
+                  {' '}On Shelf
+                </label>
+                <label>
+                  <input
+                    type="radio"
+                    value="container"
+                    checked={moveLocationType === 'container'}
+                    onChange={() => {
+                      setMoveLocationType('container');
+                      setMoveTargetShelf('');
+                    }}
+                  />
+                  {' '}Inside Container
+                </label>
+              </div>
+            </div>
+
+            {moveLocationType === 'shelf' && (
+              <div className="form-group">
+                <label htmlFor="move-target-shelf">Target Shelf *</label>
+                <select
+                  id="move-target-shelf"
+                  value={moveTargetShelf}
+                  onChange={(e) => setMoveTargetShelf(e.target.value)}
+                  required
+                >
+                  <option value="">Select a shelf</option>
+                  {allShelves
+                    ?.filter((s) => s.id !== moveModalContainer.shelf_id)
+                    .map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name}
+                      </option>
+                    ))}
+                </select>
+              </div>
+            )}
+
+            {moveLocationType === 'container' && (
+              <div className="form-group">
+                <label htmlFor="move-target-parent">Target Parent Container *</label>
+                <select
+                  id="move-target-parent"
+                  value={moveTargetParent}
+                  onChange={(e) => setMoveTargetParent(e.target.value)}
+                  required
+                >
+                  <option value="">Select a parent container</option>
+                  {allContainers
+                    ?.filter((c) => c.id !== moveModalContainer.id && c.id !== moveModalContainer.parent_container_id)
+                    .map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                </select>
+              </div>
+            )}
+
+            <div className="form-actions">
+              <button
+                type="submit"
+                className="btn btn-primary"
+                disabled={moveContainer.isPending}
+              >
+                {moveContainer.isPending ? 'Moving...' : 'Move Container'}
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => {
+                  setMoveModalContainer(null);
+                  setMoveTargetShelf('');
+                  setMoveTargetParent('');
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        )}
+      </Modal>
+
       {/* Containers Grid */}
       <div className="rooms-grid">
         {containers?.length === 0 ? (
@@ -568,8 +725,10 @@ export default function ContainersPage() {
               container={container}
               onEdit={() => openEditModal(container.id)}
               onDelete={() => handleDelete(container.id, container.name)}
+              onMove={() => setMoveModalContainer(container)}
               updateContainerPending={updateContainer.isPending}
               deleteContainerPending={deleteContainer.isPending}
+              moveContainerPending={moveContainer.isPending}
             />
           ))
         )}

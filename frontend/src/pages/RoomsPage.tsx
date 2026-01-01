@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useRooms, useCreateRoom, useUpdateRoom, useDeleteRoom } from '../hooks';
+import { useRooms, useCreateRoom, useUpdateRoom, useDeleteRoom, usePhotos } from '../hooks';
 import { Modal, PhotoUpload, PhotoGallery } from '../components';
-import type { CreateRoomRequest, UpdateRoomRequest } from '../types/generated';
+import type { CreateRoomRequest, UpdateRoomRequest, RoomResponse } from '../types/generated';
 
 export default function RoomsPage() {
   const navigate = useNavigate();
@@ -99,6 +99,79 @@ export default function RoomsPage() {
 
   if (isLoading) return <div className="loading">Loading rooms...</div>;
   if (error) return <div className="error">Error: {error.message}</div>;
+
+  // Room card component with photos
+  function RoomCard({
+    room,
+    onEdit,
+    onDelete,
+    updateRoomPending,
+    deleteRoomPending,
+  }: {
+    room: RoomResponse;
+    onEdit: () => void;
+    onDelete: () => void;
+    updateRoomPending: boolean;
+    deleteRoomPending: boolean;
+  }) {
+    const { data: photos } = usePhotos('room', room.id);
+    const firstPhoto = photos && photos.length > 0 ? photos[0] : null;
+
+    return (
+      <div className="room-card">
+        <div className="card-header">
+          <h3>{room.name}</h3>
+          <div className="card-actions">
+            <button
+              className="btn btn-secondary btn-sm"
+              onClick={onEdit}
+              disabled={updateRoomPending}
+            >
+              Edit
+            </button>
+            <button
+              className="btn btn-danger btn-sm"
+              onClick={onDelete}
+              disabled={deleteRoomPending}
+            >
+              Delete
+            </button>
+          </div>
+        </div>
+        {firstPhoto && (
+          <div className="room-photo-preview">
+            <img
+              src={firstPhoto.thumbnail_url || firstPhoto.url}
+              alt={room.name}
+              onClick={() => window.open(firstPhoto.url, '_blank')}
+              loading="lazy"
+            />
+            {photos && photos.length > 1 && (
+              <div className="photo-count-badge">
+                +{photos.length - 1}
+              </div>
+            )}
+          </div>
+        )}
+        {room.description && (
+          <p className="room-description">{room.description}</p>
+        )}
+        <div className="room-meta">
+          <small>
+            Created: {new Date(room.created_at).toLocaleDateString()}
+          </small>
+          {room.updated_at !== room.created_at && (
+            <>
+              {' • '}
+              <small>
+                Updated: {new Date(room.updated_at).toLocaleDateString()}
+              </small>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="page">
@@ -244,43 +317,14 @@ export default function RoomsPage() {
           </p>
         ) : (
           rooms?.map((room) => (
-            <div key={room.id} className="room-card">
-              <div className="card-header">
-                <h3>{room.name}</h3>
-                <div className="card-actions">
-                  <button
-                    className="btn btn-secondary btn-sm"
-                    onClick={() => openEditModal(room.id)}
-                    disabled={updateRoom.isPending}
-                  >
-                    Edit
-                  </button>
-                  <button
-                    className="btn btn-danger btn-sm"
-                    onClick={() => handleDelete(room.id, room.name)}
-                    disabled={deleteRoom.isPending}
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
-              {room.description && (
-                <p className="room-description">{room.description}</p>
-              )}
-              <div className="room-meta">
-                <small>
-                  Created: {new Date(room.created_at).toLocaleDateString()}
-                </small>
-                {room.updated_at !== room.created_at && (
-                  <>
-                    {' • '}
-                    <small>
-                      Updated: {new Date(room.updated_at).toLocaleDateString()}
-                    </small>
-                  </>
-                )}
-              </div>
-            </div>
+            <RoomCard
+              key={room.id}
+              room={room}
+              onEdit={() => openEditModal(room.id)}
+              onDelete={() => handleDelete(room.id, room.name)}
+              updateRoomPending={updateRoom.isPending}
+              deleteRoomPending={deleteRoom.isPending}
+            />
           ))
         )}
       </div>

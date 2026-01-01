@@ -37,7 +37,7 @@ export default function LabelsPage() {
       // Create object URL and open in browser (will download or open based on browser settings)
       const url = window.URL.createObjectURL(blob);
       window.open(url, '_blank');
-      
+
       // Clean up after a delay (browser needs time to open the URL)
       setTimeout(() => {
         window.URL.revokeObjectURL(url);
@@ -82,8 +82,8 @@ export default function LabelsPage() {
                 const newTemplate = e.target.value;
                 // Update count to match template's labels per sheet
                 const labelsPerSheet = newTemplate === 'avery_18660' ? 30 : 30;
-                setFormData({ 
-                  ...formData, 
+                setFormData({
+                  ...formData,
                   template: newTemplate,
                   count: labelsPerSheet,
                 });

@@ -115,6 +115,43 @@ export interface ShelfResponse {
   updated_at: string;
 }
 
+export interface Container {
+  id: string;
+  shelf_id?: string;
+  parent_container_id?: string;
+  name: string;
+  description?: string;
+  label_id?: string;
+  created_at: string;
+  updated_at: string;
+  created_by: string;
+}
+
+export interface CreateContainerRequest {
+  shelf_id?: string;
+  parent_container_id?: string;
+  name: string;
+  description?: string;
+}
+
+export interface UpdateContainerRequest {
+  name?: string;
+  description?: string;
+  shelf_id?: string;
+  parent_container_id?: string;
+}
+
+export interface ContainerResponse {
+  id: string;
+  shelf_id?: string;
+  parent_container_id?: string;
+  name: string;
+  description?: string;
+  label_id?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Photo {
   id: string;
   entity_type: string;

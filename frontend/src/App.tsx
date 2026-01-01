@@ -1,6 +1,12 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
-import { HomePage, RoomsPage, ShelvesPage, LabelsPage } from './pages';
+import {
+  HomePage,
+  RoomsPage,
+  ShelvesPage,
+  ContainersPage,
+  LabelsPage,
+} from './pages';
 import './App.css';
 
 const queryClient = new QueryClient({
@@ -70,6 +76,27 @@ function App() {
               <Route
                 path="/units/:unitId/shelves/:shelfId/edit"
                 element={<ShelvesPage />}
+              />
+              <Route path="/containers" element={<ContainersPage />} />
+              <Route
+                path="/containers/:containerId/edit"
+                element={<ContainersPage />}
+              />
+              <Route
+                path="/shelves/:shelfId/containers"
+                element={<ContainersPage />}
+              />
+              <Route
+                path="/shelves/:shelfId/containers/:containerId/edit"
+                element={<ContainersPage />}
+              />
+              <Route
+                path="/containers/:parentId/children"
+                element={<ContainersPage />}
+              />
+              <Route
+                path="/containers/:parentId/children/:containerId/edit"
+                element={<ContainersPage />}
               />
               <Route path="/labels" element={<LabelsPage />} />
             </Routes>

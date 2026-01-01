@@ -288,73 +288,72 @@ export default function ShelvesPage() {
           )}
           <div className="form-group">
             <label htmlFor="create-name">Shelf Name *</label>
-              <input
-                id="create-name"
-                type="text"
-                value={createFormData.name}
-                onChange={(e) =>
-                  setCreateFormData({ ...createFormData, name: e.target.value })
-                }
-                required
-                placeholder="e.g., Top Shelf, Bottom Shelf"
-                autoFocus
-              />
-            </div>
+            <input
+              id="create-name"
+              type="text"
+              value={createFormData.name}
+              onChange={(e) =>
+                setCreateFormData({ ...createFormData, name: e.target.value })
+              }
+              required
+              placeholder="e.g., Top Shelf, Bottom Shelf"
+              autoFocus
+            />
+          </div>
 
-            <div className="form-group">
-              <label htmlFor="create-description">Description</label>
-              <textarea
-                id="create-description"
-                value={createFormData.description}
-                onChange={(e) =>
-                  setCreateFormData({
-                    ...createFormData,
-                    description: e.target.value,
-                  })
-                }
-                placeholder="Optional description"
-                rows={3}
-              />
-            </div>
+          <div className="form-group">
+            <label htmlFor="create-description">Description</label>
+            <textarea
+              id="create-description"
+              value={createFormData.description}
+              onChange={(e) =>
+                setCreateFormData({
+                  ...createFormData,
+                  description: e.target.value,
+                })
+              }
+              placeholder="Optional description"
+              rows={3}
+            />
+          </div>
 
-            <div className="form-group">
-              <label htmlFor="create-position">Position (optional)</label>
-              <input
-                id="create-position"
-                type="number"
-                value={createFormData.position || ''}
-                onChange={(e) =>
-                  setCreateFormData({
-                    ...createFormData,
-                    position: e.target.value
-                      ? parseInt(e.target.value, 10)
-                      : undefined,
-                  })
-                }
-                placeholder="Auto-assigned if not provided"
-                min="1"
-              />
-            </div>
+          <div className="form-group">
+            <label htmlFor="create-position">Position (optional)</label>
+            <input
+              id="create-position"
+              type="number"
+              value={createFormData.position || ''}
+              onChange={(e) =>
+                setCreateFormData({
+                  ...createFormData,
+                  position: e.target.value
+                    ? parseInt(e.target.value, 10)
+                    : undefined,
+                })
+              }
+              placeholder="Auto-assigned if not provided"
+              min="1"
+            />
+          </div>
 
-            <div className="form-actions">
-              <button
-                type="submit"
-                className="btn btn-primary"
-                disabled={createShelf.isPending}
-              >
-                {createShelf.isPending ? 'Creating...' : 'Create Shelf'}
-              </button>
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={closeCreateModal}
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
-        </Modal>
-      )}
+          <div className="form-actions">
+            <button
+              type="submit"
+              className="btn btn-primary"
+              disabled={createShelf.isPending}
+            >
+              {createShelf.isPending ? 'Creating...' : 'Create Shelf'}
+            </button>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={closeCreateModal}
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      </Modal>
 
       {/* Edit Modal */}
       <Modal

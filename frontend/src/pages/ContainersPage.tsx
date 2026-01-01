@@ -56,7 +56,6 @@ export default function ContainersPage() {
   const { data: unit } = useShelvingUnit(shelf?.shelving_unit_id || '');
   const { data: room } = useRoom(unit?.room_id || '');
   const { data: allShelves } = useShelves();
-  const { data: allContainers } = useContainers();
 
   const createContainer = useCreateContainer();
   const updateContainer = useUpdateContainer();
@@ -353,7 +352,7 @@ export default function ContainersPage() {
                   type="radio"
                   value="shelf"
                   checked={locationType === 'shelf'}
-                  onChange={(e) => {
+                  onChange={() => {
                     setLocationType('shelf');
                     setCreateFormData({
                       ...createFormData,
@@ -369,7 +368,7 @@ export default function ContainersPage() {
                   type="radio"
                   value="container"
                   checked={locationType === 'container'}
-                  onChange={(e) => {
+                  onChange={() => {
                     setLocationType('container');
                     setCreateFormData({
                       ...createFormData,
@@ -431,56 +430,55 @@ export default function ContainersPage() {
             </div>
           )}
 
-            <div className="form-group">
-              <label htmlFor="create-name">Container Name *</label>
-              <input
-                id="create-name"
-                type="text"
-                value={createFormData.name}
-                onChange={(e) =>
-                  setCreateFormData({ ...createFormData, name: e.target.value })
-                }
-                required
-                placeholder="e.g., Box A, Drawer 1"
-                autoFocus
-              />
-            </div>
+          <div className="form-group">
+            <label htmlFor="create-name">Container Name *</label>
+            <input
+              id="create-name"
+              type="text"
+              value={createFormData.name}
+              onChange={(e) =>
+                setCreateFormData({ ...createFormData, name: e.target.value })
+              }
+              required
+              placeholder="e.g., Box A, Drawer 1"
+              autoFocus
+            />
+          </div>
 
-            <div className="form-group">
-              <label htmlFor="create-description">Description</label>
-              <textarea
-                id="create-description"
-                value={createFormData.description}
-                onChange={(e) =>
-                  setCreateFormData({
-                    ...createFormData,
-                    description: e.target.value,
-                  })
-                }
-                placeholder="Optional description"
-                rows={3}
-              />
-            </div>
+          <div className="form-group">
+            <label htmlFor="create-description">Description</label>
+            <textarea
+              id="create-description"
+              value={createFormData.description}
+              onChange={(e) =>
+                setCreateFormData({
+                  ...createFormData,
+                  description: e.target.value,
+                })
+              }
+              placeholder="Optional description"
+              rows={3}
+            />
+          </div>
 
-            <div className="form-actions">
-              <button
-                type="submit"
-                className="btn btn-primary"
-                disabled={createContainer.isPending}
-              >
-                {createContainer.isPending ? 'Creating...' : 'Create Container'}
-              </button>
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={closeCreateModal}
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
-        </Modal>
-      )}
+          <div className="form-actions">
+            <button
+              type="submit"
+              className="btn btn-primary"
+              disabled={createContainer.isPending}
+            >
+              {createContainer.isPending ? 'Creating...' : 'Create Container'}
+            </button>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={closeCreateModal}
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      </Modal>
 
       {/* Edit Modal */}
       <Modal

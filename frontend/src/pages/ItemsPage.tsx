@@ -9,6 +9,8 @@ import {
   useDeleteItem,
   useShelf,
   useContainer,
+  useShelves,
+  useContainers,
   useShelvingUnit,
   useRoom,
   usePhotos,
@@ -18,6 +20,8 @@ import type {
   CreateItemRequest,
   UpdateItemRequest,
   ItemResponse,
+  ShelfResponse,
+  ContainerResponse,
 } from '../types/generated';
 
 export default function ItemsPage() {
@@ -363,7 +367,7 @@ export default function ItemsPage() {
                   type="radio"
                   value="shelf"
                   checked={locationType === 'shelf'}
-                  onChange={(e) => {
+                  onChange={() => {
                     setLocationType('shelf');
                     setCreateFormData({
                       ...createFormData,
@@ -379,7 +383,7 @@ export default function ItemsPage() {
                   type="radio"
                   value="container"
                   checked={locationType === 'container'}
-                  onChange={(e) => {
+                  onChange={() => {
                     setLocationType('container');
                     setCreateFormData({
                       ...createFormData,
@@ -408,7 +412,7 @@ export default function ItemsPage() {
                 required
               >
                 <option value="">Select a shelf</option>
-                {allShelves?.map((s) => (
+                {allShelves?.map((s: ShelfResponse) => (
                   <option key={s.id} value={s.id}>
                     {s.name}
                   </option>
@@ -432,7 +436,7 @@ export default function ItemsPage() {
                 required
               >
                 <option value="">Select a container</option>
-                {allContainers?.map((c) => (
+                {allContainers?.map((c: ContainerResponse) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
                   </option>
@@ -441,85 +445,84 @@ export default function ItemsPage() {
             </div>
           )}
 
-            <div className="form-group">
-              <label htmlFor="create-name">Item Name *</label>
-              <input
-                id="create-name"
-                type="text"
-                value={createFormData.name}
-                onChange={(e) =>
-                  setCreateFormData({ ...createFormData, name: e.target.value })
-                }
-                required
-                placeholder="e.g., Laptop, Book, Tool"
-                autoFocus
-              />
-            </div>
+          <div className="form-group">
+            <label htmlFor="create-name">Item Name *</label>
+            <input
+              id="create-name"
+              type="text"
+              value={createFormData.name}
+              onChange={(e) =>
+                setCreateFormData({ ...createFormData, name: e.target.value })
+              }
+              required
+              placeholder="e.g., Laptop, Book, Tool"
+              autoFocus
+            />
+          </div>
 
-            <div className="form-group">
-              <label htmlFor="create-description">Description</label>
-              <textarea
-                id="create-description"
-                value={createFormData.description}
-                onChange={(e) =>
-                  setCreateFormData({
-                    ...createFormData,
-                    description: e.target.value,
-                  })
-                }
-                placeholder="Optional description"
-                rows={3}
-              />
-            </div>
+          <div className="form-group">
+            <label htmlFor="create-description">Description</label>
+            <textarea
+              id="create-description"
+              value={createFormData.description}
+              onChange={(e) =>
+                setCreateFormData({
+                  ...createFormData,
+                  description: e.target.value,
+                })
+              }
+              placeholder="Optional description"
+              rows={3}
+            />
+          </div>
 
-            <div className="form-group">
-              <label htmlFor="create-barcode">Barcode (optional)</label>
-              <input
-                id="create-barcode"
-                type="text"
-                value={createFormData.barcode}
-                onChange={(e) =>
-                  setCreateFormData({ ...createFormData, barcode: e.target.value })
-                }
-                placeholder="For future barcode scanning"
-              />
-            </div>
+          <div className="form-group">
+            <label htmlFor="create-barcode">Barcode (optional)</label>
+            <input
+              id="create-barcode"
+              type="text"
+              value={createFormData.barcode}
+              onChange={(e) =>
+                setCreateFormData({ ...createFormData, barcode: e.target.value })
+              }
+              placeholder="For future barcode scanning"
+            />
+          </div>
 
-            <div className="form-group">
-              <label htmlFor="create-barcode-type">Barcode Type (optional)</label>
-              <input
-                id="create-barcode-type"
-                type="text"
-                value={createFormData.barcode_type}
-                onChange={(e) =>
-                  setCreateFormData({
-                    ...createFormData,
-                    barcode_type: e.target.value,
-                  })
-                }
-                placeholder="e.g., UPC, EAN, QR"
-              />
-            </div>
+          <div className="form-group">
+            <label htmlFor="create-barcode-type">Barcode Type (optional)</label>
+            <input
+              id="create-barcode-type"
+              type="text"
+              value={createFormData.barcode_type}
+              onChange={(e) =>
+                setCreateFormData({
+                  ...createFormData,
+                  barcode_type: e.target.value,
+                })
+              }
+              placeholder="e.g., UPC, EAN, QR"
+            />
+          </div>
 
-            <div className="form-actions">
-              <button
-                type="submit"
-                className="btn btn-primary"
-                disabled={createItem.isPending}
-              >
-                {createItem.isPending ? 'Creating...' : 'Create Item'}
-              </button>
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={closeCreateModal}
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
-        </Modal>
-      )}
+          <div className="form-actions">
+            <button
+              type="submit"
+              className="btn btn-primary"
+              disabled={createItem.isPending}
+            >
+              {createItem.isPending ? 'Creating...' : 'Create Item'}
+            </button>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={closeCreateModal}
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      </Modal>
 
       {/* Edit Modal */}
       <Modal

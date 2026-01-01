@@ -67,11 +67,11 @@ pub async fn create_app(db: PgPool) -> anyhow::Result<Router> {
             return Err(anyhow::anyhow!("Failed to initialize S3 service: {:?}", e));
         }
     };
-    
+
     // Get app base URL for QR code generation (defaults to localhost for dev)
-    let app_base_url = env::var("APP_BASE_URL")
-        .unwrap_or_else(|_| "http://localhost:5173".to_string());
-    
+    let app_base_url =
+        env::var("APP_BASE_URL").unwrap_or_else(|_| "http://localhost:5173".to_string());
+
     let state = Arc::new(AppState {
         db,
         s3: s3_service,

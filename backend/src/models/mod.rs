@@ -6,6 +6,7 @@ pub mod room;
 pub mod shelf;
 pub mod shelving_unit;
 pub mod user;
+pub mod audit;
 
 // Re-export types for convenience
 // Suppress unused warnings for now as these will be used when we add routes

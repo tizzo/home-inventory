@@ -5,7 +5,7 @@ pub mod shelving_units;
 pub mod shelves;
 pub mod containers;
 pub mod items;
-pub mod move;
+pub mod r#move;
 
 // Re-export for convenience
 pub use labels::*;
@@ -15,4 +15,4 @@ pub use shelving_units::*;
 pub use shelves::*;
 pub use containers::*;
 pub use items::*;
-pub use move::*;
+pub use r#move::*;

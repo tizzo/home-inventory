@@ -12,12 +12,14 @@ use std::sync::Arc;
 use tower_http::cors::{Any, CorsLayer};
 
 use crate::services::s3::S3Service;
+use crate::services::audit::AuditService;
 
 #[derive(Clone)]
 pub struct AppState {
     pub db: PgPool,
     pub s3: Arc<S3Service>,
     pub app_base_url: String,
+    pub audit: Arc<crate::services::audit::AuditService>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -72,10 +74,13 @@ pub async fn create_app(db: PgPool) -> anyhow::Result<Router> {
     let app_base_url =
         env::var("APP_BASE_URL").unwrap_or_else(|_| "http://localhost:5173".to_string());
 
+    let audit_service = Arc::new(AuditService::new(Arc::new(db.clone())));
+
     let state = Arc::new(AppState {
         db,
         s3: s3_service,
         app_base_url,
+        audit: audit_service,
     });
 
     // Configure CORS for local development

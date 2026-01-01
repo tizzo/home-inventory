@@ -10,7 +10,7 @@ use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::app::AppState;
-use crate::services::move as move_service;
+use crate::services::r#move as move_service;
 
 #[derive(Debug, Deserialize)]
 pub struct MoveShelfRequest {

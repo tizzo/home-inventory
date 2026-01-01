@@ -71,6 +71,9 @@ pub async fn create_room(
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
 
+    // Log audit
+    state.audit.log_create("room", room.id, Some(user_id), None).await.ok();
+
     Ok(Json(RoomResponse::from(room)))
 }
 
@@ -92,8 +95,23 @@ pub async fn update_room(
         .ok_or(StatusCode::NOT_FOUND)?;
 
     // Update fields if provided
-    let name = payload.name.unwrap_or(existing.name);
-    let description = payload.description.or(existing.description);
+    let name = payload.name.unwrap_or(existing.name.clone());
+    let description = payload.description.or(existing.description.clone());
+
+    // Track changes for audit
+    let mut changes = serde_json::Map::new();
+    if payload.name.is_some() && payload.name.as_ref() != Some(&existing.name) {
+        changes.insert("name".to_string(), serde_json::json!({
+            "from": existing.name,
+            "to": name
+        }));
+    }
+    if payload.description != existing.description {
+        changes.insert("description".to_string(), serde_json::json!({
+            "from": existing.description,
+            "to": description
+        }));
+    }
 
     let room = sqlx::query_as::<_, Room>(
         r#"
@@ -113,6 +131,12 @@ pub async fn update_room(
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
 
+    // Log audit
+    if !changes.is_empty() {
+        let user_id = Uuid::new_v4(); // TODO: get from auth
+        state.audit.log_update("room", id, Some(user_id), serde_json::Value::Object(changes), None).await.ok();
+    }
+
     Ok(Json(RoomResponse::from(room)))
 }
 
@@ -121,6 +145,10 @@ pub async fn delete_room(
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
+    // Log audit before deletion
+    let user_id = Uuid::new_v4(); // TODO: get from auth
+    state.audit.log_delete("room", id, Some(user_id), None).await.ok();
+
     let result = sqlx::query("DELETE FROM rooms WHERE id = $1")
         .bind(id)
         .execute(&state.db)

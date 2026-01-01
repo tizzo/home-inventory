@@ -6,8 +6,9 @@ export default function LabelsPage() {
   const generateLabels = useGenerateLabels();
   const downloadPdf = useDownloadLabelPdf();
 
+  // Default count matches template (Avery 18660 = 30 labels per sheet)
   const [formData, setFormData] = useState<GenerateLabelsRequest>({
-    count: 10,
+    count: 30,
     template: 'avery_18660',
   });
 
@@ -18,7 +19,8 @@ export default function LabelsPage() {
     try {
       const response = await generateLabels.mutateAsync(formData);
       setLastBatchId(response.batch_id);
-      alert(`Generated ${response.count} labels in batch ${response.batch_id}`);
+      // Automatically download PDF after generation
+      await handleDownloadPdf(response.batch_id);
     } catch (err) {
       console.error('Failed to generate labels:', err);
       alert('Failed to generate labels. Please try again.');
@@ -32,15 +34,14 @@ export default function LabelsPage() {
         template: formData.template,
       });
 
-      // Create a download link
+      // Create object URL and open in browser (will download or open based on browser settings)
       const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `labels-${batchId}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
+      window.open(url, '_blank');
+      
+      // Clean up after a delay (browser needs time to open the URL)
+      setTimeout(() => {
+        window.URL.revokeObjectURL(url);
+      }, 100);
     } catch (err) {
       console.error('Failed to download PDF:', err);
       alert('Failed to download PDF. Please try again.');
@@ -77,9 +78,16 @@ export default function LabelsPage() {
             <select
               id="template"
               value={formData.template || 'avery_18660'}
-              onChange={(e) =>
-                setFormData({ ...formData, template: e.target.value })
-              }
+              onChange={(e) => {
+                const newTemplate = e.target.value;
+                // Update count to match template's labels per sheet
+                const labelsPerSheet = newTemplate === 'avery_18660' ? 30 : 30;
+                setFormData({ 
+                  ...formData, 
+                  template: newTemplate,
+                  count: labelsPerSheet,
+                });
+              }}
             >
               <option value="avery_18660">Avery 18660 (30 per sheet)</option>
             </select>

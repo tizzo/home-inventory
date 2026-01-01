@@ -190,21 +190,13 @@ pub async fn print_labels(
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
 
-    // Return PDF response
-    let _headers = AppendHeaders([
-        (header::CONTENT_TYPE, "application/pdf"),
-        (
-            header::CONTENT_DISPOSITION,
-            &format!("attachment; filename=\"labels-{}.pdf\"", batch_id),
-        ),
-    ]);
-
+    // Return PDF response with inline disposition to open in browser
     Ok(Response::builder()
         .status(StatusCode::OK)
         .header(header::CONTENT_TYPE, "application/pdf")
         .header(
             header::CONTENT_DISPOSITION,
-            format!("attachment; filename=\"labels-{}.pdf\"", batch_id),
+            format!("inline; filename=\"labels-{}.pdf\"", batch_id),
         )
         .body(axum::body::Body::from(pdf_bytes))
         .unwrap())

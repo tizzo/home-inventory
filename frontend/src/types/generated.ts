@@ -78,6 +78,43 @@ export interface ShelvingUnitResponse {
   updated_at: string;
 }
 
+export interface Shelf {
+  id: string;
+  shelving_unit_id: string;
+  name: string;
+  description?: string;
+  position?: number;
+  label_id?: string;
+  created_at: string;
+  updated_at: string;
+  created_by: string;
+}
+
+export interface CreateShelfRequest {
+  shelving_unit_id: string;
+  name: string;
+  description?: string;
+  position?: number;
+}
+
+export interface UpdateShelfRequest {
+  name?: string;
+  description?: string;
+  position?: number;
+  shelving_unit_id?: string;
+}
+
+export interface ShelfResponse {
+  id: string;
+  shelving_unit_id: string;
+  name: string;
+  description?: string;
+  position?: number;
+  label_id?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Photo {
   id: string;
   entity_type: string;

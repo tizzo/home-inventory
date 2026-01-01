@@ -54,11 +54,22 @@ dev: ## Start both backend and frontend in development mode
 frontend: ## Start frontend development server
 	cd frontend && npm run dev
 
-backend: ## Start backend development server
+backend: ## Start backend development server (requires DATABASE_URL and S3_* env vars)
 	cd backend && cargo run
 
 backend-watch: ## Start backend with auto-reload
 	cd backend && cargo watch -x run
+
+backend-env: ## Show backend environment setup instructions
+	@echo "Set these environment variables:"
+	@echo "  export DATABASE_URL=\"postgresql://postgres:devpass@localhost:5432/inventory\""
+	@echo "  export S3_ENDPOINT=\"http://localhost:9000\""
+	@echo "  export S3_ACCESS_KEY=\"minioadmin\""
+	@echo "  export S3_SECRET_KEY=\"minioadmin\""
+	@echo "  export S3_BUCKET=\"home-inventory-photos\""
+	@echo "  export S3_REGION=\"us-east-1\""
+	@echo ""
+	@echo "Or create backend/.env file with these values"
 
 generate-types: ## Generate TypeScript types from Rust
 	cd frontend && npm run generate-types

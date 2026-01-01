@@ -1,26 +1,66 @@
-import { useState } from 'react';
-import { useRooms, useCreateRoom, useDeleteRoom } from '../hooks';
-import type { CreateRoomRequest } from '../types/generated';
+import { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { useRooms, useCreateRoom, useUpdateRoom, useDeleteRoom } from '../hooks';
+import { Modal, PhotoUpload, PhotoGallery } from '../components';
+import type { CreateRoomRequest, UpdateRoomRequest } from '../types/generated';
 
 export default function RoomsPage() {
+  const navigate = useNavigate();
+  const { roomId } = useParams<{ roomId: string }>();
   const { data: rooms, isLoading, error } = useRooms();
   const createRoom = useCreateRoom();
+  const updateRoom = useUpdateRoom();
   const deleteRoom = useDeleteRoom();
 
-  const [showForm, setShowForm] = useState(false);
-  const [formData, setFormData] = useState<CreateRoomRequest>({
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [createFormData, setCreateFormData] = useState<CreateRoomRequest>({
+    name: '',
+    description: '',
+  });
+  const [editFormData, setEditFormData] = useState<UpdateRoomRequest>({
     name: '',
     description: '',
   });
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Get the room being edited from URL
+  const editingRoom = rooms?.find((r) => r.id === roomId);
+
+  // Handle URL-based edit modal
+  useEffect(() => {
+    if (roomId && editingRoom) {
+      setEditFormData({
+        name: editingRoom.name,
+        description: editingRoom.description || '',
+      });
+    }
+  }, [roomId, editingRoom]);
+
+  const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await createRoom.mutateAsync(formData);
-      setFormData({ name: '', description: '' });
-      setShowForm(false);
+      await createRoom.mutateAsync(createFormData);
+      setCreateFormData({ name: '', description: '' });
+      setShowCreateModal(false);
     } catch (err) {
       console.error('Failed to create room:', err);
+      alert('Failed to create room. Please try again.');
+    }
+  };
+
+  const handleEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!roomId) return;
+
+    try {
+      await updateRoom.mutateAsync({
+        id: roomId,
+        data: editFormData,
+      });
+      setEditFormData({ name: '', description: '' });
+      navigate('/rooms'); // Close modal by navigating back
+    } catch (err) {
+      console.error('Failed to update room:', err);
+      alert('Failed to update room. Please try again.');
     }
   };
 
@@ -28,10 +68,33 @@ export default function RoomsPage() {
     if (window.confirm(`Are you sure you want to delete "${name}"?`)) {
       try {
         await deleteRoom.mutateAsync(id);
+        // If we're viewing/editing this room, navigate back to list
+        if (roomId === id) {
+          navigate('/rooms');
+        }
       } catch (err) {
         console.error('Failed to delete room:', err);
+        alert('Failed to delete room. Please try again.');
       }
     }
+  };
+
+  const openEditModal = (id: string) => {
+    navigate(`/rooms/${id}/edit`);
+  };
+
+  const closeEditModal = () => {
+    navigate('/rooms');
+    setEditFormData({ name: '', description: '' });
+  };
+
+  const openCreateModal = () => {
+    setShowCreateModal(true);
+  };
+
+  const closeCreateModal = () => {
+    setShowCreateModal(false);
+    setCreateFormData({ name: '', description: '' });
   };
 
   if (isLoading) return <div className="loading">Loading rooms...</div>;
@@ -41,53 +104,139 @@ export default function RoomsPage() {
     <div className="page">
       <div className="page-header">
         <h1>Rooms</h1>
-        <button
-          className="btn btn-primary"
-          onClick={() => setShowForm(!showForm)}
-        >
-          {showForm ? 'Cancel' : 'Add Room'}
+        <button className="btn btn-primary" onClick={openCreateModal}>
+          Add Room
         </button>
       </div>
 
-      {showForm && (
-        <form className="form" onSubmit={handleSubmit}>
+      {/* Create Modal */}
+      <Modal
+        isOpen={showCreateModal}
+        onClose={closeCreateModal}
+        title="Create New Room"
+      >
+        <form onSubmit={handleCreate}>
           <div className="form-group">
-            <label htmlFor="name">Room Name *</label>
+            <label htmlFor="create-name">Room Name *</label>
             <input
-              id="name"
+              id="create-name"
               type="text"
-              value={formData.name}
+              value={createFormData.name}
               onChange={(e) =>
-                setFormData({ ...formData, name: e.target.value })
+                setCreateFormData({ ...createFormData, name: e.target.value })
               }
               required
               placeholder="e.g., Garage, Kitchen, Office"
+              autoFocus
             />
           </div>
 
           <div className="form-group">
-            <label htmlFor="description">Description</label>
+            <label htmlFor="create-description">Description</label>
             <textarea
-              id="description"
-              value={formData.description}
+              id="create-description"
+              value={createFormData.description}
               onChange={(e) =>
-                setFormData({ ...formData, description: e.target.value })
+                setCreateFormData({
+                  ...createFormData,
+                  description: e.target.value,
+                })
               }
               placeholder="Optional description"
               rows={3}
             />
           </div>
 
-          <button
-            type="submit"
-            className="btn btn-primary"
-            disabled={createRoom.isPending}
-          >
-            {createRoom.isPending ? 'Creating...' : 'Create Room'}
-          </button>
+          <div className="form-actions">
+            <button
+              type="submit"
+              className="btn btn-primary"
+              disabled={createRoom.isPending}
+            >
+              {createRoom.isPending ? 'Creating...' : 'Create Room'}
+            </button>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={closeCreateModal}
+            >
+              Cancel
+            </button>
+          </div>
         </form>
-      )}
+      </Modal>
 
+      {/* Edit Modal */}
+      <Modal
+        isOpen={!!roomId && !!editingRoom}
+        onClose={closeEditModal}
+        title="Edit Room"
+      >
+        <form onSubmit={handleEdit}>
+          <div className="form-group">
+            <label htmlFor="edit-name">Room Name *</label>
+            <input
+              id="edit-name"
+              type="text"
+              value={editFormData.name}
+              onChange={(e) =>
+                setEditFormData({ ...editFormData, name: e.target.value })
+              }
+              required
+              placeholder="e.g., Garage, Kitchen, Office"
+              autoFocus
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="edit-description">Description</label>
+            <textarea
+              id="edit-description"
+              value={editFormData.description}
+              onChange={(e) =>
+                setEditFormData({
+                  ...editFormData,
+                  description: e.target.value,
+                })
+              }
+              placeholder="Optional description"
+              rows={3}
+            />
+          </div>
+
+          {editingRoom && (
+            <div className="form-group">
+              <PhotoGallery entityType="room" entityId={editingRoom.id} />
+              <PhotoUpload
+                entityType="room"
+                entityId={editingRoom.id}
+                onUploadComplete={() => {
+                  // Photos will refresh automatically via React Query
+                }}
+              />
+            </div>
+          )}
+
+          <div className="form-actions">
+            <button
+              type="submit"
+              className="btn btn-primary"
+              disabled={updateRoom.isPending}
+            >
+              {updateRoom.isPending ? 'Saving...' : 'Save Changes'}
+            </button>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={closeEditModal}
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Rooms Grid */}
       <div className="rooms-grid">
         {rooms?.length === 0 ? (
           <p className="empty-state">
@@ -98,19 +247,38 @@ export default function RoomsPage() {
             <div key={room.id} className="room-card">
               <div className="card-header">
                 <h3>{room.name}</h3>
-                <button
-                  className="btn btn-danger btn-sm"
-                  onClick={() => handleDelete(room.id, room.name)}
-                  disabled={deleteRoom.isPending}
-                >
-                  Delete
-                </button>
+                <div className="card-actions">
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => openEditModal(room.id)}
+                    disabled={updateRoom.isPending}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    className="btn btn-danger btn-sm"
+                    onClick={() => handleDelete(room.id, room.name)}
+                    disabled={deleteRoom.isPending}
+                  >
+                    Delete
+                  </button>
+                </div>
               </div>
               {room.description && (
                 <p className="room-description">{room.description}</p>
               )}
               <div className="room-meta">
-                <small>Created: {new Date(room.created_at).toLocaleDateString()}</small>
+                <small>
+                  Created: {new Date(room.created_at).toLocaleDateString()}
+                </small>
+                {room.updated_at !== room.created_at && (
+                  <>
+                    {' • '}
+                    <small>
+                      Updated: {new Date(room.updated_at).toLocaleDateString()}
+                    </small>
+                  </>
+                )}
               </div>
             </div>
           ))

@@ -77,3 +77,47 @@ export interface ShelvingUnitResponse {
   created_at: string;
   updated_at: string;
 }
+
+export interface Photo {
+  id: string;
+  entity_type: string;
+  entity_id: string;
+  s3_key: string;
+  thumbnail_s3_key?: string;
+  content_type: string;
+  file_size: number;
+  width?: number;
+  height?: number;
+  created_at: string;
+  created_by: string;
+}
+
+export interface PhotoResponse {
+  id: string;
+  entity_type: string;
+  entity_id: string;
+  url: string;
+  thumbnail_url?: string;
+  content_type: string;
+  file_size: number;
+  width?: number;
+  height?: number;
+  created_at: string;
+}
+
+export interface CreatePhotoRequest {
+  entity_type: string;
+  entity_id: string;
+  s3_key: string;
+  thumbnail_s3_key?: string;
+  content_type: string;
+  file_size: number;
+  width?: number;
+  height?: number;
+}
+
+export interface PresignedUploadUrl {
+  upload_url: string;
+  s3_key: string;
+  expires_in: number;
+}

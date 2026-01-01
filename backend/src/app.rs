@@ -7,6 +7,7 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
+use std::env;
 use std::sync::Arc;
 use tower_http::cors::{Any, CorsLayer};
 
@@ -16,6 +17,7 @@ use crate::services::s3::S3Service;
 pub struct AppState {
     pub db: PgPool,
     pub s3: Arc<S3Service>,
+    pub app_base_url: String,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -65,7 +67,16 @@ pub async fn create_app(db: PgPool) -> anyhow::Result<Router> {
             return Err(anyhow::anyhow!("Failed to initialize S3 service: {:?}", e));
         }
     };
-    let state = Arc::new(AppState { db, s3: s3_service });
+    
+    // Get app base URL for QR code generation (defaults to localhost for dev)
+    let app_base_url = env::var("APP_BASE_URL")
+        .unwrap_or_else(|_| "http://localhost:5173".to_string());
+    
+    let state = Arc::new(AppState {
+        db,
+        s3: s3_service,
+        app_base_url,
+    });
 
     // Configure CORS for local development
     let cors = CorsLayer::new()

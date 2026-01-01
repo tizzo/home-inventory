@@ -99,6 +99,7 @@ pub async fn create_app(db: PgPool) -> anyhow::Result<Router> {
         .merge(crate::routes::photo_routes())
         .merge(crate::routes::label_routes())
         .merge(crate::routes::move_routes())
+        .merge(crate::routes::audit_routes())
         .with_state(state)
         .layer(cors))
 }

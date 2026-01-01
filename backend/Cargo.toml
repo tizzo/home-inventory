@@ -50,19 +50,17 @@ thiserror = "1"
 anyhow = "1"
 cargo-watch = "8.5.3"
 
-<<<<<<< Current (Your changes)
 # QR code generation
 qrcode = "0.14"
 image = "0.25"
 
 # PDF generation - using printpdf for now, may switch to simpler library
 printpdf = "0.7"
-=======
+
 # S3 storage (works with MinIO)
 aws-sdk-s3 = { version = "1", features = ["behavior-version-latest"] }
 aws-config = { version = "1", features = ["behavior-version-latest"] }
 aws-sigv4 = "1"
->>>>>>> Incoming (Background Agent changes)
 
 [build-dependencies]
 typeshare = "1"

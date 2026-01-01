@@ -78,6 +78,7 @@ pub async fn create_app(db: PgPool) -> anyhow::Result<Router> {
         .merge(crate::routes::room_routes())
         .merge(crate::routes::shelving_unit_routes())
         .merge(crate::routes::photo_routes())
+        .merge(crate::routes::label_routes())
         .with_state(state)
         .layer(cors))
 }
@@ -103,7 +104,7 @@ mod tests {
     #[ignore] // Only run when DATABASE_URL is set
     async fn test_health_check_endpoint() {
         let pool = create_test_pool().await;
-        let app = create_app(pool);
+        let app = create_app(pool).await.unwrap();
 
         let response = app
             .oneshot(
@@ -126,7 +127,7 @@ mod tests {
 
         // This will likely fail to connect, which is expected for this test
         if let Ok(pool) = crate::db::init_pool(database_url).await {
-            let app = create_app(pool);
+            let app = create_app(pool).await.unwrap();
 
             let response = app
                 .oneshot(

@@ -58,6 +58,7 @@ body {
   font-weight: 700;
   cursor: pointer;
   color: var(--primary-color);
+  text-decoration: none;
 }
 
 .nav-menu {
@@ -254,6 +255,16 @@ body {
   margin-bottom: 2rem;
 }
 
+.form h2 {
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+  font-size: 1.5rem;
+}
+
+.form-edit {
+  border: 2px solid var(--primary-color);
+}
+
 .form-group {
   margin-bottom: 1.5rem;
 }
@@ -278,6 +289,16 @@ body {
 .form-group textarea:focus {
   outline: none;
   border-color: var(--primary-color);
+}
+
+.form-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.form-actions .btn {
+  flex: 1;
 }
 
 /* Rooms Grid */
@@ -305,10 +326,21 @@ body {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1rem;
+  gap: 1rem;
 }
 
 .card-header h3 {
   font-size: 1.25rem;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.card-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-shrink: 0;
 }
 
 .room-description {
@@ -336,8 +368,6 @@ body {
   color: var(--danger-color);
 }
 
-<<<<<<< Current (Your changes)
-=======
 /* Modal */
 .modal-overlay {
   position: fixed;
@@ -544,7 +574,6 @@ body {
   margin-top: 1rem;
 }
 
->>>>>>> Incoming (Background Agent changes)
 /* Footer */
 .footer {
   background: var(--surface-color);

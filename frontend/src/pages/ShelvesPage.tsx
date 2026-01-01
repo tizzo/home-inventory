@@ -7,6 +7,7 @@ import {
   useUpdateShelf,
   useDeleteShelf,
   useShelvingUnit,
+  useShelvingUnits,
   useRoom,
   usePhotos,
 } from '../hooks';
@@ -26,6 +27,7 @@ export default function ShelvesPage() {
   );
   const { data: unit } = useShelvingUnit(unitId || '');
   const { data: room } = useRoom(unit?.room_id || '');
+  const { data: allUnits } = useShelvingUnits();
   const createShelf = useCreateShelf();
   const updateShelf = useUpdateShelf();
   const deleteShelf = useDeleteShelf();
@@ -249,23 +251,43 @@ export default function ShelvesPage() {
             {unit ? `Shelves in ${unit.name}` : 'All Shelves'}
           </h1>
         </div>
-        {unitId && (
-          <button className="btn btn-primary" onClick={openCreateModal}>
-            Add Shelf
-          </button>
-        )}
+        <button className="btn btn-primary" onClick={openCreateModal}>
+          Add Shelf
+        </button>
       </div>
 
       {/* Create Modal */}
-      {unitId && (
-        <Modal
-          isOpen={showCreateModal}
-          onClose={closeCreateModal}
-          title="Create New Shelf"
-        >
-          <form onSubmit={handleCreate}>
+      <Modal
+        isOpen={showCreateModal}
+        onClose={closeCreateModal}
+        title="Create New Shelf"
+      >
+        <form onSubmit={handleCreate}>
+          {!unitId && (
             <div className="form-group">
-              <label htmlFor="create-name">Shelf Name *</label>
+              <label htmlFor="create-unit">Shelving Unit *</label>
+              <select
+                id="create-unit"
+                value={createFormData.shelving_unit_id || ''}
+                onChange={(e) =>
+                  setCreateFormData({
+                    ...createFormData,
+                    shelving_unit_id: e.target.value,
+                  })
+                }
+                required
+              >
+                <option value="">Select a shelving unit</option>
+                {allUnits?.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+          <div className="form-group">
+            <label htmlFor="create-name">Shelf Name *</label>
               <input
                 id="create-name"
                 type="text"

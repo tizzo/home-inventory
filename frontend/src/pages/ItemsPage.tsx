@@ -55,6 +55,8 @@ export default function ItemsPage() {
   const { data: container } = useContainer(containerId || '');
   const { data: unit } = useShelvingUnit(shelf?.shelving_unit_id || '');
   const { data: room } = useRoom(unit?.room_id || '');
+  const { data: allShelves } = useShelves();
+  const { data: allContainers } = useContainers();
 
   const createItem = useCreateItem();
   const updateItem = useUpdateItem();
@@ -341,60 +343,103 @@ export default function ItemsPage() {
                 : 'All Items'}
           </h1>
         </div>
-        {(shelfId || containerId) && (
-          <button className="btn btn-primary" onClick={openCreateModal}>
-            Add Item
-          </button>
-        )}
+        <button className="btn btn-primary" onClick={openCreateModal}>
+          Add Item
+        </button>
       </div>
 
       {/* Create Modal */}
-      {(shelfId || containerId) && (
-        <Modal
-          isOpen={showCreateModal}
-          onClose={closeCreateModal}
-          title="Create New Item"
-        >
-          <form onSubmit={handleCreate}>
-            <div className="form-group">
-              <label>Location Type</label>
-              <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
-                <label>
-                  <input
-                    type="radio"
-                    value="shelf"
-                    checked={locationType === 'shelf'}
-                    onChange={(e) => {
-                      setLocationType('shelf');
-                      setCreateFormData({
-                        ...createFormData,
-                        shelf_id: shelfId,
-                        container_id: undefined,
-                      });
-                    }}
-                    disabled={!shelfId}
-                  />
-                  {' '}On Shelf
-                </label>
-                <label>
-                  <input
-                    type="radio"
-                    value="container"
-                    checked={locationType === 'container'}
-                    onChange={(e) => {
-                      setLocationType('container');
-                      setCreateFormData({
-                        ...createFormData,
-                        shelf_id: undefined,
-                        container_id: containerId,
-                      });
-                    }}
-                    disabled={!containerId}
-                  />
-                  {' '}In Container
-                </label>
-              </div>
+      <Modal
+        isOpen={showCreateModal}
+        onClose={closeCreateModal}
+        title="Create New Item"
+      >
+        <form onSubmit={handleCreate}>
+          <div className="form-group">
+            <label>Location Type</label>
+            <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+              <label>
+                <input
+                  type="radio"
+                  value="shelf"
+                  checked={locationType === 'shelf'}
+                  onChange={(e) => {
+                    setLocationType('shelf');
+                    setCreateFormData({
+                      ...createFormData,
+                      shelf_id: shelfId || undefined,
+                      container_id: undefined,
+                    });
+                  }}
+                />
+                {' '}On Shelf
+              </label>
+              <label>
+                <input
+                  type="radio"
+                  value="container"
+                  checked={locationType === 'container'}
+                  onChange={(e) => {
+                    setLocationType('container');
+                    setCreateFormData({
+                      ...createFormData,
+                      shelf_id: undefined,
+                      container_id: containerId || undefined,
+                    });
+                  }}
+                />
+                {' '}In Container
+              </label>
             </div>
+          </div>
+          {locationType === 'shelf' && !shelfId && (
+            <div className="form-group">
+              <label htmlFor="create-shelf">Shelf *</label>
+              <select
+                id="create-shelf"
+                value={createFormData.shelf_id || ''}
+                onChange={(e) =>
+                  setCreateFormData({
+                    ...createFormData,
+                    shelf_id: e.target.value,
+                    container_id: undefined,
+                  })
+                }
+                required
+              >
+                <option value="">Select a shelf</option>
+                {allShelves?.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+          {locationType === 'container' && !containerId && (
+            <div className="form-group">
+              <label htmlFor="create-container">Container *</label>
+              <select
+                id="create-container"
+                value={createFormData.container_id || ''}
+                onChange={(e) =>
+                  setCreateFormData({
+                    ...createFormData,
+                    shelf_id: undefined,
+                    container_id: e.target.value,
+                  })
+                }
+                required
+              >
+                <option value="">Select a container</option>
+                {allContainers?.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
             <div className="form-group">
               <label htmlFor="create-name">Item Name *</label>

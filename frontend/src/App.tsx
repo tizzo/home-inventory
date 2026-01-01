@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-do
 import {
   HomePage,
   RoomsPage,
+  ShelvingUnitsPage,
   ShelvesPage,
   ContainersPage,
   ItemsPage,
@@ -71,6 +72,13 @@ function App() {
               <Route path="/" element={<HomePage />} />
               <Route path="/rooms" element={<RoomsPage />} />
               <Route path="/rooms/:roomId/edit" element={<RoomsPage />} />
+              <Route path="/units" element={<ShelvingUnitsPage />} />
+              <Route path="/units/:unitId/edit" element={<ShelvingUnitsPage />} />
+              <Route path="/rooms/:roomId/units" element={<ShelvingUnitsPage />} />
+              <Route
+                path="/rooms/:roomId/units/:unitId/edit"
+                element={<ShelvingUnitsPage />}
+              />
               <Route path="/shelves" element={<ShelvesPage />} />
               <Route path="/shelves/:shelfId/edit" element={<ShelvesPage />} />
               <Route path="/units/:unitId/shelves" element={<ShelvesPage />} />

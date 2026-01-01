@@ -9,6 +9,7 @@ import {
   useDeleteContainer,
   useShelf,
   useContainer,
+  useShelves,
   useShelvingUnit,
   useRoom,
   usePhotos,
@@ -54,6 +55,8 @@ export default function ContainersPage() {
   const { data: parentContainer } = useContainer(parentId || '');
   const { data: unit } = useShelvingUnit(shelf?.shelving_unit_id || '');
   const { data: room } = useRoom(unit?.room_id || '');
+  const { data: allShelves } = useShelves();
+  const { data: allContainers } = useContainers();
 
   const createContainer = useCreateContainer();
   const updateContainer = useUpdateContainer();
@@ -330,60 +333,103 @@ export default function ContainersPage() {
                 : 'All Containers'}
           </h1>
         </div>
-        {(shelfId || parentId) && (
-          <button className="btn btn-primary" onClick={openCreateModal}>
-            Add Container
-          </button>
-        )}
+        <button className="btn btn-primary" onClick={openCreateModal}>
+          Add Container
+        </button>
       </div>
 
       {/* Create Modal */}
-      {(shelfId || parentId) && (
-        <Modal
-          isOpen={showCreateModal}
-          onClose={closeCreateModal}
-          title="Create New Container"
-        >
-          <form onSubmit={handleCreate}>
-            <div className="form-group">
-              <label>Location Type</label>
-              <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
-                <label>
-                  <input
-                    type="radio"
-                    value="shelf"
-                    checked={locationType === 'shelf'}
-                    onChange={(e) => {
-                      setLocationType('shelf');
-                      setCreateFormData({
-                        ...createFormData,
-                        shelf_id: shelfId,
-                        parent_container_id: undefined,
-                      });
-                    }}
-                    disabled={!shelfId}
-                  />
-                  {' '}On Shelf
-                </label>
-                <label>
-                  <input
-                    type="radio"
-                    value="container"
-                    checked={locationType === 'container'}
-                    onChange={(e) => {
-                      setLocationType('container');
-                      setCreateFormData({
-                        ...createFormData,
-                        shelf_id: undefined,
-                        parent_container_id: parentId,
-                      });
-                    }}
-                    disabled={!parentId}
-                  />
-                  {' '}Inside Container
-                </label>
-              </div>
+      <Modal
+        isOpen={showCreateModal}
+        onClose={closeCreateModal}
+        title="Create New Container"
+      >
+        <form onSubmit={handleCreate}>
+          <div className="form-group">
+            <label>Location Type</label>
+            <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+              <label>
+                <input
+                  type="radio"
+                  value="shelf"
+                  checked={locationType === 'shelf'}
+                  onChange={(e) => {
+                    setLocationType('shelf');
+                    setCreateFormData({
+                      ...createFormData,
+                      shelf_id: shelfId || undefined,
+                      parent_container_id: undefined,
+                    });
+                  }}
+                />
+                {' '}On Shelf
+              </label>
+              <label>
+                <input
+                  type="radio"
+                  value="container"
+                  checked={locationType === 'container'}
+                  onChange={(e) => {
+                    setLocationType('container');
+                    setCreateFormData({
+                      ...createFormData,
+                      shelf_id: undefined,
+                      parent_container_id: parentId || undefined,
+                    });
+                  }}
+                />
+                {' '}Inside Container
+              </label>
             </div>
+          </div>
+          {locationType === 'shelf' && !shelfId && (
+            <div className="form-group">
+              <label htmlFor="create-shelf">Shelf *</label>
+              <select
+                id="create-shelf"
+                value={createFormData.shelf_id || ''}
+                onChange={(e) =>
+                  setCreateFormData({
+                    ...createFormData,
+                    shelf_id: e.target.value,
+                    parent_container_id: undefined,
+                  })
+                }
+                required
+              >
+                <option value="">Select a shelf</option>
+                {allShelves?.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+          {locationType === 'container' && !parentId && (
+            <div className="form-group">
+              <label htmlFor="create-parent">Parent Container *</label>
+              <select
+                id="create-parent"
+                value={createFormData.parent_container_id || ''}
+                onChange={(e) =>
+                  setCreateFormData({
+                    ...createFormData,
+                    shelf_id: undefined,
+                    parent_container_id: e.target.value,
+                  })
+                }
+                required
+              >
+                <option value="">Select a parent container</option>
+                {allContainers?.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
             <div className="form-group">
               <label htmlFor="create-name">Container Name *</label>

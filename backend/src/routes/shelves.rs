@@ -16,14 +16,14 @@ pub async fn list_shelves(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<Vec<ShelfResponse>>, StatusCode> {
     let shelves = sqlx::query_as::<_, Shelf>(
-        "SELECT * FROM shelves ORDER BY shelving_unit_id, COALESCE(position, 0), created_at"
+        "SELECT * FROM shelves ORDER BY shelving_unit_id, COALESCE(position, 0), created_at",
     )
-        .fetch_all(&state.db)
-        .await
-        .map_err(|e| {
-            tracing::error!("Failed to fetch shelves: {:?}", e);
-            StatusCode::INTERNAL_SERVER_ERROR
-        })?;
+    .fetch_all(&state.db)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to fetch shelves: {:?}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
 
     let responses: Vec<ShelfResponse> = shelves.into_iter().map(ShelfResponse::from).collect();
     Ok(Json(responses))
@@ -94,17 +94,16 @@ pub async fn create_shelf(
     let position = if let Some(pos) = payload.position {
         Some(pos)
     } else {
-        let max_position: Option<i32> = sqlx::query_scalar(
-            "SELECT MAX(position) FROM shelves WHERE shelving_unit_id = $1"
-        )
-            .bind(payload.shelving_unit_id)
-            .fetch_optional(&state.db)
-            .await
-            .map_err(|e| {
-                tracing::error!("Failed to get max position: {:?}", e);
-                StatusCode::INTERNAL_SERVER_ERROR
-            })?;
-        
+        let max_position: Option<i32> =
+            sqlx::query_scalar("SELECT MAX(position) FROM shelves WHERE shelving_unit_id = $1")
+                .bind(payload.shelving_unit_id)
+                .fetch_optional(&state.db)
+                .await
+                .map_err(|e| {
+                    tracing::error!("Failed to get max position: {:?}", e);
+                    StatusCode::INTERNAL_SERVER_ERROR
+                })?;
+
         Some(max_position.unwrap_or(0) + 1)
     };
 
@@ -220,7 +219,7 @@ pub async fn delete_shelf(
 /// Create shelf routes
 pub fn shelf_routes() -> Router<Arc<AppState>> {
     use axum::routing::{delete, get, post, put};
-    
+
     Router::new()
         .route("/api/shelves", get(list_shelves).post(create_shelf))
         .route(

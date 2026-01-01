@@ -304,6 +304,13 @@ export default function ItemsPage() {
               Edit
             </button>
             <button
+              className="btn btn-secondary btn-sm"
+              onClick={onMove}
+              disabled={moveItemPending}
+            >
+              Move
+            </button>
+            <button
               className="btn btn-danger btn-sm"
               onClick={onDelete}
               disabled={deleteItemPending}

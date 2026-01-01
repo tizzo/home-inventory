@@ -1,6 +1,7 @@
 pub mod label;
 pub mod room;
 pub mod shelving_unit;
+pub mod shelf;
 pub mod user;
 pub mod photo;
 
@@ -12,6 +13,8 @@ pub use label::*;
 pub use room::*;
 #[allow(unused_imports)]
 pub use shelving_unit::*;
+#[allow(unused_imports)]
+pub use shelf::*;
 #[allow(unused_imports)]
 pub use user::*;
 #[allow(unused_imports)]

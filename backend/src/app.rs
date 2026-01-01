@@ -88,6 +88,7 @@ pub async fn create_app(db: PgPool) -> anyhow::Result<Router> {
         .route("/health", get(health_check))
         .merge(crate::routes::room_routes())
         .merge(crate::routes::shelving_unit_routes())
+        .merge(crate::routes::shelf_routes())
         .merge(crate::routes::photo_routes())
         .merge(crate::routes::label_routes())
         .with_state(state)

@@ -178,6 +178,9 @@ pub async fn create_item(
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
 
+    // Log audit
+    state.audit.log_create("item", item.id, Some(user_id), None).await.ok();
+
     Ok(Json(ItemResponse::from(item)))
 }
 
@@ -250,10 +253,49 @@ pub async fn update_item(
     };
 
     // Update fields if provided
-    let name = payload.name.unwrap_or(existing.name);
-    let description = payload.description.or(existing.description);
-    let barcode = payload.barcode.or(existing.barcode);
-    let barcode_type = payload.barcode_type.or(existing.barcode_type);
+    let name = payload.name.unwrap_or(existing.name.clone());
+    let description = payload.description.or(existing.description.clone());
+    let barcode = payload.barcode.or(existing.barcode.clone());
+    let barcode_type = payload.barcode_type.or(existing.barcode_type.clone());
+
+    // Track changes for audit
+    let mut changes = serde_json::Map::new();
+    if payload.name.is_some() && payload.name.as_ref() != Some(&existing.name) {
+        changes.insert("name".to_string(), serde_json::json!({
+            "from": existing.name,
+            "to": name
+        }));
+    }
+    if payload.description != existing.description {
+        changes.insert("description".to_string(), serde_json::json!({
+            "from": existing.description,
+            "to": description
+        }));
+    }
+    if payload.barcode != existing.barcode {
+        changes.insert("barcode".to_string(), serde_json::json!({
+            "from": existing.barcode,
+            "to": barcode
+        }));
+    }
+    if payload.barcode_type != existing.barcode_type {
+        changes.insert("barcode_type".to_string(), serde_json::json!({
+            "from": existing.barcode_type,
+            "to": barcode_type
+        }));
+    }
+    if shelf_id != existing.shelf_id || container_id != existing.container_id {
+        changes.insert("location".to_string(), serde_json::json!({
+            "from": {
+                "shelf_id": existing.shelf_id,
+                "container_id": existing.container_id
+            },
+            "to": {
+                "shelf_id": shelf_id,
+                "container_id": container_id
+            }
+        }));
+    }
 
     let item = sqlx::query_as::<_, Item>(
         r#"
@@ -278,6 +320,12 @@ pub async fn update_item(
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
 
+    // Log audit
+    if !changes.is_empty() {
+        let user_id = Uuid::new_v4(); // TODO: get from auth
+        state.audit.log_update("item", id, Some(user_id), serde_json::Value::Object(changes), None).await.ok();
+    }
+
     Ok(Json(ItemResponse::from(item)))
 }
 
@@ -286,6 +334,10 @@ pub async fn delete_item(
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
+    // Log audit before deletion
+    let user_id = Uuid::new_v4(); // TODO: get from auth
+    state.audit.log_delete("item", id, Some(user_id), None).await.ok();
+
     let result = sqlx::query("DELETE FROM items WHERE id = $1")
         .bind(id)
         .execute(&state.db)

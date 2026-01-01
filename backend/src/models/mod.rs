@@ -19,6 +19,8 @@ pub use label::*;
 #[allow(unused_imports)]
 pub use photo::*;
 #[allow(unused_imports)]
+pub use audit::*;
+#[allow(unused_imports)]
 pub use room::*;
 #[allow(unused_imports)]
 pub use shelf::*;

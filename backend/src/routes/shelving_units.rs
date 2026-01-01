@@ -113,6 +113,9 @@ pub async fn create_shelving_unit(
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
 
+    // Log audit
+    state.audit.log_create("shelving_unit", unit.id, Some(user_id), None).await.ok();
+
     Ok(Json(ShelvingUnitResponse::from(unit)))
 }
 
@@ -184,6 +187,10 @@ pub async fn delete_shelving_unit(
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
+    // Log audit before deletion
+    let user_id = Uuid::new_v4(); // TODO: get from auth
+    state.audit.log_delete("shelving_unit", id, Some(user_id), None).await.ok();
+
     let result = sqlx::query("DELETE FROM shelving_units WHERE id = $1")
         .bind(id)
         .execute(&state.db)

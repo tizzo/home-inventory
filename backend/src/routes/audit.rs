@@ -9,7 +9,7 @@ use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::app::AppState;
-use crate::models::{AuditLog, AuditLogResponse};
+use crate::models::audit::{AuditLog, AuditLogResponse};
 
 #[derive(Debug, Deserialize)]
 pub struct AuditLogsQuery {

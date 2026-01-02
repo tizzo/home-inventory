@@ -87,6 +87,14 @@ function NavBar() {
               Labels
             </Link>
           </li>
+          <li>
+            <Link
+              to="/audit"
+              className={location.pathname.startsWith('/audit') ? 'active' : ''}
+            >
+              Audit Logs
+            </Link>
+          </li>
         </ul>
       </div>
     </nav>

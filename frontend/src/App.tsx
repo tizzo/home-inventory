@@ -12,6 +12,7 @@ import {
   BatchDetailPage,
   LabelDetailPage,
   AuditLogPage,
+  QRScanPage,
 } from './pages';
 import { LoginButton } from './components/LoginButton';
 import { ProtectedRoute } from './components/ProtectedRoute';
@@ -114,6 +115,14 @@ function NavBar() {
           <li className="auth-nav-item">
             <LoginButton />
           </li>
+          <li>
+            <Link
+              to="/scan"
+              className={location.pathname.startsWith('/scan') ? 'active' : ''}
+            >
+              📷 Scan
+            </Link>
+          </li>
         </ul>
 
       </div>
@@ -192,9 +201,9 @@ function App() {
                   <Route path="/labels/batches/:batchId" element={<BatchDetailPage />} />
                   <Route path="/l/:labelId" element={<LabelDetailPage />} />
                   <Route path="/audit" element={<AuditLogPage />} />
+                  <Route path="/scan" element={<QRScanPage />} />
                 </Route>
               </Routes>
-
             </main>
 
             <footer className="footer">

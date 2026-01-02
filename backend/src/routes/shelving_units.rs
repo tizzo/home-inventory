@@ -157,24 +157,24 @@ pub async fn update_shelving_unit(
         existing.room_id
     };
 
-    // Update fields if provided
-    let name = payload.name.unwrap_or(existing.name.clone());
-    let description = payload.description.or(existing.description.clone());
-
-    // Track changes for audit
+    // Track changes for audit before consuming payload
     let mut changes = serde_json::Map::new();
     if payload.name.is_some() && payload.name.as_ref() != Some(&existing.name) {
         changes.insert("name".to_string(), serde_json::json!({
-            "from": existing.name,
-            "to": name
+            "from": &existing.name,
+            "to": payload.name.as_ref().unwrap()
         }));
     }
-    if payload.description != existing.description {
+    if payload.description.is_some() && payload.description.as_ref() != existing.description.as_ref() {
         changes.insert("description".to_string(), serde_json::json!({
-            "from": existing.description,
-            "to": description
+            "from": &existing.description,
+            "to": payload.description.as_ref()
         }));
     }
+
+    // Update fields if provided
+    let name = payload.name.unwrap_or(existing.name.clone());
+    let description = payload.description.or(existing.description.clone());
     if payload.room_id.is_some() && payload.room_id != Some(existing.room_id) {
         changes.insert("room_id".to_string(), serde_json::json!({
             "from": existing.room_id,

@@ -170,31 +170,31 @@ pub async fn update_shelf(
         existing.shelving_unit_id
     };
 
+    // Track changes for audit before consuming payload
+    let mut changes = serde_json::Map::new();
+    if payload.name.is_some() && payload.name.as_ref() != Some(&existing.name) {
+        changes.insert("name".to_string(), serde_json::json!({
+            "from": &existing.name,
+            "to": payload.name.as_ref().unwrap()
+        }));
+    }
+    if payload.description.is_some() && payload.description.as_ref() != existing.description.as_ref() {
+        changes.insert("description".to_string(), serde_json::json!({
+            "from": &existing.description,
+            "to": payload.description.as_ref()
+        }));
+    }
+    if payload.position.is_some() && payload.position != existing.position {
+        changes.insert("position".to_string(), serde_json::json!({
+            "from": existing.position,
+            "to": payload.position
+        }));
+    }
+
     // Update fields if provided
     let name = payload.name.unwrap_or(existing.name.clone());
     let description = payload.description.or(existing.description.clone());
     let position = payload.position.or(existing.position);
-
-    // Track changes for audit
-    let mut changes = serde_json::Map::new();
-    if payload.name.is_some() && payload.name.as_ref() != Some(&existing.name) {
-        changes.insert("name".to_string(), serde_json::json!({
-            "from": existing.name,
-            "to": name
-        }));
-    }
-    if payload.description != existing.description {
-        changes.insert("description".to_string(), serde_json::json!({
-            "from": existing.description,
-            "to": description
-        }));
-    }
-    if payload.position != existing.position {
-        changes.insert("position".to_string(), serde_json::json!({
-            "from": existing.position,
-            "to": position
-        }));
-    }
     if payload.shelving_unit_id.is_some() && payload.shelving_unit_id != Some(existing.shelving_unit_id) {
         changes.insert("shelving_unit_id".to_string(), serde_json::json!({
             "from": existing.shelving_unit_id,

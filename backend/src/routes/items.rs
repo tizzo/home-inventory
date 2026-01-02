@@ -252,38 +252,38 @@ pub async fn update_item(
         (existing.shelf_id, existing.container_id)
     };
 
+    // Track changes for audit before consuming payload
+    let mut changes = serde_json::Map::new();
+    if payload.name.is_some() && payload.name.as_ref() != Some(&existing.name) {
+        changes.insert("name".to_string(), serde_json::json!({
+            "from": &existing.name,
+            "to": payload.name.as_ref().unwrap()
+        }));
+    }
+    if payload.description.is_some() && payload.description.as_ref() != existing.description.as_ref() {
+        changes.insert("description".to_string(), serde_json::json!({
+            "from": &existing.description,
+            "to": payload.description.as_ref()
+        }));
+    }
+    if payload.barcode.is_some() && payload.barcode != existing.barcode {
+        changes.insert("barcode".to_string(), serde_json::json!({
+            "from": &existing.barcode,
+            "to": &payload.barcode
+        }));
+    }
+    if payload.barcode_type.is_some() && payload.barcode_type != existing.barcode_type {
+        changes.insert("barcode_type".to_string(), serde_json::json!({
+            "from": &existing.barcode_type,
+            "to": &payload.barcode_type
+        }));
+    }
+
     // Update fields if provided
     let name = payload.name.unwrap_or(existing.name.clone());
     let description = payload.description.or(existing.description.clone());
     let barcode = payload.barcode.or(existing.barcode.clone());
     let barcode_type = payload.barcode_type.or(existing.barcode_type.clone());
-
-    // Track changes for audit
-    let mut changes = serde_json::Map::new();
-    if payload.name.is_some() && payload.name.as_ref() != Some(&existing.name) {
-        changes.insert("name".to_string(), serde_json::json!({
-            "from": existing.name,
-            "to": name
-        }));
-    }
-    if payload.description != existing.description {
-        changes.insert("description".to_string(), serde_json::json!({
-            "from": existing.description,
-            "to": description
-        }));
-    }
-    if payload.barcode != existing.barcode {
-        changes.insert("barcode".to_string(), serde_json::json!({
-            "from": existing.barcode,
-            "to": barcode
-        }));
-    }
-    if payload.barcode_type != existing.barcode_type {
-        changes.insert("barcode_type".to_string(), serde_json::json!({
-            "from": existing.barcode_type,
-            "to": barcode_type
-        }));
-    }
     if shelf_id != existing.shelf_id || container_id != existing.container_id {
         changes.insert("location".to_string(), serde_json::json!({
             "from": {

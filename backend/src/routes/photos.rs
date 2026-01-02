@@ -10,18 +10,16 @@ use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::app::AppState;
-use crate::models::{
-    CreatePhotoRequest, Photo, PhotoResponse, PresignedUploadUrl,
-};
+use crate::models::{CreatePhotoRequest, Photo, PhotoResponse, PresignedUploadUrl};
 
 #[derive(Deserialize)]
-struct GetPhotosQuery {
+pub struct GetPhotosQuery {
     entity_type: String,
     entity_id: String,
 }
 
 #[derive(Deserialize)]
-struct UploadUrlRequest {
+pub struct UploadUrlRequest {
     content_type: String,
 }
 
@@ -197,14 +195,10 @@ pub async fn delete_photo(
         .ok_or(StatusCode::NOT_FOUND)?;
 
     // Delete from S3
-    state
-        .s3
-        .delete_file(&photo.s3_key)
-        .await
-        .map_err(|e| {
-            tracing::error!("Failed to delete file from S3: {:?}", e);
-            StatusCode::INTERNAL_SERVER_ERROR
-        })?;
+    state.s3.delete_file(&photo.s3_key).await.map_err(|e| {
+        tracing::error!("Failed to delete file from S3: {:?}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
 
     if let Some(ref thumb_key) = photo.thumbnail_s3_key {
         state.s3.delete_file(thumb_key).await.ok(); // Ignore errors for thumbnails
@@ -224,7 +218,9 @@ pub async fn delete_photo(
         return Err(StatusCode::NOT_FOUND);
     }
 
-    Ok(Json(serde_json::json!({ "message": "Photo deleted successfully" })))
+    Ok(Json(
+        serde_json::json!({ "message": "Photo deleted successfully" }),
+    ))
 }
 
 /// Create photo routes

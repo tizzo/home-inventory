@@ -6,6 +6,7 @@ use uuid::Uuid;
 
 #[typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+#[allow(dead_code, clippy::dead_code)] // Used in database schema and will be used for user management
 pub struct User {
     pub id: Uuid,
     pub email: String,

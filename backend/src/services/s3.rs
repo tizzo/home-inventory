@@ -1,7 +1,4 @@
-use aws_sdk_s3::{
-    presigning::PresigningConfig,
-    Client as S3Client,
-};
+use aws_sdk_s3::{presigning::PresigningConfig, Client as S3Client};
 use std::env;
 use std::time::Duration;
 use uuid::Uuid;
@@ -9,6 +6,7 @@ use uuid::Uuid;
 pub struct S3Service {
     client: S3Client,
     bucket: String,
+    #[allow(dead_code)]
     endpoint_url: Option<String>,
 }
 
@@ -17,7 +15,7 @@ impl S3Service {
         let bucket = env::var("S3_BUCKET").unwrap_or_else(|_| "home-inventory-photos".to_string());
         let endpoint_url = env::var("S3_ENDPOINT").ok();
         let region = env::var("S3_REGION").unwrap_or_else(|_| "us-east-1".to_string());
-        
+
         // Get credentials - support both S3_* and AWS_* env vars
         let access_key = env::var("S3_ACCESS_KEY")
             .or_else(|_| env::var("AWS_ACCESS_KEY_ID"))
@@ -26,28 +24,27 @@ impl S3Service {
             .or_else(|_| env::var("AWS_SECRET_ACCESS_KEY"))
             .unwrap_or_else(|_| "minioadmin".to_string());
 
-        tracing::info!("Initializing S3 service with bucket: {}, endpoint: {:?}", bucket, endpoint_url);
+        tracing::info!(
+            "Initializing S3 service with bucket: {}, endpoint: {:?}",
+            bucket,
+            endpoint_url
+        );
 
         let client = if let Some(endpoint) = &endpoint_url {
             // For MinIO/local S3, configure with custom endpoint and credentials
             tracing::info!("Using MinIO endpoint: {}", endpoint);
-            let credentials = aws_sdk_s3::config::Credentials::new(
-                &access_key,
-                &secret_key,
-                None,
-                None,
-                "minio",
-            );
-            
+            let credentials =
+                aws_sdk_s3::config::Credentials::new(&access_key, &secret_key, None, None, "minio");
+
             // MinIO requires path-style URLs (not virtual-hosted-style)
             let s3_config = aws_sdk_s3::Config::builder()
                 .behavior_version(aws_sdk_s3::config::BehaviorVersion::latest())
                 .endpoint_url(endpoint)
                 .region(aws_config::Region::new(region))
                 .credentials_provider(credentials)
-                .force_path_style(true)  // Critical for MinIO compatibility
+                .force_path_style(true) // Critical for MinIO compatibility
                 .build();
-            
+
             S3Client::from_conf(s3_config)
         } else {
             // For AWS S3, use standard config
@@ -59,12 +56,7 @@ impl S3Service {
 
         // Verify bucket exists (should be created by minio-init container)
         // We don't create it here - that's handled by infrastructure
-        match client
-            .head_bucket()
-            .bucket(&bucket)
-            .send()
-            .await
-        {
+        match client.head_bucket().bucket(&bucket).send().await {
             Ok(_) => {
                 tracing::info!("✅ S3 bucket '{}' verified", bucket);
             }
@@ -102,7 +94,11 @@ impl S3Service {
         };
         let s3_key = format!("{}/{}/{}.{}", entity_type, entity_id, file_id, extension);
 
-        tracing::debug!("Generating presigned URL for bucket: {}, key: {}", self.bucket, s3_key);
+        tracing::debug!(
+            "Generating presigned URL for bucket: {}, key: {}",
+            self.bucket,
+            s3_key
+        );
 
         // Generate presigned URL (valid for 1 hour)
         let presigning_config = PresigningConfig::expires_in(Duration::from_secs(3600))?;
@@ -117,7 +113,7 @@ impl S3Service {
             .await?;
 
         let upload_url = presigned_request.uri().to_string();
-        
+
         tracing::debug!("Generated presigned URL: {}", upload_url);
         tracing::debug!("Bucket: {}, Key: {}", self.bucket, s3_key);
 
@@ -125,10 +121,7 @@ impl S3Service {
     }
 
     /// Generate a presigned URL for downloading/viewing a file
-    pub async fn generate_presigned_download_url(
-        &self,
-        s3_key: &str,
-    ) -> anyhow::Result<String> {
+    pub async fn generate_presigned_download_url(&self, s3_key: &str) -> anyhow::Result<String> {
         let presigning_config = PresigningConfig::expires_in(Duration::from_secs(86400))?;
 
         let presigned_request = self
@@ -154,10 +147,12 @@ impl S3Service {
         Ok(())
     }
 
+    #[allow(dead_code, clippy::dead_code)]
     pub fn get_bucket(&self) -> &str {
         &self.bucket
     }
-    
+
+    #[allow(dead_code, clippy::dead_code)]
     pub fn get_endpoint(&self) -> Option<&str> {
         self.endpoint_url.as_deref()
     }

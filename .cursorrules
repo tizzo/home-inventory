@@ -23,7 +23,8 @@
    - Ensure all tests pass before committing
 
 ## Git Commits
-- NEVER commit until explicitly instructed by the user
+- Commit autonomously with small, incremental changes that add functionality in slices
+- Make frequent commits to enable safe autonomous operation and easy review later
 - Use conventional commit format: `type: description`
 - Author commits as the human developer (not as AI/Cursor/robot)
 - Do not mention AI assistance in commit messages
@@ -45,7 +46,7 @@
   - Good: "Prevent crashes when API returns malformed user data"
   - Bad: "Updated Room model with new fields"
   - Good: "Support tracking room dimensions for space planning"
-- **Prompt for commits regularly**: After completing a logical unit of work (feature, fix, refactor), remind the user that we may want to commit before moving on
+- **Commit after each logical unit of work**: After completing a feature slice, fix, or refactor that can stand alone
 
 ## Deep Linking & URL Structure
 - **Every discrete UI state must have a deep linkable URL path**

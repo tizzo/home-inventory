@@ -157,10 +157,10 @@ export default function ShelvesPage() {
     });
   };
 
-  if (isLoading) return <div className="loading">Loading shelves...</div>;
-
   const [moveModalShelf, setMoveModalShelf] = useState<ShelfResponse | null>(null);
   const [moveTargetUnit, setMoveTargetUnit] = useState<string>('');
+
+  if (isLoading) return <div className="loading">Loading shelves...</div>;
 
   const handleMove = async (shelf: ShelfResponse) => {
     if (!moveTargetUnit) {

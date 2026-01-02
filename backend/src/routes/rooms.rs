@@ -2,6 +2,7 @@ use axum::{
     extract::{Path, State},
     http::StatusCode,
     response::Json,
+    routing::{delete, get, post, put},
     Router,
 };
 use serde_json::json;
@@ -72,7 +73,11 @@ pub async fn create_room(
     })?;
 
     // Log audit
-    state.audit.log_create("room", room.id, Some(user_id), None).await.ok();
+    state
+        .audit
+        .log_create("room", room.id, Some(user_id), None)
+        .await
+        .ok();
 
     Ok(Json(RoomResponse::from(room)))
 }
@@ -101,16 +106,22 @@ pub async fn update_room(
     // Track changes for audit
     let mut changes = serde_json::Map::new();
     if payload.name.is_some() && payload.name.as_ref() != Some(&existing.name) {
-        changes.insert("name".to_string(), serde_json::json!({
-            "from": existing.name,
-            "to": name
-        }));
+        changes.insert(
+            "name".to_string(),
+            serde_json::json!({
+                "from": existing.name,
+                "to": name
+            }),
+        );
     }
     if payload.description != existing.description {
-        changes.insert("description".to_string(), serde_json::json!({
-            "from": existing.description,
-            "to": description
-        }));
+        changes.insert(
+            "description".to_string(),
+            serde_json::json!({
+                "from": existing.description,
+                "to": description
+            }),
+        );
     }
 
     let room = sqlx::query_as::<_, Room>(
@@ -134,7 +145,17 @@ pub async fn update_room(
     // Log audit
     if !changes.is_empty() {
         let user_id = Uuid::new_v4(); // TODO: get from auth
-        state.audit.log_update("room", id, Some(user_id), serde_json::Value::Object(changes), None).await.ok();
+        state
+            .audit
+            .log_update(
+                "room",
+                id,
+                Some(user_id),
+                serde_json::Value::Object(changes),
+                None,
+            )
+            .await
+            .ok();
     }
 
     Ok(Json(RoomResponse::from(room)))
@@ -147,7 +168,11 @@ pub async fn delete_room(
 ) -> Result<Json<serde_json::Value>, StatusCode> {
     // Log audit before deletion
     let user_id = Uuid::new_v4(); // TODO: get from auth
-    state.audit.log_delete("room", id, Some(user_id), None).await.ok();
+    state
+        .audit
+        .log_delete("room", id, Some(user_id), None)
+        .await
+        .ok();
 
     let result = sqlx::query("DELETE FROM rooms WHERE id = $1")
         .bind(id)
@@ -167,8 +192,6 @@ pub async fn delete_room(
 
 /// Create room routes
 pub fn room_routes() -> Router<Arc<AppState>> {
-    use axum::routing::{delete, get, post, put};
-    
     Router::new()
         .route("/api/rooms", get(list_rooms).post(create_room))
         .route(

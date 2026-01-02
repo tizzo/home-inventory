@@ -2,6 +2,7 @@ use axum::{
     extract::{Path, State},
     http::StatusCode,
     response::Json,
+    routing::{delete, get, post, put},
     Router,
 };
 use serde_json::json;
@@ -238,8 +239,6 @@ pub async fn delete_shelving_unit(
 
 /// Create shelving unit routes
 pub fn shelving_unit_routes() -> Router<Arc<AppState>> {
-    use axum::routing::{delete, get, post, put};
-    
     Router::new()
         .route("/api/units", get(list_shelving_units).post(create_shelving_unit))
         .route(

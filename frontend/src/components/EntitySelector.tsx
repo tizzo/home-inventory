@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 import { useRooms, useShelvingUnits, useShelves, useContainers, useItems } from '../hooks';
 import { labelsApi } from '../api';
@@ -50,6 +50,7 @@ export default function EntitySelector({
   const [searchQuery, setSearchQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
+  const [scannerActive, setScannerActive] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const scannerElementRef = useRef<HTMLDivElement>(null);
@@ -112,72 +113,23 @@ export default function EntitySelector({
     return allEntities.filter((entity) => fuzzyMatch(entity.displayText, searchQuery));
   }, [allEntities, searchQuery]);
 
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }
-  }, [isOpen]);
-
-  // Handle QR code scanning
-  const handleScanClick = async () => {
-    if (showScanner) {
-      // Stop scanner
-      if (scannerRef.current) {
-        try {
-          await scannerRef.current.stop();
-          scannerRef.current.clear();
-        } catch (err) {
-          console.error('Error stopping scanner:', err);
-        }
-        scannerRef.current = null;
-      }
-      setShowScanner(false);
-      return;
-    }
-
-    // Start scanner
-    setShowScanner(true);
-    
-    // Wait for DOM to update
-    setTimeout(async () => {
-      if (!scannerElementRef.current) return;
-
+  // Stop scanner function
+  const stopScanner = useCallback(async () => {
+    if (scannerRef.current) {
       try {
-        const html5QrCode = new Html5Qrcode(scannerElementRef.current.id);
-        scannerRef.current = html5QrCode;
-
-        await html5QrCode.start(
-          { facingMode: 'environment' },
-          {
-            fps: 10,
-            qrbox: { width: 250, height: 250 },
-          },
-          (decodedText) => {
-            // Handle scanned QR code
-            handleQrScan(decodedText);
-          },
-          () => {
-            // Ignore scanning errors (they're frequent during scanning)
-          }
-        );
+        await scannerRef.current.stop();
+        scannerRef.current.clear();
       } catch (err) {
-        console.error('Error starting scanner:', err);
-        alert('Failed to start camera. Please check permissions.');
-        setShowScanner(false);
+        console.error('Error stopping scanner:', err);
       }
-    }, 100);
-  };
+      scannerRef.current = null;
+    }
+    setScannerActive(false);
+    setShowScanner(false);
+  }, []);
 
   // Handle QR code scan result
-  const handleQrScan = async (qrData: string) => {
+  const handleQrScan = useCallback(async (qrData: string) => {
     try {
       // Extract label ID from URL format: /l/{label_id} or http://.../l/{label_id}
       const match = qrData.match(/\/l\/([a-f0-9-]+)/i);
@@ -214,33 +166,93 @@ export default function EntitySelector({
       // Set the selected entity
       onChange(label.assigned_to_id);
       setIsOpen(false);
-      setShowScanner(false);
-      
-      // Stop scanner
-      if (scannerRef.current) {
-        try {
-          await scannerRef.current.stop();
-          scannerRef.current.clear();
-        } catch (err) {
-          console.error('Error stopping scanner:', err);
-        }
-        scannerRef.current = null;
-      }
+      await stopScanner();
     } catch (err) {
       console.error('Error processing QR scan:', err);
       alert('Failed to process QR code. Please try again.');
+    }
+  }, [entityType, onChange, stopScanner]);
+
+  // Start scanner function
+  const startScanner = useCallback(async () => {
+    if (scannerActive || !scannerElementRef.current) return;
+
+    setShowScanner(true);
+    setScannerActive(true);
+    
+    // Wait for DOM to update
+    setTimeout(async () => {
+      if (!scannerElementRef.current) {
+        setScannerActive(false);
+        setShowScanner(false);
+        return;
+      }
+
+      try {
+        const html5QrCode = new Html5Qrcode(scannerElementRef.current.id);
+        scannerRef.current = html5QrCode;
+
+        await html5QrCode.start(
+          { facingMode: 'environment' },
+          {
+            fps: 10,
+            qrbox: { width: 250, height: 250 },
+          },
+          (decodedText) => {
+            // Handle scanned QR code
+            handleQrScan(decodedText).catch(console.error);
+          },
+          () => {
+            // Ignore scanning errors (they're frequent during scanning)
+          }
+        );
+      } catch (err) {
+        console.error('Error starting scanner:', err);
+        // Don't show alert - just silently fail (user can still type)
+        setScannerActive(false);
+        setShowScanner(false);
+      }
+    }, 100);
+  }, [scannerActive, handleQrScan]);
+
+  // Start scanner when dropdown opens
+  useEffect(() => {
+    if (isOpen && !scannerActive) {
+      startScanner();
+    } else if (!isOpen && scannerActive) {
+      stopScanner();
+    }
+  }, [isOpen, scannerActive, startScanner, stopScanner]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [isOpen]);
+
+  // Handle manual scan button toggle
+  const handleScanClick = async () => {
+    if (scannerActive) {
+      await stopScanner();
+    } else {
+      await startScanner();
     }
   };
 
   // Cleanup scanner on unmount
   useEffect(() => {
     return () => {
-      if (scannerRef.current) {
-        scannerRef.current.stop().catch(() => {});
-        scannerRef.current.clear();
-      }
+      stopScanner().catch(console.error);
     };
-  }, []);
+  }, [stopScanner]);
 
   const handleSelect = (entity: Entity) => {
     onChange(entity.id);
@@ -274,7 +286,9 @@ export default function EntitySelector({
                 onChange(undefined);
               }
             }}
-            onFocus={() => setIsOpen(true)}
+            onFocus={() => {
+              setIsOpen(true);
+            }}
             placeholder={placeholder || `Search ${entityType}...`}
             required={required}
             style={{ width: '100%' }}

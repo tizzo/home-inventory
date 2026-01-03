@@ -325,7 +325,7 @@ export default function EntitySelector({
               console.log('EntitySelector: Input focused, setting isOpen=true');
               setIsOpen(true);
             }}
-            onBlur={(e) => {
+            onBlur={() => {
               // Only close if we're not clicking on the scan button or scanner area
               // Use setTimeout to allow click events to fire first
               setTimeout(() => {

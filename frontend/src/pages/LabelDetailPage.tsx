@@ -2,7 +2,7 @@ import { useEffect, useCallback, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useLabel, useAssignLabel, useCreateRoom, useCreateShelvingUnit, useCreateShelf, useCreateContainer, useCreateItem } from '../hooks';
 import { useToast } from '../context/ToastContext';
-import { Modal } from '../components';
+import { Modal, PhotoUpload } from '../components';
 import type { AssignLabelRequest, CreateRoomRequest, CreateShelvingUnitRequest, CreateShelfRequest, CreateContainerRequest, CreateItemRequest } from '../types/generated';
 
 export default function LabelDetailPage() {
@@ -24,6 +24,7 @@ export default function LabelDetailPage() {
     description: string;
     [key: string]: string | undefined;
   }>({ name: '', description: '' });
+  const [createdEntityId, setCreatedEntityId] = useState<string | null>(null);
 
   const getAssignedEntityLink = useCallback((type: string, id: string): string | null => {
     switch (type) {
@@ -166,11 +167,8 @@ export default function LabelDetailPage() {
       await assignLabel.mutateAsync({ id: labelId, data: assignPayload });
       toast.showSuccess(`${getEntityTypeDisplayName(selectedEntityType)} created and label assigned!`);
       
-      // Navigate to the assigned entity
-      const link = getAssignedEntityLink(selectedEntityType, createdEntityId);
-      if (link) {
-        navigate(link);
-      }
+      // Store created entity ID and keep modal open for photo upload
+      setCreatedEntityId(createdEntityId);
     } catch (err) {
       toast.showError(`Failed to create ${getEntityTypeDisplayName(selectedEntityType)}. Please try again.`);
       console.error('Failed to create entity:', err);
@@ -180,6 +178,15 @@ export default function LabelDetailPage() {
   const closeModal = () => {
     setSelectedEntityType(null);
     setFormData({ name: '', description: '' });
+    setCreatedEntityId(null);
+    
+    // Navigate to created entity if it exists
+    if (createdEntityId && selectedEntityType) {
+      const link = getAssignedEntityLink(selectedEntityType, createdEntityId);
+      if (link) {
+        navigate(link);
+      }
+    }
   };
 
   if (isLoading) {
@@ -449,37 +456,68 @@ export default function LabelDetailPage() {
               </>
             )}
 
-            <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
-              <button
-                type="submit"
-                className="btn btn-primary"
-                disabled={
-                  createRoom.isPending ||
-                  createUnit.isPending ||
-                  createShelf.isPending ||
-                  createContainer.isPending ||
-                  createItem.isPending ||
-                  assignLabel.isPending
-                }
-              >
-                {assignLabel.isPending ? 'Creating...' : `Create ${getEntityTypeDisplayName(selectedEntityType)}`}
-              </button>
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={closeModal}
-                disabled={
-                  createRoom.isPending ||
-                  createUnit.isPending ||
-                  createShelf.isPending ||
-                  createContainer.isPending ||
-                  createItem.isPending ||
-                  assignLabel.isPending
-                }
-              >
-                Cancel
-              </button>
-            </div>
+            {!createdEntityId && (
+              <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={
+                    createRoom.isPending ||
+                    createUnit.isPending ||
+                    createShelf.isPending ||
+                    createContainer.isPending ||
+                    createItem.isPending ||
+                    assignLabel.isPending
+                  }
+                >
+                  {assignLabel.isPending || createRoom.isPending || createUnit.isPending || createShelf.isPending || createContainer.isPending || createItem.isPending
+                    ? 'Creating...'
+                    : `Create ${getEntityTypeDisplayName(selectedEntityType)}`}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={closeModal}
+                  disabled={
+                    createRoom.isPending ||
+                    createUnit.isPending ||
+                    createShelf.isPending ||
+                    createContainer.isPending ||
+                    createItem.isPending ||
+                    assignLabel.isPending
+                  }
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
+
+            {createdEntityId && (
+              <>
+                <div style={{ marginTop: '2rem', padding: '1rem', background: 'var(--bg-color)', borderRadius: '0.5rem' }}>
+                  <h3 style={{ marginTop: 0, marginBottom: '1rem' }}>Upload Photo (Optional)</h3>
+                  <PhotoUpload
+                    entityType={selectedEntityType === 'unit' ? 'shelving_unit' : selectedEntityType}
+                    entityId={createdEntityId}
+                    onUploadComplete={() => {
+                      toast.showSuccess('Photo uploaded successfully!');
+                    }}
+                    onError={(error) => {
+                      toast.showError(`Failed to upload photo: ${error.message}`);
+                    }}
+                  />
+                </div>
+                <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={closeModal}
+                  >
+                    Done
+                  </button>
+                </div>
+              </>
+            )}
           </form>
         </Modal>
       )}

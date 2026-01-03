@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuditLogs } from '../hooks';
 import type { AuditLogsQuery } from '../api/audit';
 
@@ -17,12 +18,59 @@ export default function AuditLogPage() {
     }));
   };
 
-  const formatChanges = (changes: any) => {
-    if (!changes) return null;
-    if (typeof changes === 'object') {
-      return JSON.stringify(changes, null, 2);
+  const formatDetails = (changes: any, metadata: any, action: string) => {
+    // For MOVE actions, metadata contains the move information
+    if (action === 'MOVE' && metadata) {
+      return metadata;
     }
-    return String(changes);
+    // For UPDATE actions, changes contains the field changes
+    if (action === 'UPDATE' && changes) {
+      return changes;
+    }
+    // For other actions, prefer metadata if available, otherwise changes
+    return metadata || changes || null;
+  };
+
+  const formatJson = (data: any) => {
+    if (!data) return null;
+    if (typeof data === 'object') {
+      return JSON.stringify(data, null, 2);
+    }
+    return String(data);
+  };
+
+  const getEntityLink = (entityType: string, entityId: string): string => {
+    switch (entityType) {
+      case 'room':
+        return `/rooms/${entityId}/edit`;
+      case 'shelving_unit':
+        return `/units/${entityId}/edit`;
+      case 'shelf':
+        return `/shelves/${entityId}/edit`;
+      case 'container':
+        return `/containers/${entityId}/edit`;
+      case 'item':
+        return `/items/${entityId}/edit`;
+      default:
+        return '#';
+    }
+  };
+
+  const getEntityDisplayName = (entityType: string): string => {
+    switch (entityType) {
+      case 'room':
+        return 'Room';
+      case 'shelving_unit':
+        return 'Unit';
+      case 'shelf':
+        return 'Shelf';
+      case 'container':
+        return 'Container';
+      case 'item':
+        return 'Item';
+      default:
+        return entityType;
+    }
   };
 
   if (isLoading) return <div className="loading">Loading audit logs...</div>;
@@ -86,97 +134,97 @@ export default function AuditLogPage() {
           <thead>
             <tr>
               <th>Timestamp</th>
-              <th>Entity Type</th>
-              <th>Entity ID</th>
+              <th>Entity</th>
               <th>Action</th>
               <th>User ID</th>
-              <th>Changes</th>
-              <th>Metadata</th>
+              <th>Details</th>
             </tr>
           </thead>
           <tbody>
             {logs?.length === 0 ? (
               <tr>
-                <td colSpan={7} style={{ textAlign: 'center', padding: '2rem' }}>
+                <td colSpan={5} style={{ textAlign: 'center', padding: '2rem' }}>
                   No audit logs found
                 </td>
               </tr>
             ) : (
-              logs?.map((log) => (
-                <tr key={log.id}>
-                  <td>{new Date(log.created_at).toLocaleString()}</td>
-                  <td>{log.entity_type}</td>
-                  <td>
-                    <code style={{ fontSize: '0.875rem' }}>
-                      {log.entity_id.substring(0, 8)}...
-                    </code>
-                  </td>
-                  <td>
-                    <span
-                      className={`action-badge action-${log.action.toLowerCase()}`}
-                    >
-                      {log.action}
-                    </span>
-                  </td>
-                  <td>
-                    {log.user_id ? (
-                      <code style={{ fontSize: '0.875rem' }}>
-                        {log.user_id.substring(0, 8)}...
-                      </code>
-                    ) : (
-                      '-'
-                    )}
-                  </td>
-                  <td>
-                    {log.changes ? (
-                      <details>
-                        <summary style={{ cursor: 'pointer', color: 'var(--primary-color)' }}>
-                          View Changes
-                        </summary>
-                        <pre
-                          style={{
-                            marginTop: '0.5rem',
-                            padding: '0.5rem',
-                            background: 'var(--bg-color)',
-                            borderRadius: '4px',
-                            fontSize: '0.75rem',
-                            maxHeight: '200px',
-                            overflow: 'auto',
-                          }}
-                        >
-                          {formatChanges(log.changes)}
-                        </pre>
-                      </details>
-                    ) : (
-                      '-'
-                    )}
-                  </td>
-                  <td>
-                    {log.metadata ? (
-                      <details>
-                        <summary style={{ cursor: 'pointer', color: 'var(--primary-color)' }}>
-                          View Metadata
-                        </summary>
-                        <pre
-                          style={{
-                            marginTop: '0.5rem',
-                            padding: '0.5rem',
-                            background: 'var(--bg-color)',
-                            borderRadius: '4px',
-                            fontSize: '0.75rem',
-                            maxHeight: '200px',
-                            overflow: 'auto',
-                          }}
-                        >
-                          {formatChanges(log.metadata)}
-                        </pre>
-                      </details>
-                    ) : (
-                      '-'
-                    )}
-                  </td>
-                </tr>
-              ))
+              logs?.map((log) => {
+                const details = formatDetails(log.changes, log.metadata, log.action);
+                const entityLink = getEntityLink(log.entity_type, log.entity_id);
+                
+                return (
+                  <tr key={log.id}>
+                    <td>{new Date(log.created_at).toLocaleString()}</td>
+                    <td>
+                      <Link
+                        to={entityLink}
+                        style={{
+                          color: 'var(--primary-color)',
+                          textDecoration: 'none',
+                          fontWeight: 500,
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.textDecoration = 'underline';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.textDecoration = 'none';
+                        }}
+                      >
+                        {getEntityDisplayName(log.entity_type)}
+                        <span style={{ color: 'var(--text-secondary)', marginLeft: '0.5rem', fontWeight: 'normal' }}>
+                          <code style={{ fontSize: '0.75rem' }}>
+                            {log.entity_id.substring(0, 8)}...
+                          </code>
+                        </span>
+                      </Link>
+                    </td>
+                    <td>
+                      <span
+                        className={`action-badge action-${log.action.toLowerCase()}`}
+                      >
+                        {log.action}
+                      </span>
+                    </td>
+                    <td>
+                      {log.user_id ? (
+                        <code style={{ fontSize: '0.875rem' }}>
+                          {log.user_id.substring(0, 8)}...
+                        </code>
+                      ) : (
+                        '-'
+                      )}
+                    </td>
+                    <td>
+                      {details ? (
+                        <details>
+                          <summary style={{ cursor: 'pointer', color: 'var(--primary-color)' }}>
+                            {log.action === 'MOVE' ? 'View Move Details' : 
+                             log.action === 'UPDATE' ? 'View Changes' : 
+                             'View Details'}
+                          </summary>
+                          <pre
+                            style={{
+                              marginTop: '0.5rem',
+                              padding: '0.5rem',
+                              background: 'var(--bg-color)',
+                              borderRadius: '4px',
+                              fontSize: '0.75rem',
+                              maxHeight: '200px',
+                              overflow: 'auto',
+                              whiteSpace: 'pre-wrap',
+                              wordBreak: 'break-word',
+                            }}
+                          >
+                            {formatJson(details)}
+                          </pre>
+                        </details>
+                      ) : (
+                        '-'
+                      )}
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>

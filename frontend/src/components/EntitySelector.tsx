@@ -218,9 +218,9 @@ export default function EntitySelector({
   // Start scanner when dropdown opens
   useEffect(() => {
     if (isOpen && !scannerActive) {
-      startScanner();
+      startScanner().catch(console.error);
     } else if (!isOpen && scannerActive) {
-      stopScanner();
+      stopScanner().catch(console.error);
     }
   }, [isOpen, scannerActive, startScanner, stopScanner]);
 

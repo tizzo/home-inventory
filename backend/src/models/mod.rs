@@ -31,3 +31,5 @@ pub use shelf::*;
 pub use shelving_unit::*;
 #[allow(unused_imports)]
 pub use user::*;
+#[allow(unused_imports)]
+pub use pagination::*;

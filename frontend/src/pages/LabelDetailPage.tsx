@@ -93,7 +93,7 @@ export default function LabelDetailPage() {
 
   // Unassigned label - show assignment interface
   return (
-    <div className="page" style={{ background: 'red', minHeight: '100vh' }}>
+    <div className="page">
       <div className="page-header">
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>

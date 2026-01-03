@@ -222,7 +222,6 @@ export default function EntitySelector({
     } else if (!isOpen && scannerActive) {
       stopScanner().catch(console.error);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, scannerActive, startScanner, stopScanner]);
 
   // Close dropdown when clicking outside

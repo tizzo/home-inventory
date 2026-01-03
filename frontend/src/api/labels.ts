@@ -6,7 +6,30 @@ import type {
   AssignLabelRequest,
 } from '../types/generated';
 
+export interface BatchWithLabels {
+  batch_id: string;
+  labels: LabelResponse[];
+  created_at: string;
+}
+
 export const labelsApi = {
+  // List all batches with their labels
+  listBatches: async (): Promise<BatchWithLabels[]> => {
+    const response = await apiClient.get<BatchWithLabels[]>('/api/labels');
+    return response.data;
+  },
+
+  // Get a single batch by ID
+  getBatchById: async (batchId: string): Promise<BatchWithLabels> => {
+    // Find the batch from the list (we could add a dedicated endpoint later)
+    const batches = await labelsApi.listBatches();
+    const batch = batches.find((b) => b.batch_id === batchId);
+    if (!batch) {
+      throw new Error(`Batch ${batchId} not found`);
+    }
+    return batch;
+  },
+
   // Generate a batch of labels
   generate: async (
     data: GenerateLabelsRequest

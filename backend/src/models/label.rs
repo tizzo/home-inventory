@@ -67,3 +67,10 @@ pub struct AssignLabelRequest {
     pub assigned_to_id: Uuid,
 }
 
+#[typeshare]
+#[derive(Debug, Serialize)]
+pub struct BatchWithLabels {
+    pub batch_id: Uuid,
+    pub labels: Vec<LabelResponse>,
+    pub created_at: DateTime<Utc>,
+}

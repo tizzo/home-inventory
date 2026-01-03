@@ -9,7 +9,7 @@ use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::app::AppState;
-use crate::models::label::*;
+use crate::models::label::{BatchWithLabels, *};
 use crate::services::generate_label_pdf;
 
 /// Generate a batch of labels
@@ -151,6 +151,48 @@ pub struct PrintQuery {
     template: Option<String>,
 }
 
+/// List all batches with their labels
+pub async fn list_batches(
+    State(state): State<Arc<AppState>>,
+) -> Result<axum::Json<Vec<BatchWithLabels>>, StatusCode> {
+    // Get all unique batch IDs
+    let batch_ids: Vec<Uuid> = sqlx::query_scalar(
+        "SELECT DISTINCT batch_id FROM labels WHERE batch_id IS NOT NULL ORDER BY batch_id DESC"
+    )
+    .fetch_all(&state.db)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to fetch batch IDs: {:?}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    let mut batches = Vec::new();
+    for batch_id in batch_ids {
+        // Get all labels for this batch
+        let labels = sqlx::query_as::<_, Label>(
+            "SELECT * FROM labels WHERE batch_id = $1 ORDER BY number ASC"
+        )
+        .bind(batch_id)
+        .fetch_all(&state.db)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to fetch labels for batch: {:?}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+        if !labels.is_empty() {
+            let created_at = labels[0].created_at;
+            batches.push(BatchWithLabels {
+                batch_id,
+                labels: labels.into_iter().map(LabelResponse::from).collect(),
+                created_at,
+            });
+        }
+    }
+
+    Ok(axum::Json(batches))
+}
+
 /// Generate PDF for a batch of labels
 pub async fn print_labels(
     State(state): State<Arc<AppState>>,
@@ -208,7 +250,8 @@ pub fn label_routes() -> Router<Arc<AppState>> {
 
     Router::new()
         .route("/api/labels/generate", post(generate_labels))
-        .route("/api/labels/:id", get(get_label))
-        .route("/api/labels/:id/assign", post(assign_label))
         .route("/api/labels/print/:batchId", get(print_labels))
+        .route("/api/labels/:id/assign", post(assign_label))
+        .route("/api/labels", get(list_batches))
+        .route("/api/labels/:id", get(get_label))
 }

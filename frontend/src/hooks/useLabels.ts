@@ -1,11 +1,28 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { labelsApi } from '../api';
+import { labelsApi, type BatchWithLabels } from '../api';
 import type {
   LabelResponse,
   GenerateLabelsRequest,
   GenerateLabelsResponse,
   AssignLabelRequest,
 } from '../types/generated';
+
+// List all batches
+export const useBatches = () => {
+  return useQuery<BatchWithLabels[], Error>({
+    queryKey: ['labels', 'batches'],
+    queryFn: () => labelsApi.listBatches(),
+  });
+};
+
+// Get a single batch by ID
+export const useBatch = (batchId: string) => {
+  return useQuery<BatchWithLabels, Error>({
+    queryKey: ['labels', 'batches', batchId],
+    queryFn: () => labelsApi.getBatchById(batchId),
+    enabled: !!batchId,
+  });
+};
 
 // Get a single label
 export const useLabel = (id: string) => {
@@ -24,6 +41,7 @@ export const useGenerateLabels = () => {
     mutationFn: labelsApi.generate,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['labels'] });
+      queryClient.invalidateQueries({ queryKey: ['labels', 'batches'] });
     },
   });
 };

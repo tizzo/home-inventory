@@ -1,10 +1,12 @@
 import { useState } from 'react';
-import { useGenerateLabels, useDownloadLabelPdf } from '../hooks';
+import { Link } from 'react-router-dom';
+import { useGenerateLabels, useDownloadLabelPdf, useBatches } from '../hooks';
 import type { GenerateLabelsRequest } from '../types/generated';
 
 export default function LabelsPage() {
   const generateLabels = useGenerateLabels();
   const downloadPdf = useDownloadLabelPdf();
+  const { data: batches, isLoading: batchesLoading, error: batchesError } = useBatches();
 
   // Default count matches template (Avery 18660 = 30 labels per sheet)
   const [formData, setFormData] = useState<GenerateLabelsRequest>({
@@ -122,6 +124,54 @@ export default function LabelsPage() {
           </div>
         </div>
       )}
+
+      {/* Batches Table */}
+      <div className="form" style={{ marginTop: '2rem' }}>
+        <h2>Label Batches</h2>
+        {batchesError ? (
+          <div className="error">
+            Error loading batches: {batchesError.message}
+          </div>
+        ) : batchesLoading ? (
+          <div className="loading">Loading batches...</div>
+        ) : !batches || batches.length === 0 ? (
+          <div className="empty-state">No batches found. Generate labels to create a batch.</div>
+        ) : (
+          <div className="table-container">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Batch ID</th>
+                  <th>Created</th>
+                  <th>Label Count</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {batches.map((batch) => (
+                  <tr key={batch.batch_id}>
+                    <td>
+                      <code style={{ fontSize: '0.875rem' }}>
+                        {batch.batch_id.substring(0, 8)}...
+                      </code>
+                    </td>
+                    <td>{new Date(batch.created_at).toLocaleString()}</td>
+                    <td>{batch.labels.length}</td>
+                    <td>
+                      <Link
+                        to={`/labels/batches/${batch.batch_id}`}
+                        className="btn btn-primary btn-sm"
+                      >
+                        View Details
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

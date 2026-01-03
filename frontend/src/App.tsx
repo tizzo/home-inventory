@@ -9,6 +9,7 @@ import {
   ContainersPage,
   ItemsPage,
   LabelsPage,
+  BatchDetailPage,
   AuditLogPage,
 } from './pages';
 import './App.css';
@@ -166,6 +167,7 @@ function App() {
                   element={<ItemsPage />}
                 />
                 <Route path="/labels" element={<LabelsPage />} />
+                <Route path="/labels/batches/:batchId" element={<BatchDetailPage />} />
                 <Route path="/audit" element={<AuditLogPage />} />
               </Routes>
             </main>

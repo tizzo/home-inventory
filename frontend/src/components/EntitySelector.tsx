@@ -175,62 +175,89 @@ export default function EntitySelector({
 
   // Start scanner function
   const startScanner = useCallback(async () => {
-    if (scannerActive || !scannerElementRef.current) return;
+    if (scannerActive) {
+      console.log('EntitySelector: Scanner already active, skipping');
+      return;
+    }
 
+    console.log('EntitySelector: Starting scanner, setting showScanner=true');
+    // First, show the scanner UI
     setShowScanner(true);
     setScannerActive(true);
     
-    // Wait for DOM to update
-    setTimeout(async () => {
-      if (!scannerElementRef.current) {
-        setScannerActive(false);
-        setShowScanner(false);
-        return;
-      }
+    // Wait for DOM to update and element to be available
+    // Use requestAnimationFrame to ensure DOM is ready
+    requestAnimationFrame(() => {
+      setTimeout(async () => {
+        // Check if element exists - it should be rendered now
+        const elementId = `qr-scanner-${entityType}`;
+        const element = document.getElementById(elementId);
+        console.log('EntitySelector: Looking for scanner element:', elementId, element ? 'found' : 'not found');
+        
+        if (!element) {
+          console.warn('EntitySelector: Scanner element not found in DOM after render');
+          setScannerActive(false);
+          setShowScanner(false);
+          return;
+        }
 
-      try {
-        const html5QrCode = new Html5Qrcode(scannerElementRef.current.id);
-        scannerRef.current = html5QrCode;
+        try {
+          console.log('EntitySelector: Creating Html5Qrcode instance');
+          const html5QrCode = new Html5Qrcode(element.id);
+          scannerRef.current = html5QrCode;
 
-        await html5QrCode.start(
-          { facingMode: 'environment' },
-          {
-            fps: 10,
-            qrbox: { width: 250, height: 250 },
-          },
-          (decodedText) => {
-            // Handle scanned QR code
-            handleQrScan(decodedText).catch(console.error);
-          },
-          () => {
-            // Ignore scanning errors (they're frequent during scanning)
-          }
-        );
-      } catch (err) {
-        console.error('Error starting scanner:', err);
-        // Don't show alert - just silently fail (user can still type)
-        setScannerActive(false);
-        setShowScanner(false);
-      }
-    }, 100);
-  }, [scannerActive, handleQrScan]);
+          console.log('EntitySelector: Starting camera...');
+          await html5QrCode.start(
+            { facingMode: 'environment' },
+            {
+              fps: 10,
+              qrbox: { width: 250, height: 250 },
+            },
+            (decodedText) => {
+              console.log('EntitySelector: QR code scanned:', decodedText);
+              // Handle scanned QR code
+              handleQrScan(decodedText).catch(console.error);
+            },
+            () => {
+              // Ignore scanning errors (they're frequent during scanning)
+            }
+          );
+          console.log('EntitySelector: Camera started successfully');
+        } catch (err) {
+          console.error('EntitySelector: Error starting scanner:', err);
+          // Don't show alert - just silently fail (user can still type)
+          setScannerActive(false);
+          setShowScanner(false);
+        }
+      }, 200); // Increased delay to ensure DOM is ready
+    });
+  }, [scannerActive, handleQrScan, entityType]);
 
   // Start scanner when dropdown opens
   useEffect(() => {
     if (isOpen && !scannerActive) {
+      console.log('EntitySelector: Dropdown opened, starting scanner...');
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      startScanner().catch(console.error);
+      startScanner().catch((err) => {
+        console.error('EntitySelector: Failed to start scanner:', err);
+      });
     } else if (!isOpen && scannerActive) {
+      console.log('EntitySelector: Dropdown closed, stopping scanner...');
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      stopScanner().catch(console.error);
+      stopScanner().catch((err) => {
+        console.error('EntitySelector: Failed to stop scanner:', err);
+      });
     }
   }, [isOpen, scannerActive, startScanner, stopScanner]);
 
-  // Close dropdown when clicking outside
+  // Close dropdown when clicking outside (but not when scanner is active)
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
+        // Don't close if scanner is active - user might be interacting with camera
+        if (!scannerActive) {
+          setIsOpen(false);
+        }
       }
     };
 
@@ -238,7 +265,7 @@ export default function EntitySelector({
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
-  }, [isOpen]);
+  }, [isOpen, scannerActive]);
 
   // Handle manual scan button toggle
   const handleScanClick = async () => {
@@ -289,6 +316,7 @@ export default function EntitySelector({
               }
             }}
             onFocus={() => {
+              console.log('EntitySelector: Input focused, setting isOpen=true');
               setIsOpen(true);
             }}
             placeholder={placeholder || `Search ${entityType}...`}
@@ -381,8 +409,8 @@ export default function EntitySelector({
         </button>
       </div>
 
-      {/* QR Scanner */}
-      {showScanner && (
+      {/* QR Scanner - Always render when isOpen, but only show when showScanner is true */}
+      {isOpen && (
         <div
           style={{
             marginTop: '1rem',
@@ -390,6 +418,7 @@ export default function EntitySelector({
             background: 'var(--bg-color)',
             borderRadius: '0.5rem',
             border: '2px solid var(--primary-color)',
+            display: showScanner ? 'block' : 'none',
           }}
         >
           <div style={{ marginBottom: '0.5rem', fontWeight: 600 }}>

@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useLabel, useAssignLabel } from '../hooks';
 import { useToast } from '../context/ToastContext';
@@ -11,7 +11,7 @@ export default function LabelDetailPage() {
   const navigate = useNavigate();
   const toast = useToast();
 
-  const getAssignedEntityLink = (type: string, id: string): string | null => {
+  const getAssignedEntityLink = useCallback((type: string, id: string): string | null => {
     switch (type) {
       case 'room':
         return `/rooms/${id}/edit`;
@@ -26,7 +26,7 @@ export default function LabelDetailPage() {
       default:
         return null;
     }
-  };
+  }, []);
 
   // Auto-redirect if label is assigned
   useEffect(() => {

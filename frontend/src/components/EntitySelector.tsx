@@ -270,8 +270,14 @@ export default function EntitySelector({
   // Handle manual scan button toggle
   const handleScanClick = async () => {
     if (scannerActive) {
+      console.log('EntitySelector: Scan button clicked, stopping scanner');
       await stopScanner();
     } else {
+      console.log('EntitySelector: Scan button clicked, starting scanner');
+      // Ensure dropdown is open when manually starting scanner
+      if (!isOpen) {
+        setIsOpen(true);
+      }
       await startScanner();
     }
   };
@@ -318,6 +324,22 @@ export default function EntitySelector({
             onFocus={() => {
               console.log('EntitySelector: Input focused, setting isOpen=true');
               setIsOpen(true);
+            }}
+            onBlur={(e) => {
+              // Only close if we're not clicking on the scan button or scanner area
+              // Use setTimeout to allow click events to fire first
+              setTimeout(() => {
+                const activeElement = document.activeElement;
+                const container = containerRef.current;
+                // Don't close if focus moved to something inside the container (like scan button)
+                if (container && !container.contains(activeElement)) {
+                  console.log('EntitySelector: Input blurred, closing dropdown and stopping scanner');
+                  setIsOpen(false);
+                  if (scannerActive) {
+                    stopScanner().catch(console.error);
+                  }
+                }
+              }, 200);
             }}
             placeholder={placeholder || `Search ${entityType}...`}
             required={required}
@@ -402,10 +424,14 @@ export default function EntitySelector({
         <button
           type="button"
           onClick={handleScanClick}
+          onMouseDown={(e) => {
+            // Prevent blur event from firing when clicking the button
+            e.preventDefault();
+          }}
           className="btn btn-secondary"
           style={{ whiteSpace: 'nowrap' }}
         >
-          {showScanner ? '📷 Stop' : '📷 Scan'}
+          {scannerActive ? '📷 Stop' : '📷 Scan'}
         </button>
       </div>
 

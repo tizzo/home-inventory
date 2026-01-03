@@ -45,7 +45,9 @@ pub async fn list_shelves(
     })?;
 
     let responses: Vec<ShelfResponse> = shelves.into_iter().map(ShelfResponse::from).collect();
-    Ok(Json(PaginatedResponse::new(responses, total, limit, offset)))
+    Ok(Json(PaginatedResponse::new(
+        responses, total, limit, offset,
+    )))
 }
 
 /// Get shelves by shelving unit
@@ -82,7 +84,9 @@ pub async fn list_shelves_by_unit(
         })?;
 
     let responses: Vec<ShelfResponse> = shelves.into_iter().map(ShelfResponse::from).collect();
-    Ok(Json(PaginatedResponse::new(responses, total, limit, offset)))
+    Ok(Json(PaginatedResponse::new(
+        responses, total, limit, offset,
+    )))
 }
 
 /// Get a single shelf by ID
@@ -164,7 +168,11 @@ pub async fn create_shelf(
     })?;
 
     // Log audit
-    state.audit.log_create("shelf", shelf.id, Some(user_id), None).await.ok();
+    state
+        .audit
+        .log_create("shelf", shelf.id, Some(user_id), None)
+        .await
+        .ok();
 
     Ok(Json(ShelfResponse::from(shelf)))
 }
@@ -209,33 +217,49 @@ pub async fn update_shelf(
     // Track changes for audit before consuming payload
     let mut changes = serde_json::Map::new();
     if payload.name.is_some() && payload.name.as_ref() != Some(&existing.name) {
-        changes.insert("name".to_string(), serde_json::json!({
-            "from": &existing.name,
-            "to": payload.name.as_ref().unwrap()
-        }));
+        changes.insert(
+            "name".to_string(),
+            serde_json::json!({
+                "from": &existing.name,
+                "to": payload.name.as_ref().unwrap()
+            }),
+        );
     }
-    if payload.description.is_some() && payload.description.as_ref() != existing.description.as_ref() {
-        changes.insert("description".to_string(), serde_json::json!({
-            "from": &existing.description,
-            "to": payload.description.as_ref()
-        }));
+    if payload.description.is_some()
+        && payload.description.as_ref() != existing.description.as_ref()
+    {
+        changes.insert(
+            "description".to_string(),
+            serde_json::json!({
+                "from": &existing.description,
+                "to": payload.description.as_ref()
+            }),
+        );
     }
     if payload.position.is_some() && payload.position != existing.position {
-        changes.insert("position".to_string(), serde_json::json!({
-            "from": existing.position,
-            "to": payload.position
-        }));
+        changes.insert(
+            "position".to_string(),
+            serde_json::json!({
+                "from": existing.position,
+                "to": payload.position
+            }),
+        );
     }
 
     // Update fields if provided
     let name = payload.name.unwrap_or(existing.name.clone());
     let description = payload.description.or(existing.description.clone());
     let position = payload.position.or(existing.position);
-    if payload.shelving_unit_id.is_some() && payload.shelving_unit_id != Some(existing.shelving_unit_id) {
-        changes.insert("shelving_unit_id".to_string(), serde_json::json!({
-            "from": existing.shelving_unit_id,
-            "to": shelving_unit_id
-        }));
+    if payload.shelving_unit_id.is_some()
+        && payload.shelving_unit_id != Some(existing.shelving_unit_id)
+    {
+        changes.insert(
+            "shelving_unit_id".to_string(),
+            serde_json::json!({
+                "from": existing.shelving_unit_id,
+                "to": shelving_unit_id
+            }),
+        );
     }
 
     let shelf = sqlx::query_as::<_, Shelf>(
@@ -261,7 +285,17 @@ pub async fn update_shelf(
     // Log audit
     if !changes.is_empty() {
         let user_id = Uuid::new_v4(); // TODO: get from auth
-        state.audit.log_update("shelf", id, Some(user_id), serde_json::Value::Object(changes), None).await.ok();
+        state
+            .audit
+            .log_update(
+                "shelf",
+                id,
+                Some(user_id),
+                serde_json::Value::Object(changes),
+                None,
+            )
+            .await
+            .ok();
     }
 
     Ok(Json(ShelfResponse::from(shelf)))
@@ -274,7 +308,11 @@ pub async fn delete_shelf(
 ) -> Result<Json<serde_json::Value>, StatusCode> {
     // Log audit before deletion
     let user_id = Uuid::new_v4(); // TODO: get from auth
-    state.audit.log_delete("shelf", id, Some(user_id), None).await.ok();
+    state
+        .audit
+        .log_delete("shelf", id, Some(user_id), None)
+        .await
+        .ok();
 
     let result = sqlx::query("DELETE FROM shelves WHERE id = $1")
         .bind(id)
@@ -294,6 +332,7 @@ pub async fn delete_shelf(
 
 /// Create shelf routes
 pub fn shelf_routes() -> Router<Arc<AppState>> {
+    #[allow(unused_imports)]
     use axum::routing::{delete, get, post, put};
 
     Router::new()

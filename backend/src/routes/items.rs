@@ -32,7 +32,7 @@ pub async fn list_items(
 
     // Get paginated items
     let items = sqlx::query_as::<_, Item>(
-        "SELECT * FROM items ORDER BY created_at DESC LIMIT $1 OFFSET $2"
+        "SELECT * FROM items ORDER BY created_at DESC LIMIT $1 OFFSET $2",
     )
     .bind(limit)
     .bind(offset)
@@ -44,7 +44,9 @@ pub async fn list_items(
     })?;
 
     let responses: Vec<ItemResponse> = items.into_iter().map(ItemResponse::from).collect();
-    Ok(Json(PaginatedResponse::new(responses, total, limit, offset)))
+    Ok(Json(PaginatedResponse::new(
+        responses, total, limit, offset,
+    )))
 }
 
 /// Get items by shelf
@@ -68,20 +70,22 @@ pub async fn list_items_by_shelf(
 
     // Get paginated items
     let items = sqlx::query_as::<_, Item>(
-        "SELECT * FROM items WHERE shelf_id = $1 ORDER BY created_at LIMIT $2 OFFSET $3"
+        "SELECT * FROM items WHERE shelf_id = $1 ORDER BY created_at LIMIT $2 OFFSET $3",
     )
-        .bind(shelf_id)
-        .bind(limit)
-        .bind(offset)
-        .fetch_all(&state.db)
-        .await
-        .map_err(|e| {
-            tracing::error!("Failed to fetch items: {:?}", e);
-            StatusCode::INTERNAL_SERVER_ERROR
-        })?;
+    .bind(shelf_id)
+    .bind(limit)
+    .bind(offset)
+    .fetch_all(&state.db)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to fetch items: {:?}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
 
     let responses: Vec<ItemResponse> = items.into_iter().map(ItemResponse::from).collect();
-    Ok(Json(PaginatedResponse::new(responses, total, limit, offset)))
+    Ok(Json(PaginatedResponse::new(
+        responses, total, limit, offset,
+    )))
 }
 
 /// Get items by container
@@ -105,20 +109,22 @@ pub async fn list_items_by_container(
 
     // Get paginated items
     let items = sqlx::query_as::<_, Item>(
-        "SELECT * FROM items WHERE container_id = $1 ORDER BY created_at LIMIT $2 OFFSET $3"
+        "SELECT * FROM items WHERE container_id = $1 ORDER BY created_at LIMIT $2 OFFSET $3",
     )
-        .bind(container_id)
-        .bind(limit)
-        .bind(offset)
-        .fetch_all(&state.db)
-        .await
-        .map_err(|e| {
-            tracing::error!("Failed to fetch items: {:?}", e);
-            StatusCode::INTERNAL_SERVER_ERROR
-        })?;
+    .bind(container_id)
+    .bind(limit)
+    .bind(offset)
+    .fetch_all(&state.db)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to fetch items: {:?}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
 
     let responses: Vec<ItemResponse> = items.into_iter().map(ItemResponse::from).collect();
-    Ok(Json(PaginatedResponse::new(responses, total, limit, offset)))
+    Ok(Json(PaginatedResponse::new(
+        responses, total, limit, offset,
+    )))
 }
 
 /// Get a single item by ID
@@ -233,7 +239,11 @@ pub async fn create_item(
     })?;
 
     // Log audit
-    state.audit.log_create("item", item.id, Some(user_id), None).await.ok();
+    state
+        .audit
+        .log_create("item", item.id, Some(user_id), None)
+        .await
+        .ok();
 
     Ok(Json(ItemResponse::from(item)))
 }
@@ -256,9 +266,7 @@ pub async fn update_item(
         .ok_or(StatusCode::NOT_FOUND)?;
 
     // Handle location changes
-    let (shelf_id, container_id) = if payload.shelf_id.is_some()
-        || payload.container_id.is_some()
-    {
+    let (shelf_id, container_id) = if payload.shelf_id.is_some() || payload.container_id.is_some() {
         // New location provided - validate constraint
         let new_shelf_id = payload.shelf_id.or(existing.shelf_id);
         let new_container_id = payload.container_id.or(existing.container_id);
@@ -309,28 +317,42 @@ pub async fn update_item(
     // Track changes for audit before consuming payload
     let mut changes = serde_json::Map::new();
     if payload.name.is_some() && payload.name.as_ref() != Some(&existing.name) {
-        changes.insert("name".to_string(), serde_json::json!({
-            "from": &existing.name,
-            "to": payload.name.as_ref().unwrap()
-        }));
+        changes.insert(
+            "name".to_string(),
+            serde_json::json!({
+                "from": &existing.name,
+                "to": payload.name.as_ref().unwrap()
+            }),
+        );
     }
-    if payload.description.is_some() && payload.description.as_ref() != existing.description.as_ref() {
-        changes.insert("description".to_string(), serde_json::json!({
-            "from": &existing.description,
-            "to": payload.description.as_ref()
-        }));
+    if payload.description.is_some()
+        && payload.description.as_ref() != existing.description.as_ref()
+    {
+        changes.insert(
+            "description".to_string(),
+            serde_json::json!({
+                "from": &existing.description,
+                "to": payload.description.as_ref()
+            }),
+        );
     }
     if payload.barcode.is_some() && payload.barcode != existing.barcode {
-        changes.insert("barcode".to_string(), serde_json::json!({
-            "from": &existing.barcode,
-            "to": &payload.barcode
-        }));
+        changes.insert(
+            "barcode".to_string(),
+            serde_json::json!({
+                "from": &existing.barcode,
+                "to": &payload.barcode
+            }),
+        );
     }
     if payload.barcode_type.is_some() && payload.barcode_type != existing.barcode_type {
-        changes.insert("barcode_type".to_string(), serde_json::json!({
-            "from": &existing.barcode_type,
-            "to": &payload.barcode_type
-        }));
+        changes.insert(
+            "barcode_type".to_string(),
+            serde_json::json!({
+                "from": &existing.barcode_type,
+                "to": &payload.barcode_type
+            }),
+        );
     }
 
     // Update fields if provided
@@ -339,16 +361,19 @@ pub async fn update_item(
     let barcode = payload.barcode.or(existing.barcode.clone());
     let barcode_type = payload.barcode_type.or(existing.barcode_type.clone());
     if shelf_id != existing.shelf_id || container_id != existing.container_id {
-        changes.insert("location".to_string(), serde_json::json!({
-            "from": {
-                "shelf_id": existing.shelf_id,
-                "container_id": existing.container_id
-            },
-            "to": {
-                "shelf_id": shelf_id,
-                "container_id": container_id
-            }
-        }));
+        changes.insert(
+            "location".to_string(),
+            serde_json::json!({
+                "from": {
+                    "shelf_id": existing.shelf_id,
+                    "container_id": existing.container_id
+                },
+                "to": {
+                    "shelf_id": shelf_id,
+                    "container_id": container_id
+                }
+            }),
+        );
     }
 
     let item = sqlx::query_as::<_, Item>(
@@ -377,7 +402,17 @@ pub async fn update_item(
     // Log audit
     if !changes.is_empty() {
         let user_id = Uuid::new_v4(); // TODO: get from auth
-        state.audit.log_update("item", id, Some(user_id), serde_json::Value::Object(changes), None).await.ok();
+        state
+            .audit
+            .log_update(
+                "item",
+                id,
+                Some(user_id),
+                serde_json::Value::Object(changes),
+                None,
+            )
+            .await
+            .ok();
     }
 
     Ok(Json(ItemResponse::from(item)))
@@ -390,7 +425,11 @@ pub async fn delete_item(
 ) -> Result<Json<serde_json::Value>, StatusCode> {
     // Log audit before deletion
     let user_id = Uuid::new_v4(); // TODO: get from auth
-    state.audit.log_delete("item", id, Some(user_id), None).await.ok();
+    state
+        .audit
+        .log_delete("item", id, Some(user_id), None)
+        .await
+        .ok();
 
     let result = sqlx::query("DELETE FROM items WHERE id = $1")
         .bind(id)
@@ -410,8 +449,8 @@ pub async fn delete_item(
 
 /// Create item routes
 pub fn item_routes() -> Router<Arc<AppState>> {
-    use axum::routing::{delete, get, post, put};
-    
+    use axum::routing::get;
+
     Router::new()
         .route("/api/items", get(list_items).post(create_item))
         .route(
@@ -419,6 +458,9 @@ pub fn item_routes() -> Router<Arc<AppState>> {
             get(get_item).put(update_item).delete(delete_item),
         )
         .route("/api/shelves/:shelf_id/items", get(list_items_by_shelf))
-        .route("/api/containers/:container_id/items", get(list_items_by_container))
+        .route(
+            "/api/containers/:container_id/items",
+            get(list_items_by_container),
+        )
         .route("/api/items/barcode/:barcode", get(get_item_by_barcode))
 }

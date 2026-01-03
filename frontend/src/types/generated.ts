@@ -285,7 +285,9 @@ export interface AuditLog {
   entity_id: string;
   action: string;
   user_id?: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   changes?: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   metadata?: any;
   created_at: string;
 }
@@ -296,7 +298,9 @@ export interface AuditLogResponse {
   entity_id: string;
   action: string;
   user_id?: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   changes?: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   metadata?: any;
   created_at: string;
 }

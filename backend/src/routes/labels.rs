@@ -1,7 +1,7 @@
 use axum::{
     extract::{Path, Query, State},
     http::{header, StatusCode},
-    response::{AppendHeaders, Response},
+    response::Response,
     Router,
 };
 use serde::Deserialize;
@@ -162,7 +162,7 @@ pub async fn list_batches(
 
     // Get total count of unique batches
     let total: i64 = sqlx::query_scalar(
-        "SELECT COUNT(DISTINCT batch_id) FROM labels WHERE batch_id IS NOT NULL"
+        "SELECT COUNT(DISTINCT batch_id) FROM labels WHERE batch_id IS NOT NULL",
     )
     .fetch_one(&state.db)
     .await
@@ -188,7 +188,7 @@ pub async fn list_batches(
     for batch_id in batch_ids {
         // Get all labels for this batch
         let labels = sqlx::query_as::<_, Label>(
-            "SELECT * FROM labels WHERE batch_id = $1 ORDER BY number ASC"
+            "SELECT * FROM labels WHERE batch_id = $1 ORDER BY number ASC",
         )
         .bind(batch_id)
         .fetch_all(&state.db)
@@ -208,7 +208,9 @@ pub async fn list_batches(
         }
     }
 
-    Ok(axum::Json(PaginatedResponse::new(batches, total, limit, offset)))
+    Ok(axum::Json(PaginatedResponse::new(
+        batches, total, limit, offset,
+    )))
 }
 
 /// Generate PDF for a batch of labels

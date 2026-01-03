@@ -11,8 +11,8 @@ use std::env;
 use std::sync::Arc;
 use tower_http::cors::{Any, CorsLayer};
 
-use crate::services::s3::S3Service;
 use crate::services::audit::AuditService;
+use crate::services::s3::S3Service;
 
 #[derive(Clone)]
 pub struct AppState {

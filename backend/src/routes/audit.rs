@@ -50,7 +50,11 @@ pub async fn get_audit_logs(
     }
 
     query.push_str(" ORDER BY created_at DESC");
-    query.push_str(&format!(" LIMIT ${} OFFSET ${}", bind_count, bind_count + 1));
+    query.push_str(&format!(
+        " LIMIT ${} OFFSET ${}",
+        bind_count,
+        bind_count + 1
+    ));
 
     // Build query dynamically - for now use a simpler approach
     let logs = if params.entity_type.is_some()
@@ -60,7 +64,7 @@ pub async fn get_audit_logs(
     {
         // Use a simpler query for now
         sqlx::query_as::<_, AuditLog>(
-            "SELECT * FROM audit_logs ORDER BY created_at DESC LIMIT $1 OFFSET $2"
+            "SELECT * FROM audit_logs ORDER BY created_at DESC LIMIT $1 OFFSET $2",
         )
         .bind(limit)
         .bind(offset)
@@ -68,7 +72,7 @@ pub async fn get_audit_logs(
         .await
     } else {
         sqlx::query_as::<_, AuditLog>(
-            "SELECT * FROM audit_logs ORDER BY created_at DESC LIMIT $1 OFFSET $2"
+            "SELECT * FROM audit_logs ORDER BY created_at DESC LIMIT $1 OFFSET $2",
         )
         .bind(limit)
         .bind(offset)
@@ -108,8 +112,11 @@ pub async fn get_audit_logs_by_entity(
 /// Create audit routes
 pub fn audit_routes() -> Router<Arc<AppState>> {
     use axum::routing::get;
-    
+
     Router::new()
         .route("/api/audit", get(get_audit_logs))
-        .route("/api/audit/entity/:entity_type/:entity_id", get(get_audit_logs_by_entity))
+        .route(
+            "/api/audit/entity/:entity_type/:entity_id",
+            get(get_audit_logs_by_entity),
+        )
 }

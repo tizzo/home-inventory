@@ -147,12 +147,12 @@ impl S3Service {
         Ok(())
     }
 
-    #[allow(dead_code, clippy::dead_code)]
+    #[allow(dead_code)]
     pub fn get_bucket(&self) -> &str {
         &self.bucket
     }
 
-    #[allow(dead_code, clippy::dead_code)]
+    #[allow(dead_code)]
     pub fn get_endpoint(&self) -> Option<&str> {
         self.endpoint_url.as_deref()
     }

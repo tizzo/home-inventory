@@ -18,7 +18,7 @@ export default function AuditLogPage() {
     }));
   };
 
-  const formatDetails = (changes: any, metadata: any, action: string) => {
+  const formatDetails = (changes: unknown, metadata: unknown, action: string): unknown => {
     // For MOVE actions, metadata contains the move information
     if (action === 'MOVE' && metadata) {
       return metadata;
@@ -31,7 +31,7 @@ export default function AuditLogPage() {
     return metadata || changes || null;
   };
 
-  const formatJson = (data: any) => {
+  const formatJson = (data: unknown): string | null => {
     if (!data) return null;
     if (typeof data === 'object') {
       return JSON.stringify(data, null, 2);

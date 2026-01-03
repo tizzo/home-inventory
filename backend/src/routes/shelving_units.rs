@@ -2,7 +2,6 @@ use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
     response::Json,
-    routing::{delete, get, post, put},
     Router,
 };
 use serde_json::json;
@@ -47,7 +46,9 @@ pub async fn list_shelving_units(
 
     let responses: Vec<ShelvingUnitResponse> =
         units.into_iter().map(ShelvingUnitResponse::from).collect();
-    Ok(Json(PaginatedResponse::new(responses, total, limit, offset)))
+    Ok(Json(PaginatedResponse::new(
+        responses, total, limit, offset,
+    )))
 }
 
 /// Get shelving units by room
@@ -85,7 +86,9 @@ pub async fn list_shelving_units_by_room(
 
     let responses: Vec<ShelvingUnitResponse> =
         units.into_iter().map(ShelvingUnitResponse::from).collect();
-    Ok(Json(PaginatedResponse::new(responses, total, limit, offset)))
+    Ok(Json(PaginatedResponse::new(
+        responses, total, limit, offset,
+    )))
 }
 
 /// Get a single shelving unit by ID
@@ -149,7 +152,11 @@ pub async fn create_shelving_unit(
     })?;
 
     // Log audit
-    state.audit.log_create("shelving_unit", unit.id, Some(user_id), None).await.ok();
+    state
+        .audit
+        .log_create("shelving_unit", unit.id, Some(user_id), None)
+        .await
+        .ok();
 
     Ok(Json(ShelvingUnitResponse::from(unit)))
 }
@@ -194,26 +201,37 @@ pub async fn update_shelving_unit(
     // Track changes for audit before consuming payload
     let mut changes = serde_json::Map::new();
     if payload.name.is_some() && payload.name.as_ref() != Some(&existing.name) {
-        changes.insert("name".to_string(), serde_json::json!({
-            "from": &existing.name,
-            "to": payload.name.as_ref().unwrap()
-        }));
+        changes.insert(
+            "name".to_string(),
+            serde_json::json!({
+                "from": &existing.name,
+                "to": payload.name.as_ref().unwrap()
+            }),
+        );
     }
-    if payload.description.is_some() && payload.description.as_ref() != existing.description.as_ref() {
-        changes.insert("description".to_string(), serde_json::json!({
-            "from": &existing.description,
-            "to": payload.description.as_ref()
-        }));
+    if payload.description.is_some()
+        && payload.description.as_ref() != existing.description.as_ref()
+    {
+        changes.insert(
+            "description".to_string(),
+            serde_json::json!({
+                "from": &existing.description,
+                "to": payload.description.as_ref()
+            }),
+        );
     }
 
     // Update fields if provided
     let name = payload.name.unwrap_or(existing.name.clone());
     let description = payload.description.or(existing.description.clone());
     if payload.room_id.is_some() && payload.room_id != Some(existing.room_id) {
-        changes.insert("room_id".to_string(), serde_json::json!({
-            "from": existing.room_id,
-            "to": room_id
-        }));
+        changes.insert(
+            "room_id".to_string(),
+            serde_json::json!({
+                "from": existing.room_id,
+                "to": room_id
+            }),
+        );
     }
 
     let unit = sqlx::query_as::<_, ShelvingUnit>(
@@ -238,7 +256,17 @@ pub async fn update_shelving_unit(
     // Log audit
     if !changes.is_empty() {
         let user_id = Uuid::new_v4(); // TODO: get from auth
-        state.audit.log_update("shelving_unit", id, Some(user_id), serde_json::Value::Object(changes), None).await.ok();
+        state
+            .audit
+            .log_update(
+                "shelving_unit",
+                id,
+                Some(user_id),
+                serde_json::Value::Object(changes),
+                None,
+            )
+            .await
+            .ok();
     }
 
     Ok(Json(ShelvingUnitResponse::from(unit)))
@@ -251,7 +279,11 @@ pub async fn delete_shelving_unit(
 ) -> Result<Json<serde_json::Value>, StatusCode> {
     // Log audit before deletion
     let user_id = Uuid::new_v4(); // TODO: get from auth
-    state.audit.log_delete("shelving_unit", id, Some(user_id), None).await.ok();
+    state
+        .audit
+        .log_delete("shelving_unit", id, Some(user_id), None)
+        .await
+        .ok();
 
     let result = sqlx::query("DELETE FROM shelving_units WHERE id = $1")
         .bind(id)
@@ -273,13 +305,22 @@ pub async fn delete_shelving_unit(
 
 /// Create shelving unit routes
 pub fn shelving_unit_routes() -> Router<Arc<AppState>> {
+    #[allow(unused_imports)]
+    use axum::routing::{delete, get, post, put};
+    
     Router::new()
-        .route("/api/units", get(list_shelving_units).post(create_shelving_unit))
+        .route(
+            "/api/units",
+            get(list_shelving_units).post(create_shelving_unit),
+        )
         .route(
             "/api/units/:id",
             get(get_shelving_unit)
                 .put(update_shelving_unit)
                 .delete(delete_shelving_unit),
         )
-        .route("/api/rooms/:room_id/units", get(list_shelving_units_by_room))
+        .route(
+            "/api/rooms/:room_id/units",
+            get(list_shelving_units_by_room),
+        )
 }

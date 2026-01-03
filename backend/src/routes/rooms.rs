@@ -2,7 +2,6 @@ use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
     response::Json,
-    routing::{delete, get, post, put},
     Router,
 };
 use serde_json::json;
@@ -33,7 +32,7 @@ pub async fn list_rooms(
 
     // Get paginated rooms
     let rooms = sqlx::query_as::<_, Room>(
-        "SELECT * FROM rooms ORDER BY created_at DESC LIMIT $1 OFFSET $2"
+        "SELECT * FROM rooms ORDER BY created_at DESC LIMIT $1 OFFSET $2",
     )
     .bind(limit)
     .bind(offset)
@@ -45,7 +44,9 @@ pub async fn list_rooms(
     })?;
 
     let responses: Vec<RoomResponse> = rooms.into_iter().map(RoomResponse::from).collect();
-    Ok(Json(PaginatedResponse::new(responses, total, limit, offset)))
+    Ok(Json(PaginatedResponse::new(
+        responses, total, limit, offset,
+    )))
 }
 
 /// Get a single room by ID
@@ -130,7 +131,9 @@ pub async fn update_room(
             }),
         );
     }
-    if payload.description.is_some() && payload.description.as_ref() != existing.description.as_ref() {
+    if payload.description.is_some()
+        && payload.description.as_ref() != existing.description.as_ref()
+    {
         changes.insert(
             "description".to_string(),
             serde_json::json!({
@@ -212,6 +215,9 @@ pub async fn delete_room(
 
 /// Create room routes
 pub fn room_routes() -> Router<Arc<AppState>> {
+    #[allow(unused_imports)]
+    use axum::routing::{delete, get, post, put};
+    
     Router::new()
         .route("/api/rooms", get(list_rooms).post(create_room))
         .route(

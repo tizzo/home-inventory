@@ -1,4 +1,3 @@
-use crate::app::AppState;
 use axum::http::StatusCode;
 use serde_json::Value;
 use sqlx::PgPool;
@@ -73,8 +72,15 @@ impl AuditService {
         user_id: Option<Uuid>,
         metadata: Option<Value>,
     ) -> Result<(), StatusCode> {
-        self.log_action(entity_type, entity_id, AuditAction::Create, user_id, None, metadata)
-            .await
+        self.log_action(
+            entity_type,
+            entity_id,
+            AuditAction::Create,
+            user_id,
+            None,
+            metadata,
+        )
+        .await
     }
 
     /// Log an update action with changes
@@ -105,8 +111,15 @@ impl AuditService {
         user_id: Option<Uuid>,
         metadata: Option<Value>,
     ) -> Result<(), StatusCode> {
-        self.log_action(entity_type, entity_id, AuditAction::Delete, user_id, None, metadata)
-            .await
+        self.log_action(
+            entity_type,
+            entity_id,
+            AuditAction::Delete,
+            user_id,
+            None,
+            metadata,
+        )
+        .await
     }
 
     /// Log a move action
@@ -123,7 +136,7 @@ impl AuditService {
             "from": from_location,
             "to": to_location,
         });
-        
+
         let combined_metadata = if let Some(meta) = metadata {
             let mut map = meta.as_object().cloned().unwrap_or_default();
             map.extend(move_metadata.as_object().unwrap().clone());

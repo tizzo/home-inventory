@@ -307,7 +307,7 @@ pub async fn delete_shelving_unit(
 pub fn shelving_unit_routes() -> Router<Arc<AppState>> {
     #[allow(unused_imports)]
     use axum::routing::{delete, get, post, put};
-    
+
     Router::new()
         .route(
             "/api/units",

@@ -217,7 +217,7 @@ pub async fn delete_room(
 pub fn room_routes() -> Router<Arc<AppState>> {
     #[allow(unused_imports)]
     use axum::routing::{delete, get, post, put};
-    
+
     Router::new()
         .route("/api/rooms", get(list_rooms).post(create_room))
         .route(

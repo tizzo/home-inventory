@@ -1,11 +1,33 @@
 import { QRCodeSVG } from 'qrcode.react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useBatch, useDownloadLabelPdf } from '../hooks';
 
 export default function BatchDetailPage() {
   const { batchId } = useParams<{ batchId: string }>();
   const { data: batch, isLoading, error } = useBatch(batchId || '');
   const downloadPdf = useDownloadLabelPdf();
+  const navigate = useNavigate();
+
+  const getLabelLink = (label: { assigned_to_type?: string; assigned_to_id?: string }): string | null => {
+    if (!label.assigned_to_type || !label.assigned_to_id) {
+      return null;
+    }
+
+    switch (label.assigned_to_type) {
+      case 'room':
+        return `/rooms/${label.assigned_to_id}/edit`;
+      case 'shelving_unit':
+        return `/units/${label.assigned_to_id}/edit`;
+      case 'shelf':
+        return `/shelves/${label.assigned_to_id}/edit`;
+      case 'container':
+        return `/containers/${label.assigned_to_id}/edit`;
+      case 'item':
+        return `/items/${label.assigned_to_id}/edit`;
+      default:
+        return null;
+    }
+  };
 
   const handleReprint = async () => {
     if (!batchId) return;
@@ -106,32 +128,46 @@ export default function BatchDetailPage() {
               gap: '1.5rem',
             }}
           >
-            {batch.labels.map((label) => (
-              <div
-                key={label.id}
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: '1rem',
-                  padding: '1.5rem',
-                  background: 'var(--surface-color)',
-                  borderRadius: '0.75rem',
-                  border: '2px solid var(--border-color)',
-                  boxShadow: 'var(--shadow)',
-                  transition: 'all 0.2s',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-4px)';
-                  e.currentTarget.style.boxShadow = 'var(--shadow-lg)';
-                  e.currentTarget.style.borderColor = 'var(--primary-color)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = 'var(--shadow)';
-                  e.currentTarget.style.borderColor = 'var(--border-color)';
-                }}
-              >
+            {batch.labels.map((label) => {
+              const labelLink = getLabelLink(label);
+              const isClickable = labelLink !== null;
+              
+              return (
+                <div
+                  key={label.id}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '1rem',
+                    padding: '1.5rem',
+                    background: 'var(--surface-color)',
+                    borderRadius: '0.75rem',
+                    border: '2px solid var(--border-color)',
+                    boxShadow: 'var(--shadow)',
+                    transition: 'all 0.2s',
+                    cursor: isClickable ? 'pointer' : 'default',
+                  }}
+                  onClick={() => {
+                    if (labelLink) {
+                      navigate(labelLink);
+                    }
+                  }}
+                  onMouseEnter={(e) => {
+                    if (isClickable) {
+                      e.currentTarget.style.transform = 'translateY(-4px)';
+                      e.currentTarget.style.boxShadow = 'var(--shadow-lg)';
+                      e.currentTarget.style.borderColor = 'var(--primary-color)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (isClickable) {
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = 'var(--shadow)';
+                      e.currentTarget.style.borderColor = 'var(--border-color)';
+                    }
+                  }}
+                >
                 <div
                   style={{
                     padding: '0.75rem',
@@ -155,7 +191,8 @@ export default function BatchDetailPage() {
                       fontSize: '1rem',
                       fontWeight: 700,
                       marginBottom: '0.5rem',
-                      color: 'var(--primary-color)',
+                      color: isClickable ? 'var(--primary-color)' : 'var(--text-color)',
+                      textDecoration: isClickable ? 'underline' : 'none',
                     }}
                   >
                     #{label.number}
@@ -172,6 +209,11 @@ export default function BatchDetailPage() {
                       }}
                     >
                       ✓ Assigned to {label.assigned_to_type}
+                      {isClickable && (
+                        <span style={{ marginLeft: '0.5rem', fontSize: '0.7rem' }}>
+                          (click to view)
+                        </span>
+                      )}
                     </div>
                   ) : (
                     <div
@@ -186,7 +228,8 @@ export default function BatchDetailPage() {
                   )}
                 </div>
               </div>
-            ))}
+            );
+            })}
           </div>
         )}
       </div>

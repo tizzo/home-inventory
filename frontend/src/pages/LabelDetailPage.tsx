@@ -1,8 +1,9 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { useLabel, useAssignLabel } from '../hooks';
+import { useLabel, useAssignLabel, useCreateRoom, useCreateShelvingUnit, useCreateShelf, useCreateContainer, useCreateItem } from '../hooks';
 import { useToast } from '../context/ToastContext';
-import type { AssignLabelRequest } from '../types/generated';
+import { Modal } from '../components';
+import type { AssignLabelRequest, CreateRoomRequest, CreateShelvingUnitRequest, CreateShelfRequest, CreateContainerRequest, CreateItemRequest } from '../types/generated';
 
 export default function LabelDetailPage() {
   const { labelId } = useParams<{ labelId: string }>();
@@ -10,6 +11,19 @@ export default function LabelDetailPage() {
   const assignLabel = useAssignLabel();
   const navigate = useNavigate();
   const toast = useToast();
+  
+  const createRoom = useCreateRoom();
+  const createUnit = useCreateShelvingUnit();
+  const createShelf = useCreateShelf();
+  const createContainer = useCreateContainer();
+  const createItem = useCreateItem();
+  
+  const [selectedEntityType, setSelectedEntityType] = useState<string | null>(null);
+  const [formData, setFormData] = useState<{
+    name: string;
+    description: string;
+    [key: string]: string | undefined;
+  }>({ name: '', description: '' });
 
   const getAssignedEntityLink = useCallback((type: string, id: string): string | null => {
     switch (type) {
@@ -38,27 +52,134 @@ export default function LabelDetailPage() {
     }
   }, [label, navigate, getAssignedEntityLink]);
 
-  const handleAssign = async (entityType: string, entityId: string) => {
-    if (!labelId) return;
+  const capitalize = (str: string): string => {
+    return str.charAt(0).toUpperCase() + str.slice(1);
+  };
+
+  const getEntityTypeDisplayName = (type: string): string => {
+    switch (type) {
+      case 'room':
+        return 'Room';
+      case 'unit':
+        return 'Shelving Unit';
+      case 'shelf':
+        return 'Shelf';
+      case 'container':
+        return 'Container';
+      case 'item':
+        return 'Item';
+      default:
+        return type;
+    }
+  };
+
+  const handleEntityTypeClick = (entityType: string) => {
+    if (!label) return;
+    
+    const displayName = getEntityTypeDisplayName(entityType);
+    const prefillName = `${displayName} ${label.number}`;
+    
+    setSelectedEntityType(entityType);
+    setFormData({
+      name: prefillName,
+      description: '',
+    });
+  };
+
+  const handleCreateAndAssign = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!labelId || !selectedEntityType || !label) return;
 
     try {
-      const payload: AssignLabelRequest = {
-        assigned_to_type: entityType,
-        assigned_to_id: entityId,
+      let createdEntityId: string;
+
+      // Create the entity based on type
+      switch (selectedEntityType) {
+        case 'room': {
+          const payload: CreateRoomRequest = {
+            name: formData.name,
+            description: formData.description || undefined,
+          };
+          const room = await createRoom.mutateAsync(payload);
+          createdEntityId = room.id;
+          break;
+        }
+        case 'unit': {
+          if (!formData.room_id) {
+            toast.showError('Room ID is required for shelving units');
+            return;
+          }
+          const payload: CreateShelvingUnitRequest = {
+            name: formData.name,
+            description: formData.description || undefined,
+            room_id: formData.room_id,
+          };
+          const unit = await createUnit.mutateAsync(payload);
+          createdEntityId = unit.id;
+          break;
+        }
+        case 'shelf': {
+          const payload: CreateShelfRequest = {
+            name: formData.name,
+            description: formData.description || undefined,
+            position: formData.position ? parseInt(formData.position, 10) : undefined,
+            shelving_unit_id: formData.shelving_unit_id,
+          };
+          const shelf = await createShelf.mutateAsync(payload);
+          createdEntityId = shelf.id;
+          break;
+        }
+        case 'container': {
+          const payload: CreateContainerRequest = {
+            name: formData.name,
+            description: formData.description || undefined,
+            shelf_id: formData.shelf_id,
+            parent_container_id: formData.parent_container_id,
+          };
+          const container = await createContainer.mutateAsync(payload);
+          createdEntityId = container.id;
+          break;
+        }
+        case 'item': {
+          const payload: CreateItemRequest = {
+            name: formData.name,
+            description: formData.description || undefined,
+            barcode: formData.barcode,
+            barcode_type: formData.barcode_type,
+            shelf_id: formData.shelf_id,
+            container_id: formData.container_id,
+          };
+          const item = await createItem.mutateAsync(payload);
+          createdEntityId = item.id;
+          break;
+        }
+        default:
+          throw new Error(`Unknown entity type: ${selectedEntityType}`);
+      }
+
+      // Assign the label to the newly created entity
+      const assignPayload: AssignLabelRequest = {
+        assigned_to_type: selectedEntityType,
+        assigned_to_id: createdEntityId,
       };
 
-      await assignLabel.mutateAsync({ id: labelId, data: payload });
-      toast.showSuccess('Label assigned successfully!');
+      await assignLabel.mutateAsync({ id: labelId, data: assignPayload });
+      toast.showSuccess(`${getEntityTypeDisplayName(selectedEntityType)} created and label assigned!`);
       
       // Navigate to the assigned entity
-      const link = getAssignedEntityLink(entityType, entityId);
+      const link = getAssignedEntityLink(selectedEntityType, createdEntityId);
       if (link) {
         navigate(link);
       }
     } catch (err) {
-      toast.showError('Failed to assign label. Please try again.');
-      console.error('Failed to assign label:', err);
+      toast.showError(`Failed to create ${getEntityTypeDisplayName(selectedEntityType)}. Please try again.`);
+      console.error('Failed to create entity:', err);
     }
+  };
+
+  const closeModal = () => {
+    setSelectedEntityType(null);
+    setFormData({ name: '', description: '' });
   };
 
   if (isLoading) {
@@ -134,47 +255,234 @@ export default function LabelDetailPage() {
       </div>
 
       <div className="form">
-        <h2 style={{ marginBottom: '1.5rem' }}>Assign Label</h2>
+        <h2 style={{ marginBottom: '1.5rem' }}>Create and Assign Label</h2>
         <p style={{ marginBottom: '2rem', color: 'var(--text-secondary)' }}>
-          This label is not yet assigned. Choose an entity to assign it to:
+          This label is not yet assigned. Create a new entity and assign this label to it:
         </p>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <div>
-            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>
-              Entity Type
-            </label>
-            <select
-              id="entity-type"
-              style={{ width: '100%', padding: '0.5rem', fontSize: '1rem' }}
-              onChange={(e) => {
-                const type = e.target.value;
-                if (type) {
-                  // For now, we'll need entity selection UI
-                  // This is a simplified version - you might want a more sophisticated picker
-                  const entityId = prompt(`Enter the ${type} ID to assign this label to:`);
-                  if (entityId) {
-                    handleAssign(type, entityId);
-                  }
-                }
-              }}
-            >
-              <option value="">Select entity type...</option>
-              <option value="room">Room</option>
-              <option value="unit">Shelving Unit</option>
-              <option value="shelf">Shelf</option>
-              <option value="container">Container</option>
-              <option value="item">Item</option>
-            </select>
-          </div>
+        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '2rem' }}>
+          <button
+            className="btn btn-primary"
+            onClick={() => handleEntityTypeClick('room')}
+            disabled={createRoom.isPending}
+          >
+            Create Room
+          </button>
+          <button
+            className="btn btn-primary"
+            onClick={() => handleEntityTypeClick('unit')}
+            disabled={createUnit.isPending}
+          >
+            Create Shelving Unit
+          </button>
+          <button
+            className="btn btn-primary"
+            onClick={() => handleEntityTypeClick('shelf')}
+            disabled={createShelf.isPending}
+          >
+            Create Shelf
+          </button>
+          <button
+            className="btn btn-primary"
+            onClick={() => handleEntityTypeClick('container')}
+            disabled={createContainer.isPending}
+          >
+            Create Container
+          </button>
+          <button
+            className="btn btn-primary"
+            onClick={() => handleEntityTypeClick('item')}
+            disabled={createItem.isPending}
+          >
+            Create Item
+          </button>
         </div>
 
         <div style={{ marginTop: '2rem', padding: '1rem', background: 'var(--bg-color)', borderRadius: '0.5rem' }}>
           <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', margin: 0 }}>
-            <strong>Note:</strong> After assignment, scanning this label will automatically navigate to the assigned entity.
+            <strong>Note:</strong> After creating and assigning, scanning this label will automatically navigate to the created entity.
           </p>
         </div>
       </div>
+
+      {/* Create Entity Modal */}
+      {selectedEntityType && (
+        <Modal
+          isOpen={true}
+          onClose={closeModal}
+          title={`Create ${getEntityTypeDisplayName(selectedEntityType)}`}
+        >
+          <form onSubmit={handleCreateAndAssign} className="form">
+            <div className="form-group">
+              <label htmlFor="name">Name</label>
+              <input
+                id="name"
+                type="text"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                required
+                autoFocus
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="description">Description (optional)</label>
+              <textarea
+                id="description"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                rows={3}
+              />
+            </div>
+
+            {/* Additional fields based on entity type */}
+            {selectedEntityType === 'unit' && (
+              <div className="form-group">
+                <label htmlFor="room_id">Room ID (required)</label>
+                <input
+                  id="room_id"
+                  type="text"
+                  value={formData.room_id || ''}
+                  onChange={(e) => setFormData({ ...formData, room_id: e.target.value })}
+                  placeholder="Enter room UUID"
+                  required
+                />
+              </div>
+            )}
+
+            {selectedEntityType === 'shelf' && (
+              <>
+                <div className="form-group">
+                  <label htmlFor="shelving_unit_id">Shelving Unit ID (required)</label>
+                  <input
+                    id="shelving_unit_id"
+                    type="text"
+                    value={formData.shelving_unit_id || ''}
+                    onChange={(e) => setFormData({ ...formData, shelving_unit_id: e.target.value })}
+                    placeholder="Enter shelving unit UUID"
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="position">Position (optional)</label>
+                  <input
+                    id="position"
+                    type="number"
+                    value={formData.position || ''}
+                    onChange={(e) => setFormData({ ...formData, position: e.target.value })}
+                    placeholder="Shelf position"
+                  />
+                </div>
+              </>
+            )}
+
+            {selectedEntityType === 'container' && (
+              <>
+                <div className="form-group">
+                  <label htmlFor="shelf_id">Shelf ID (optional)</label>
+                  <input
+                    id="shelf_id"
+                    type="text"
+                    value={formData.shelf_id || ''}
+                    onChange={(e) => setFormData({ ...formData, shelf_id: e.target.value })}
+                    placeholder="Enter shelf UUID"
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="parent_container_id">Parent Container ID (optional)</label>
+                  <input
+                    id="parent_container_id"
+                    type="text"
+                    value={formData.parent_container_id || ''}
+                    onChange={(e) => setFormData({ ...formData, parent_container_id: e.target.value })}
+                    placeholder="Enter parent container UUID"
+                  />
+                </div>
+                <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginTop: '-0.5rem', marginBottom: '1rem' }}>
+                  Note: Provide either shelf_id OR parent_container_id, not both
+                </p>
+              </>
+            )}
+
+            {selectedEntityType === 'item' && (
+              <>
+                <div className="form-group">
+                  <label htmlFor="shelf_id">Shelf ID (optional)</label>
+                  <input
+                    id="shelf_id"
+                    type="text"
+                    value={formData.shelf_id || ''}
+                    onChange={(e) => setFormData({ ...formData, shelf_id: e.target.value })}
+                    placeholder="Enter shelf UUID"
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="container_id">Container ID (optional)</label>
+                  <input
+                    id="container_id"
+                    type="text"
+                    value={formData.container_id || ''}
+                    onChange={(e) => setFormData({ ...formData, container_id: e.target.value })}
+                    placeholder="Enter container UUID"
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="barcode">Barcode (optional)</label>
+                  <input
+                    id="barcode"
+                    type="text"
+                    value={formData.barcode || ''}
+                    onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
+                    placeholder="Product barcode"
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="barcode_type">Barcode Type (optional)</label>
+                  <input
+                    id="barcode_type"
+                    type="text"
+                    value={formData.barcode_type || ''}
+                    onChange={(e) => setFormData({ ...formData, barcode_type: e.target.value })}
+                    placeholder="e.g., UPC, EAN"
+                  />
+                </div>
+              </>
+            )}
+
+            <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
+              <button
+                type="submit"
+                className="btn btn-primary"
+                disabled={
+                  createRoom.isPending ||
+                  createUnit.isPending ||
+                  createShelf.isPending ||
+                  createContainer.isPending ||
+                  createItem.isPending ||
+                  assignLabel.isPending
+                }
+              >
+                {assignLabel.isPending ? 'Creating...' : `Create ${getEntityTypeDisplayName(selectedEntityType)}`}
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={closeModal}
+                disabled={
+                  createRoom.isPending ||
+                  createUnit.isPending ||
+                  createShelf.isPending ||
+                  createContainer.isPending ||
+                  createItem.isPending ||
+                  assignLabel.isPending
+                }
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
     </div>
   );
 }

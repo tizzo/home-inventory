@@ -10,6 +10,7 @@ import {
   ItemsPage,
   LabelsPage,
   BatchDetailPage,
+  LabelDetailPage,
   AuditLogPage,
 } from './pages';
 import './App.css';
@@ -168,6 +169,7 @@ function App() {
                 />
                 <Route path="/labels" element={<LabelsPage />} />
                 <Route path="/labels/batches/:batchId" element={<BatchDetailPage />} />
+                <Route path="/l/:labelId" element={<LabelDetailPage />} />
                 <Route path="/audit" element={<AuditLogPage />} />
               </Routes>
             </main>

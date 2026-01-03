@@ -16,7 +16,7 @@ export default function BatchDetailPage() {
     switch (label.assigned_to_type) {
       case 'room':
         return `/rooms/${label.assigned_to_id}/edit`;
-      case 'shelving_unit':
+      case 'unit':
         return `/units/${label.assigned_to_id}/edit`;
       case 'shelf':
         return `/shelves/${label.assigned_to_id}/edit`;

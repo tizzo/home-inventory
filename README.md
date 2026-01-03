@@ -265,27 +265,29 @@ npx wrangler pages deploy dist --project-name=home-inventory
 
 ## Development Phases
 
-### Phase 1: Foundation ✓ (75% Complete)
+### Phase 1: Foundation ✓ (80% Complete)
 - [x] Project structure
 - [ ] Auth flow (Cognito + Google + Session cookies)
 - [x] Basic CRUD for Rooms
 - [x] Database setup with migrations
 - [x] Type generation pipeline
 
-### Phase 2: Core Hierarchy ✓ (60% Complete)
+### Phase 2: Core Hierarchy ✓ (100% Complete)
 - [x] Shelving Units CRUD
-- [ ] Shelves, Containers, Items (tables exist, routes needed)
-- [ ] Audit logging (table exists, implementation needed)
-- [ ] Move operations
+- [x] Shelves CRUD
+- [x] Containers CRUD
+- [x] Items CRUD
+- [x] Move operations
 - [x] Basic frontend with CRUD forms
 - [x] Photo upload & display
+- [x] Audit logging
 
-### Phase 3: Labels & QR ✓ (80% Complete)
+### Phase 3: Labels & QR ✓ (100% Complete)
 - [x] Label generation service
 - [x] QR code generation
 - [x] PDF generation (Avery 18660 format)
 - [x] Label assignment flow
-- [ ] Camera QR scanning
+- [x] Camera QR scanning
 
 ### Phase 4: Barcode & Search (0% Complete)
 - [ ] Barcode scanning

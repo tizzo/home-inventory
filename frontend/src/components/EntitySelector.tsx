@@ -54,6 +54,7 @@ export default function EntitySelector({
   const containerRef = useRef<HTMLDivElement>(null);
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const scannerElementRef = useRef<HTMLDivElement>(null);
+  const scanButtonClickedRef = useRef(false);
 
   // Fetch entities based on type
   const { data: roomsResponse } = useRooms({ limit: 1000 });
@@ -243,7 +244,7 @@ export default function EntitySelector({
       });
     } else if (!isOpen && scannerActive) {
       console.log('EntitySelector: Dropdown closed, stopping scanner...');
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+       
       stopScanner().catch((err) => {
         console.error('EntitySelector: Failed to stop scanner:', err);
       });
@@ -268,18 +269,32 @@ export default function EntitySelector({
   }, [isOpen, scannerActive]);
 
   // Handle manual scan button toggle
-  const handleScanClick = async () => {
+  const handleScanClick = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    scanButtonClickedRef.current = true;
+    
     if (scannerActive) {
       console.log('EntitySelector: Scan button clicked, stopping scanner');
       await stopScanner();
+      // Also close dropdown when stopping
+      setIsOpen(false);
     } else {
       console.log('EntitySelector: Scan button clicked, starting scanner');
       // Ensure dropdown is open when manually starting scanner
       if (!isOpen) {
         setIsOpen(true);
       }
-      await startScanner();
+      // Wait a bit for dropdown to open, then start scanner
+      setTimeout(() => {
+        startScanner().catch(console.error);
+      }, 100);
     }
+    
+    // Reset flag after a short delay
+    setTimeout(() => {
+      scanButtonClickedRef.current = false;
+    }, 300);
   };
 
   // Cleanup scanner on unmount
@@ -329,17 +344,23 @@ export default function EntitySelector({
               // Only close if we're not clicking on the scan button or scanner area
               // Use setTimeout to allow click events to fire first
               setTimeout(() => {
+                // Don't close if scan button was just clicked
+                if (scanButtonClickedRef.current) {
+                  console.log('EntitySelector: Ignoring blur - scan button was clicked');
+                  return;
+                }
+                
                 const activeElement = document.activeElement;
                 const container = containerRef.current;
                 // Don't close if focus moved to something inside the container (like scan button)
                 if (container && !container.contains(activeElement)) {
                   console.log('EntitySelector: Input blurred, closing dropdown and stopping scanner');
-                  setIsOpen(false);
                   if (scannerActive) {
                     stopScanner().catch(console.error);
                   }
+                  setIsOpen(false);
                 }
-              }, 200);
+              }, 150);
             }}
             placeholder={placeholder || `Search ${entityType}...`}
             required={required}
@@ -427,6 +448,7 @@ export default function EntitySelector({
           onMouseDown={(e) => {
             // Prevent blur event from firing when clicking the button
             e.preventDefault();
+            e.stopPropagation();
           }}
           className="btn btn-secondary"
           style={{ whiteSpace: 'nowrap' }}

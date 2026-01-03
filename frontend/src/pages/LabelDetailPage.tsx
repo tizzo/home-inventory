@@ -11,16 +11,6 @@ export default function LabelDetailPage() {
   const navigate = useNavigate();
   const toast = useToast();
 
-  // Auto-redirect if label is assigned
-  useEffect(() => {
-    if (label?.assigned_to_type && label?.assigned_to_id) {
-      const link = getAssignedEntityLink(label.assigned_to_type, label.assigned_to_id);
-      if (link) {
-        navigate(link, { replace: true });
-      }
-    }
-  }, [label, navigate]);
-
   const getAssignedEntityLink = (type: string, id: string): string | null => {
     switch (type) {
       case 'room':
@@ -37,6 +27,16 @@ export default function LabelDetailPage() {
         return null;
     }
   };
+
+  // Auto-redirect if label is assigned
+  useEffect(() => {
+    if (label?.assigned_to_type && label?.assigned_to_id) {
+      const link = getAssignedEntityLink(label.assigned_to_type, label.assigned_to_id);
+      if (link) {
+        navigate(link, { replace: true });
+      }
+    }
+  }, [label, navigate, getAssignedEntityLink]);
 
   const handleAssign = async (entityType: string, entityId: string) => {
     if (!labelId) return;

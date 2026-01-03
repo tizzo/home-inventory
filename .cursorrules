@@ -6,21 +6,28 @@
 - Refactor after tests pass
 
 ## Code Quality - Before Any Commit
+**CRITICAL: Before declaring ANY work complete, you MUST run all basic CI checks:**
+
 1. **TypeScript/Frontend**: 
    - Use strict typing (no `any` types)
    - Run `npm run type-check` and resolve all issues
    - **ALWAYS run `npm run build` before declaring frontend work complete**
    - Run `prettier --write .` for formatting
    - Run `npm run lint` and fix all issues
+   - **ALL of these must pass before saying work is done**
 
 2. **Rust**:
    - Run `cargo fmt` for formatting
    - Run `cargo clippy -- -D warnings` and resolve all issues
    - Fix all clippy warnings before proceeding
+   - Run `cargo build` to ensure compilation succeeds
+   - **ALL of these must pass before saying work is done**
 
 3. **Tests**: 
    - Run all tests (`cargo test` for backend, `npm test` for frontend)
    - Ensure all tests pass before committing
+
+**NEVER declare work complete without running the full check suite above. This is non-negotiable.**
 
 ## Git Commits
 - Commit autonomously with small, incremental changes that add functionality in slices

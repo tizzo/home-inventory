@@ -218,8 +218,10 @@ export default function EntitySelector({
   // Start scanner when dropdown opens
   useEffect(() => {
     if (isOpen && !scannerActive) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       startScanner().catch(console.error);
     } else if (!isOpen && scannerActive) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       stopScanner().catch(console.error);
     }
   }, [isOpen, scannerActive, startScanner, stopScanner]);

@@ -132,7 +132,6 @@ export default function BatchDetailPage() {
               const labelLink = getLabelLink(label);
               // If assigned, link to entity; if unassigned, link to assignment page
               const clickTarget = labelLink || `/l/${label.id}`;
-              const isClickable = true; // All labels are clickable now
               
               return (
                 <div

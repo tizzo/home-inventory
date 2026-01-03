@@ -2,7 +2,7 @@ import { useEffect, useCallback, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useLabel, useAssignLabel, useCreateRoom, useCreateShelvingUnit, useCreateShelf, useCreateContainer, useCreateItem } from '../hooks';
 import { useToast } from '../context/ToastContext';
-import { Modal, PhotoUpload } from '../components';
+import { Modal, PhotoUpload, EntitySelector } from '../components';
 import type { AssignLabelRequest, CreateRoomRequest, CreateShelvingUnitRequest, CreateShelfRequest, CreateContainerRequest, CreateItemRequest } from '../types/generated';
 
 export default function LabelDetailPage() {
@@ -344,32 +344,26 @@ export default function LabelDetailPage() {
 
             {/* Additional fields based on entity type */}
             {selectedEntityType === 'unit' && (
-                <div className="form-group">
-                  <label htmlFor="room_id">Room ID *</label>
-                  <input
-                    id="room_id"
-                    type="text"
-                    value={formData.room_id || ''}
-                    onChange={(e) => setFormData({ ...formData, room_id: e.target.value })}
-                    placeholder="Enter room UUID"
-                    required
-                  />
-                </div>
+              <EntitySelector
+                entityType="room"
+                value={formData.room_id}
+                onChange={(id) => setFormData({ ...formData, room_id: id })}
+                required
+                label="Room"
+                placeholder="Search for a room..."
+              />
             )}
 
             {selectedEntityType === 'shelf' && (
               <>
-                <div className="form-group">
-                  <label htmlFor="shelving_unit_id">Shelving Unit ID *</label>
-                  <input
-                    id="shelving_unit_id"
-                    type="text"
-                    value={formData.shelving_unit_id || ''}
-                    onChange={(e) => setFormData({ ...formData, shelving_unit_id: e.target.value })}
-                    placeholder="Enter shelving unit UUID"
-                    required
-                  />
-                </div>
+                <EntitySelector
+                  entityType="unit"
+                  value={formData.shelving_unit_id}
+                  onChange={(id) => setFormData({ ...formData, shelving_unit_id: id })}
+                  required
+                  label="Shelving Unit"
+                  placeholder="Search for a shelving unit..."
+                />
                 <div className="form-group">
                   <label htmlFor="position">Position (optional)</label>
                   <input
@@ -385,54 +379,42 @@ export default function LabelDetailPage() {
 
             {selectedEntityType === 'container' && (
               <>
-                <div className="form-group">
-                  <label htmlFor="shelf_id">Shelf ID (optional)</label>
-                  <input
-                    id="shelf_id"
-                    type="text"
-                    value={formData.shelf_id || ''}
-                    onChange={(e) => setFormData({ ...formData, shelf_id: e.target.value })}
-                    placeholder="Enter shelf UUID"
-                  />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="parent_container_id">Parent Container ID (optional)</label>
-                  <input
-                    id="parent_container_id"
-                    type="text"
-                    value={formData.parent_container_id || ''}
-                    onChange={(e) => setFormData({ ...formData, parent_container_id: e.target.value })}
-                    placeholder="Enter parent container UUID"
-                  />
-                </div>
+                <EntitySelector
+                  entityType="shelf"
+                  value={formData.shelf_id}
+                  onChange={(id) => setFormData({ ...formData, shelf_id: id, parent_container_id: undefined })}
+                  label="Shelf (optional)"
+                  placeholder="Search for a shelf..."
+                />
+                <EntitySelector
+                  entityType="container"
+                  value={formData.parent_container_id}
+                  onChange={(id) => setFormData({ ...formData, parent_container_id: id, shelf_id: undefined })}
+                  label="Parent Container (optional)"
+                  placeholder="Search for a parent container..."
+                />
                 <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginTop: '-0.5rem', marginBottom: '1rem' }}>
-                  Note: Provide either shelf_id OR parent_container_id, not both
+                  Note: Provide either shelf OR parent container, not both
                 </p>
               </>
             )}
 
             {selectedEntityType === 'item' && (
               <>
-                <div className="form-group">
-                  <label htmlFor="shelf_id">Shelf ID (optional)</label>
-                  <input
-                    id="shelf_id"
-                    type="text"
-                    value={formData.shelf_id || ''}
-                    onChange={(e) => setFormData({ ...formData, shelf_id: e.target.value })}
-                    placeholder="Enter shelf UUID"
-                  />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="container_id">Container ID (optional)</label>
-                  <input
-                    id="container_id"
-                    type="text"
-                    value={formData.container_id || ''}
-                    onChange={(e) => setFormData({ ...formData, container_id: e.target.value })}
-                    placeholder="Enter container UUID"
-                  />
-                </div>
+                <EntitySelector
+                  entityType="shelf"
+                  value={formData.shelf_id}
+                  onChange={(id) => setFormData({ ...formData, shelf_id: id })}
+                  label="Shelf (optional)"
+                  placeholder="Search for a shelf..."
+                />
+                <EntitySelector
+                  entityType="container"
+                  value={formData.container_id}
+                  onChange={(id) => setFormData({ ...formData, container_id: id })}
+                  label="Container (optional)"
+                  placeholder="Search for a container..."
+                />
                 <div className="form-group">
                   <label htmlFor="barcode">Barcode (optional)</label>
                   <input

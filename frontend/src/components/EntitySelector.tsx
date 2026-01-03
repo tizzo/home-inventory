@@ -1,0 +1,398 @@
+import { useState, useEffect, useRef, useMemo } from 'react';
+import { Html5Qrcode } from 'html5-qrcode';
+import { useRooms, useShelvingUnits, useShelves, useContainers, useItems } from '../hooks';
+import { labelsApi } from '../api';
+import type { RoomResponse, ShelvingUnitResponse, ShelfResponse, ContainerResponse, ItemResponse } from '../types/generated';
+
+export type EntityType = 'room' | 'unit' | 'shelf' | 'container' | 'item';
+
+interface EntitySelectorProps {
+  entityType: EntityType;
+  value?: string;
+  onChange: (entityId: string | undefined) => void;
+  required?: boolean;
+  placeholder?: string;
+  label?: string;
+}
+
+interface Entity {
+  id: string;
+  name: string;
+  displayText: string;
+}
+
+// Simple fuzzy match function
+const fuzzyMatch = (text: string, query: string): boolean => {
+  const lowerText = text.toLowerCase();
+  const lowerQuery = query.toLowerCase();
+  
+  // Exact match
+  if (lowerText.includes(lowerQuery)) return true;
+  
+  // Fuzzy match: check if all query characters appear in order
+  let queryIndex = 0;
+  for (let i = 0; i < lowerText.length && queryIndex < lowerQuery.length; i++) {
+    if (lowerText[i] === lowerQuery[queryIndex]) {
+      queryIndex++;
+    }
+  }
+  return queryIndex === lowerQuery.length;
+};
+
+export default function EntitySelector({
+  entityType,
+  value,
+  onChange,
+  required = false,
+  placeholder,
+  label,
+}: EntitySelectorProps) {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isOpen, setIsOpen] = useState(false);
+  const [showScanner, setShowScanner] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const scannerRef = useRef<Html5Qrcode | null>(null);
+  const scannerElementRef = useRef<HTMLDivElement>(null);
+
+  // Fetch entities based on type
+  const { data: roomsResponse } = useRooms({ limit: 1000 });
+  const { data: unitsResponse } = useShelvingUnits({ limit: 1000 });
+  const { data: shelvesResponse } = useShelves({ limit: 1000 });
+  const { data: containersResponse } = useContainers({ limit: 1000 });
+  const { data: itemsResponse } = useItems({ limit: 1000 });
+
+  // Get entities based on type
+  const allEntities = useMemo(() => {
+    switch (entityType) {
+      case 'room':
+        return (roomsResponse?.data || []).map((r: RoomResponse) => ({
+          id: r.id,
+          name: r.name,
+          displayText: r.name,
+        }));
+      case 'unit':
+        return (unitsResponse?.data || []).map((u: ShelvingUnitResponse) => ({
+          id: u.id,
+          name: u.name,
+          displayText: u.name,
+        }));
+      case 'shelf':
+        return (shelvesResponse?.data || []).map((s: ShelfResponse) => ({
+          id: s.id,
+          name: s.name,
+          displayText: s.name,
+        }));
+      case 'container':
+        return (containersResponse?.data || []).map((c: ContainerResponse) => ({
+          id: c.id,
+          name: c.name,
+          displayText: c.name,
+        }));
+      case 'item':
+        return (itemsResponse?.data || []).map((i: ItemResponse) => ({
+          id: i.id,
+          name: i.name,
+          displayText: i.name,
+        }));
+      default:
+        return [];
+    }
+  }, [entityType, roomsResponse, unitsResponse, shelvesResponse, containersResponse, itemsResponse]);
+
+  // Get selected entity
+  const selectedEntity = useMemo(() => {
+    return allEntities.find((e) => e.id === value);
+  }, [allEntities, value]);
+
+  // Filter entities based on search query
+  const filteredEntities = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return allEntities;
+    }
+    return allEntities.filter((entity) => fuzzyMatch(entity.displayText, searchQuery));
+  }, [allEntities, searchQuery]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [isOpen]);
+
+  // Handle QR code scanning
+  const handleScanClick = async () => {
+    if (showScanner) {
+      // Stop scanner
+      if (scannerRef.current) {
+        try {
+          await scannerRef.current.stop();
+          scannerRef.current.clear();
+        } catch (err) {
+          console.error('Error stopping scanner:', err);
+        }
+        scannerRef.current = null;
+      }
+      setShowScanner(false);
+      return;
+    }
+
+    // Start scanner
+    setShowScanner(true);
+    
+    // Wait for DOM to update
+    setTimeout(async () => {
+      if (!scannerElementRef.current) return;
+
+      try {
+        const html5QrCode = new Html5Qrcode(scannerElementRef.current.id);
+        scannerRef.current = html5QrCode;
+
+        await html5QrCode.start(
+          { facingMode: 'environment' },
+          {
+            fps: 10,
+            qrbox: { width: 250, height: 250 },
+          },
+          (decodedText) => {
+            // Handle scanned QR code
+            handleQrScan(decodedText);
+          },
+          () => {
+            // Ignore scanning errors (they're frequent during scanning)
+          }
+        );
+      } catch (err) {
+        console.error('Error starting scanner:', err);
+        alert('Failed to start camera. Please check permissions.');
+        setShowScanner(false);
+      }
+    }, 100);
+  };
+
+  // Handle QR code scan result
+  const handleQrScan = async (qrData: string) => {
+    try {
+      // Extract label ID from URL format: /l/{label_id} or http://.../l/{label_id}
+      const match = qrData.match(/\/l\/([a-f0-9-]+)/i);
+      if (!match) {
+        alert('Invalid QR code format. Expected label URL.');
+        return;
+      }
+
+      const labelId = match[1];
+      
+      // Fetch label via API
+      const label = await labelsApi.getById(labelId);
+      
+      // Map label entity type to selector entity type
+      const typeMap: Record<string, EntityType> = {
+        room: 'room',
+        unit: 'unit',
+        shelf: 'shelf',
+        container: 'container',
+        item: 'item',
+      };
+      
+      if (!label.assigned_to_id) {
+        alert('This label is not assigned to any entity.');
+        return;
+      }
+
+      const labelEntityType = label.assigned_to_type ? typeMap[label.assigned_to_type] : undefined;
+      if (!labelEntityType || labelEntityType !== entityType) {
+        alert(`This label is assigned to a ${label.assigned_to_type || 'unknown'}, not a ${entityType}.`);
+        return;
+      }
+
+      // Set the selected entity
+      onChange(label.assigned_to_id);
+      setIsOpen(false);
+      setShowScanner(false);
+      
+      // Stop scanner
+      if (scannerRef.current) {
+        try {
+          await scannerRef.current.stop();
+          scannerRef.current.clear();
+        } catch (err) {
+          console.error('Error stopping scanner:', err);
+        }
+        scannerRef.current = null;
+      }
+    } catch (err) {
+      console.error('Error processing QR scan:', err);
+      alert('Failed to process QR code. Please try again.');
+    }
+  };
+
+  // Cleanup scanner on unmount
+  useEffect(() => {
+    return () => {
+      if (scannerRef.current) {
+        scannerRef.current.stop().catch(() => {});
+        scannerRef.current.clear();
+      }
+    };
+  }, []);
+
+  const handleSelect = (entity: Entity) => {
+    onChange(entity.id);
+    setSearchQuery('');
+    setIsOpen(false);
+  };
+
+  const handleClear = () => {
+    onChange(undefined);
+    setSearchQuery('');
+  };
+
+  return (
+    <div className="form-group" ref={containerRef} style={{ position: 'relative' }}>
+      {label && (
+        <label htmlFor={`entity-selector-${entityType}`}>
+          {label}
+          {required && <span style={{ color: 'var(--error-color)' }}> *</span>}
+        </label>
+      )}
+      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'stretch' }}>
+        <div style={{ flex: 1, position: 'relative' }}>
+          <input
+            id={`entity-selector-${entityType}`}
+            type="text"
+            value={selectedEntity ? selectedEntity.displayText : searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setIsOpen(true);
+              if (selectedEntity) {
+                onChange(undefined);
+              }
+            }}
+            onFocus={() => setIsOpen(true)}
+            placeholder={placeholder || `Search ${entityType}...`}
+            required={required}
+            style={{ width: '100%' }}
+          />
+          {selectedEntity && (
+            <button
+              type="button"
+              onClick={handleClear}
+              style={{
+                position: 'absolute',
+                right: '0.5rem',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: '1.2rem',
+                color: 'var(--text-secondary)',
+                padding: '0.25rem',
+              }}
+              aria-label="Clear selection"
+            >
+              ×
+            </button>
+          )}
+
+          {/* Dropdown */}
+          {isOpen && !showScanner && (
+            <div
+              style={{
+                position: 'absolute',
+                top: '100%',
+                left: 0,
+                right: 0,
+                zIndex: 1000,
+                background: 'var(--surface-color)',
+                border: '1px solid var(--border-color)',
+                borderRadius: '0.5rem',
+                marginTop: '0.25rem',
+                maxHeight: '300px',
+                overflowY: 'auto',
+                boxShadow: 'var(--shadow-lg)',
+              }}
+            >
+              {filteredEntities.length === 0 ? (
+                <div style={{ padding: '1rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                  {searchQuery ? 'No matches found' : 'No entities available'}
+                </div>
+              ) : (
+                filteredEntities.map((entity) => (
+                  <button
+                    key={entity.id}
+                    type="button"
+                    onClick={() => handleSelect(entity)}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem 1rem',
+                      textAlign: 'left',
+                      background: entity.id === value ? 'rgba(var(--primary-color-rgb), 0.1)' : 'transparent',
+                      border: 'none',
+                      cursor: 'pointer',
+                      borderBottom: '1px solid var(--border-color)',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = 'var(--bg-color)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background =
+                        entity.id === value ? 'rgba(var(--primary-color-rgb), 0.1)' : 'transparent';
+                    }}
+                  >
+                    {entity.displayText}
+                  </button>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* QR Scanner Button */}
+        <button
+          type="button"
+          onClick={handleScanClick}
+          className="btn btn-secondary"
+          style={{ whiteSpace: 'nowrap' }}
+        >
+          {showScanner ? '📷 Stop' : '📷 Scan'}
+        </button>
+      </div>
+
+      {/* QR Scanner */}
+      {showScanner && (
+        <div
+          style={{
+            marginTop: '1rem',
+            padding: '1rem',
+            background: 'var(--bg-color)',
+            borderRadius: '0.5rem',
+            border: '2px solid var(--primary-color)',
+          }}
+        >
+          <div style={{ marginBottom: '0.5rem', fontWeight: 600 }}>
+            Scan Label QR Code
+          </div>
+          <div
+            id={`qr-scanner-${entityType}`}
+            ref={scannerElementRef}
+            style={{
+              width: '100%',
+              maxWidth: '400px',
+              margin: '0 auto',
+            }}
+          />
+          <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginTop: '0.5rem', marginBottom: 0 }}>
+            Point camera at label QR code
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}

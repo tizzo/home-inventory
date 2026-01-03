@@ -824,7 +824,7 @@ export default function ItemsPage() {
       </div>
 
       {/* Pagination */}
-      {itemsResponse && (
+      {itemsResponse && itemsResponse.total > 0 && (
         <Pagination
           total={itemsResponse.total}
           limit={itemsResponse.limit}

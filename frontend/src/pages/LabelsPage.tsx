@@ -176,7 +176,7 @@ export default function LabelsPage() {
         )}
 
         {/* Pagination */}
-        {batchesResponse && (
+        {batchesResponse && batchesResponse.total > 0 && (
           <Pagination
             total={batchesResponse.total}
             limit={batchesResponse.limit}

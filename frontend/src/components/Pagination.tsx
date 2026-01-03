@@ -11,29 +11,35 @@ export default function Pagination({
   offset,
   onPageChange,
 }: PaginationProps) {
-  const currentPage = Math.floor(offset / limit) + 1;
-  const totalPages = Math.ceil(total / limit);
-  const startItem = offset + 1;
-  const endItem = Math.min(offset + limit, total);
+  // Guard against invalid values
+  const safeTotal = total ?? 0;
+  const safeLimit = limit ?? 50;
+  const safeOffset = offset ?? 0;
 
-  if (totalPages <= 1) {
+  const currentPage = Math.floor(safeOffset / safeLimit) + 1;
+  const totalPages = Math.ceil(safeTotal / safeLimit);
+  const startItem = safeOffset + 1;
+  const endItem = Math.min(safeOffset + safeLimit, safeTotal);
+
+  // Don't show pagination if there's only one page or no results
+  if (totalPages <= 1 || safeTotal === 0) {
     return null;
   }
 
   const handlePrevious = () => {
-    if (offset > 0) {
-      onPageChange(Math.max(0, offset - limit));
+    if (safeOffset > 0) {
+      onPageChange(Math.max(0, safeOffset - safeLimit));
     }
   };
 
   const handleNext = () => {
-    if (offset + limit < total) {
-      onPageChange(offset + limit);
+    if (safeOffset + safeLimit < safeTotal) {
+      onPageChange(safeOffset + safeLimit);
     }
   };
 
   const handlePageClick = (page: number) => {
-    onPageChange((page - 1) * limit);
+    onPageChange((page - 1) * safeLimit);
   };
 
   // Calculate page numbers to show
@@ -87,14 +93,14 @@ export default function Pagination({
       }}
     >
       <div style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
-        Showing {startItem} to {endItem} of {total} results
+        Showing {startItem} to {endItem} of {safeTotal} results
       </div>
 
       <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
         <button
           className="btn btn-secondary btn-sm"
           onClick={handlePrevious}
-          disabled={offset === 0}
+          disabled={safeOffset === 0}
         >
           Previous
         </button>
@@ -136,7 +142,7 @@ export default function Pagination({
         <button
           className="btn btn-secondary btn-sm"
           onClick={handleNext}
-          disabled={offset + limit >= total}
+          disabled={safeOffset + safeLimit >= safeTotal}
         >
           Next
         </button>

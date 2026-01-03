@@ -579,7 +579,7 @@ export default function ShelvesPage() {
       </div>
 
       {/* Pagination */}
-      {shelvesResponse && (
+      {shelvesResponse && shelvesResponse.total > 0 && (
         <Pagination
           total={shelvesResponse.total}
           limit={shelvesResponse.limit}

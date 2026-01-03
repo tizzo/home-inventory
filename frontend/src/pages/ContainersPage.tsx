@@ -749,7 +749,7 @@ export default function ContainersPage() {
       </div>
 
       {/* Pagination */}
-      {containersResponse && (
+      {containersResponse && containersResponse.total > 0 && (
         <Pagination
           total={containersResponse.total}
           limit={containersResponse.limit}

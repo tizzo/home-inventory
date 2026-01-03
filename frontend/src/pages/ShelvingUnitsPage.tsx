@@ -415,7 +415,7 @@ export default function ShelvingUnitsPage() {
       </div>
 
       {/* Pagination */}
-      {unitsResponse && (
+      {unitsResponse && unitsResponse.total > 0 && (
         <Pagination
           total={unitsResponse.total}
           limit={unitsResponse.limit}

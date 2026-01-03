@@ -332,7 +332,7 @@ export default function RoomsPage() {
       </div>
 
       {/* Pagination */}
-      {roomsResponse && (
+      {roomsResponse && roomsResponse.total > 0 && (
         <Pagination
           total={roomsResponse.total}
           limit={roomsResponse.limit}

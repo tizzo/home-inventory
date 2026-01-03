@@ -52,10 +52,6 @@ export default function LabelDetailPage() {
     }
   }, [label, navigate, getAssignedEntityLink]);
 
-  const capitalize = (str: string): string => {
-    return str.charAt(0).toUpperCase() + str.slice(1);
-  };
-
   const getEntityTypeDisplayName = (type: string): string => {
     switch (type) {
       case 'room':
@@ -112,18 +108,22 @@ export default function LabelDetailPage() {
           const payload: CreateShelvingUnitRequest = {
             name: formData.name,
             description: formData.description || undefined,
-            room_id: formData.room_id,
+            room_id: formData.room_id as string,
           };
           const unit = await createUnit.mutateAsync(payload);
           createdEntityId = unit.id;
           break;
         }
         case 'shelf': {
+          if (!formData.shelving_unit_id) {
+            toast.showError('Shelving Unit ID is required for shelves');
+            return;
+          }
           const payload: CreateShelfRequest = {
             name: formData.name,
             description: formData.description || undefined,
             position: formData.position ? parseInt(formData.position, 10) : undefined,
-            shelving_unit_id: formData.shelving_unit_id,
+            shelving_unit_id: formData.shelving_unit_id as string,
           };
           const shelf = await createShelf.mutateAsync(payload);
           createdEntityId = shelf.id;
@@ -337,23 +337,23 @@ export default function LabelDetailPage() {
 
             {/* Additional fields based on entity type */}
             {selectedEntityType === 'unit' && (
-              <div className="form-group">
-                <label htmlFor="room_id">Room ID (required)</label>
-                <input
-                  id="room_id"
-                  type="text"
-                  value={formData.room_id || ''}
-                  onChange={(e) => setFormData({ ...formData, room_id: e.target.value })}
-                  placeholder="Enter room UUID"
-                  required
-                />
-              </div>
+                <div className="form-group">
+                  <label htmlFor="room_id">Room ID *</label>
+                  <input
+                    id="room_id"
+                    type="text"
+                    value={formData.room_id || ''}
+                    onChange={(e) => setFormData({ ...formData, room_id: e.target.value })}
+                    placeholder="Enter room UUID"
+                    required
+                  />
+                </div>
             )}
 
             {selectedEntityType === 'shelf' && (
               <>
                 <div className="form-group">
-                  <label htmlFor="shelving_unit_id">Shelving Unit ID (required)</label>
+                  <label htmlFor="shelving_unit_id">Shelving Unit ID *</label>
                   <input
                     id="shelving_unit_id"
                     type="text"

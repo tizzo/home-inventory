@@ -130,7 +130,9 @@ export default function BatchDetailPage() {
           >
             {batch.labels.map((label) => {
               const labelLink = getLabelLink(label);
-              const isClickable = labelLink !== null;
+              // If assigned, link to entity; if unassigned, link to assignment page
+              const clickTarget = labelLink || `/l/${label.id}`;
+              const isClickable = true; // All labels are clickable now
               
               return (
                 <div
@@ -146,26 +148,20 @@ export default function BatchDetailPage() {
                     border: '2px solid var(--border-color)',
                     boxShadow: 'var(--shadow)',
                     transition: 'all 0.2s',
-                    cursor: isClickable ? 'pointer' : 'default',
+                    cursor: 'pointer',
                   }}
                   onClick={() => {
-                    if (labelLink) {
-                      navigate(labelLink);
-                    }
+                    navigate(clickTarget);
                   }}
                   onMouseEnter={(e) => {
-                    if (isClickable) {
-                      e.currentTarget.style.transform = 'translateY(-4px)';
-                      e.currentTarget.style.boxShadow = 'var(--shadow-lg)';
-                      e.currentTarget.style.borderColor = 'var(--primary-color)';
-                    }
+                    e.currentTarget.style.transform = 'translateY(-4px)';
+                    e.currentTarget.style.boxShadow = 'var(--shadow-lg)';
+                    e.currentTarget.style.borderColor = 'var(--primary-color)';
                   }}
                   onMouseLeave={(e) => {
-                    if (isClickable) {
-                      e.currentTarget.style.transform = 'translateY(0)';
-                      e.currentTarget.style.boxShadow = 'var(--shadow)';
-                      e.currentTarget.style.borderColor = 'var(--border-color)';
-                    }
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = 'var(--shadow)';
+                    e.currentTarget.style.borderColor = 'var(--border-color)';
                   }}
                 >
                 <div
@@ -191,8 +187,8 @@ export default function BatchDetailPage() {
                       fontSize: '1rem',
                       fontWeight: 700,
                       marginBottom: '0.5rem',
-                      color: isClickable ? 'var(--primary-color)' : 'var(--text-color)',
-                      textDecoration: isClickable ? 'underline' : 'none',
+                      color: 'var(--primary-color)',
+                      textDecoration: 'underline',
                     }}
                   >
                     #{label.number}
@@ -209,21 +205,20 @@ export default function BatchDetailPage() {
                       }}
                     >
                       ✓ Assigned to {label.assigned_to_type}
-                      {isClickable && (
-                        <span style={{ marginLeft: '0.5rem', fontSize: '0.7rem' }}>
-                          (click to view)
-                        </span>
-                      )}
+                      <span style={{ marginLeft: '0.5rem', fontSize: '0.7rem' }}>
+                        (click to view)
+                      </span>
                     </div>
                   ) : (
                     <div
                       style={{
                         fontSize: '0.75rem',
-                        color: 'var(--text-secondary)',
+                        color: 'var(--primary-color)',
                         fontStyle: 'italic',
+                        fontWeight: 600,
                       }}
                     >
-                      Unassigned
+                      Unassigned (click to assign)
                     </div>
                   )}
                 </div>

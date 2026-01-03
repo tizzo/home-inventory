@@ -1,6 +1,7 @@
 pub mod container;
 pub mod item;
 pub mod label;
+pub mod pagination;
 pub mod photo;
 pub mod room;
 pub mod shelf;
@@ -28,3 +29,5 @@ pub use shelf::*;
 pub use shelving_unit::*;
 #[allow(unused_imports)]
 pub use user::*;
+#[allow(unused_imports)]
+pub use pagination::*;

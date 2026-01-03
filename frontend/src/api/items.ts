@@ -3,27 +3,31 @@ import type {
   ItemResponse,
   CreateItemRequest,
   UpdateItemRequest,
+  PaginatedResponse,
+  PaginationQuery,
 } from '../types/generated';
 
 export const itemsApi = {
   // Get all items
-  getAll: async (): Promise<ItemResponse[]> => {
-    const response = await apiClient.get<ItemResponse[]>('/api/items');
+  getAll: async (params?: PaginationQuery): Promise<PaginatedResponse<ItemResponse>> => {
+    const response = await apiClient.get<PaginatedResponse<ItemResponse>>('/api/items', { params });
     return response.data;
   },
 
   // Get items by shelf
-  getByShelf: async (shelfId: string): Promise<ItemResponse[]> => {
-    const response = await apiClient.get<ItemResponse[]>(
-      `/api/shelves/${shelfId}/items`
+  getByShelf: async (shelfId: string, params?: PaginationQuery): Promise<PaginatedResponse<ItemResponse>> => {
+    const response = await apiClient.get<PaginatedResponse<ItemResponse>>(
+      `/api/shelves/${shelfId}/items`,
+      { params }
     );
     return response.data;
   },
 
   // Get items by container
-  getByContainer: async (containerId: string): Promise<ItemResponse[]> => {
-    const response = await apiClient.get<ItemResponse[]>(
-      `/api/containers/${containerId}/items`
+  getByContainer: async (containerId: string, params?: PaginationQuery): Promise<PaginatedResponse<ItemResponse>> => {
+    const response = await apiClient.get<PaginatedResponse<ItemResponse>>(
+      `/api/containers/${containerId}/items`,
+      { params }
     );
     return response.data;
   },

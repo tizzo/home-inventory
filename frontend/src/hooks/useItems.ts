@@ -4,30 +4,32 @@ import type {
   ItemResponse,
   CreateItemRequest,
   UpdateItemRequest,
+  PaginatedResponse,
+  PaginationQuery,
 } from '../types/generated';
 
 // Get all items
-export const useItems = () => {
-  return useQuery<ItemResponse[], Error>({
-    queryKey: ['items'],
-    queryFn: itemsApi.getAll,
+export const useItems = (params?: PaginationQuery) => {
+  return useQuery<PaginatedResponse<ItemResponse>, Error>({
+    queryKey: ['items', params],
+    queryFn: () => itemsApi.getAll(params),
   });
 };
 
 // Get items by shelf
-export const useItemsByShelf = (shelfId: string) => {
-  return useQuery<ItemResponse[], Error>({
-    queryKey: ['items', 'shelf', shelfId],
-    queryFn: () => itemsApi.getByShelf(shelfId),
+export const useItemsByShelf = (shelfId: string, params?: PaginationQuery) => {
+  return useQuery<PaginatedResponse<ItemResponse>, Error>({
+    queryKey: ['items', 'shelf', shelfId, params],
+    queryFn: () => itemsApi.getByShelf(shelfId, params),
     enabled: !!shelfId,
   });
 };
 
 // Get items by container
-export const useItemsByContainer = (containerId: string) => {
-  return useQuery<ItemResponse[], Error>({
-    queryKey: ['items', 'container', containerId],
-    queryFn: () => itemsApi.getByContainer(containerId),
+export const useItemsByContainer = (containerId: string, params?: PaginationQuery) => {
+  return useQuery<PaginatedResponse<ItemResponse>, Error>({
+    queryKey: ['items', 'container', containerId, params],
+    queryFn: () => itemsApi.getByContainer(containerId, params),
     enabled: !!containerId,
   });
 };

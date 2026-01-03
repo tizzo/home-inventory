@@ -1,5 +1,5 @@
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::StatusCode,
     response::Json,
     routing::{delete, get, post, put},
@@ -11,16 +11,33 @@ use uuid::Uuid;
 
 use crate::app::AppState;
 use crate::models::{
-    CreateShelvingUnitRequest, ShelvingUnit, ShelvingUnitResponse, UpdateShelvingUnitRequest,
+    CreateShelvingUnitRequest, PaginatedResponse, PaginationQuery, ShelvingUnit,
+    ShelvingUnitResponse, UpdateShelvingUnitRequest,
 };
 
 /// Get all shelving units
 pub async fn list_shelving_units(
     State(state): State<Arc<AppState>>,
-) -> Result<Json<Vec<ShelvingUnitResponse>>, StatusCode> {
+    Query(params): Query<PaginationQuery>,
+) -> Result<Json<PaginatedResponse<ShelvingUnitResponse>>, StatusCode> {
+    let limit = params.limit.unwrap_or(50).min(1000).max(1);
+    let offset = params.offset.unwrap_or(0).max(0);
+
+    // Get total count
+    let total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM shelving_units")
+        .fetch_one(&state.db)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to count shelving units: {:?}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    // Get paginated units
     let units = sqlx::query_as::<_, ShelvingUnit>(
-        "SELECT * FROM shelving_units ORDER BY created_at DESC",
+        "SELECT * FROM shelving_units ORDER BY created_at DESC LIMIT $1 OFFSET $2",
     )
+    .bind(limit)
+    .bind(offset)
     .fetch_all(&state.db)
     .await
     .map_err(|e| {
@@ -30,18 +47,35 @@ pub async fn list_shelving_units(
 
     let responses: Vec<ShelvingUnitResponse> =
         units.into_iter().map(ShelvingUnitResponse::from).collect();
-    Ok(Json(responses))
+    Ok(Json(PaginatedResponse::new(responses, total, limit, offset)))
 }
 
 /// Get shelving units by room
 pub async fn list_shelving_units_by_room(
     State(state): State<Arc<AppState>>,
     Path(room_id): Path<Uuid>,
-) -> Result<Json<Vec<ShelvingUnitResponse>>, StatusCode> {
+    Query(params): Query<PaginationQuery>,
+) -> Result<Json<PaginatedResponse<ShelvingUnitResponse>>, StatusCode> {
+    let limit = params.limit.unwrap_or(50).min(1000).max(1);
+    let offset = params.offset.unwrap_or(0).max(0);
+
+    // Get total count
+    let total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM shelving_units WHERE room_id = $1")
+        .bind(room_id)
+        .fetch_one(&state.db)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to count shelving units for room: {:?}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    // Get paginated units
     let units = sqlx::query_as::<_, ShelvingUnit>(
-        "SELECT * FROM shelving_units WHERE room_id = $1 ORDER BY created_at DESC",
+        "SELECT * FROM shelving_units WHERE room_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3",
     )
     .bind(room_id)
+    .bind(limit)
+    .bind(offset)
     .fetch_all(&state.db)
     .await
     .map_err(|e| {
@@ -51,7 +85,7 @@ pub async fn list_shelving_units_by_room(
 
     let responses: Vec<ShelvingUnitResponse> =
         units.into_iter().map(ShelvingUnitResponse::from).collect();
-    Ok(Json(responses))
+    Ok(Json(PaginatedResponse::new(responses, total, limit, offset)))
 }
 
 /// Get a single shelving unit by ID

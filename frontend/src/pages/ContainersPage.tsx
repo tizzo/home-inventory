@@ -16,7 +16,7 @@ import {
   useRoom,
   usePhotos,
 } from '../hooks';
-import { Modal, PhotoUpload, PhotoGallery } from '../components';
+import { Modal, PhotoUpload, PhotoGallery, Pagination } from '../components';
 import type {
   CreateContainerRequest,
   UpdateContainerRequest,
@@ -33,11 +33,16 @@ export default function ContainersPage() {
 
   // Determine context and fetch appropriate data
   const context = shelfId ? 'shelf' : parentId ? 'parent' : 'all';
-  const { data: allContainers, isLoading: isLoadingAll } = useContainers();
-  const { data: shelfContainers, isLoading: isLoadingShelf } =
-    useContainersByShelf(shelfId || '');
-  const { data: parentContainers, isLoading: isLoadingParent } =
-    useContainersByParent(parentId || '');
+  const [pagination, setPagination] = useState({ limit: 50, offset: 0 });
+  const { data: allContainersResponse, isLoading: isLoadingAll } = useContainers(pagination);
+  const { data: shelfContainersResponse, isLoading: isLoadingShelf } =
+    useContainersByShelf(shelfId || '', pagination);
+  const { data: parentContainersResponse, isLoading: isLoadingParent } =
+    useContainersByParent(parentId || '', pagination);
+
+  const allContainers = allContainersResponse?.data || [];
+  const shelfContainers = shelfContainersResponse?.data || [];
+  const parentContainers = parentContainersResponse?.data || [];
 
   const containers =
     context === 'shelf'
@@ -45,6 +50,12 @@ export default function ContainersPage() {
       : context === 'parent'
         ? parentContainers
         : allContainers;
+  const containersResponse =
+    context === 'shelf'
+      ? shelfContainersResponse
+      : context === 'parent'
+        ? parentContainersResponse
+        : allContainersResponse;
   const isLoading =
     context === 'shelf'
       ? isLoadingShelf
@@ -57,7 +68,8 @@ export default function ContainersPage() {
   const { data: parentContainer } = useContainer(parentId || '');
   const { data: unit } = useShelvingUnit(shelf?.shelving_unit_id || '');
   const { data: room } = useRoom(unit?.room_id || '');
-  const { data: allShelves } = useShelves();
+  const { data: allShelvesResponse } = useShelves();
+  const allShelves = allShelvesResponse?.data || [];
 
   const createContainer = useCreateContainer();
   const updateContainer = useUpdateContainer();
@@ -443,7 +455,7 @@ export default function ContainersPage() {
                 required
               >
                 <option value="">Select a shelf</option>
-                {allShelves?.map((s) => (
+                {allShelves.map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.name}
                   </option>
@@ -467,7 +479,7 @@ export default function ContainersPage() {
                 required
               >
                 <option value="">Select a parent container</option>
-                {allContainers?.map((c) => (
+                {allContainers.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
                   </option>
@@ -714,14 +726,14 @@ export default function ContainersPage() {
 
       {/* Containers Grid */}
       <div className="rooms-grid">
-        {containers?.length === 0 ? (
+        {containers.length === 0 ? (
           <p className="empty-state">
             {shelfId || parentId
               ? 'No containers yet. Click "Add Container" to create your first container.'
               : 'No containers found.'}
           </p>
         ) : (
-          containers?.map((container) => (
+          containers.map((container) => (
             <ContainerCard
               key={container.id}
               container={container}
@@ -735,6 +747,16 @@ export default function ContainersPage() {
           ))
         )}
       </div>
+
+      {/* Pagination */}
+      {containersResponse && (
+        <Pagination
+          total={containersResponse.total}
+          limit={containersResponse.limit}
+          offset={containersResponse.offset}
+          onPageChange={(newOffset) => setPagination({ ...pagination, offset: newOffset })}
+        />
+      )}
     </div>
   );
 }

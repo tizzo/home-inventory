@@ -1,5 +1,5 @@
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::StatusCode,
     response::Json,
     Router,
@@ -9,33 +9,70 @@ use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::app::AppState;
-use crate::models::{CreateItemRequest, Item, ItemResponse, UpdateItemRequest};
+use crate::models::{
+    CreateItemRequest, Item, ItemResponse, PaginatedResponse, PaginationQuery, UpdateItemRequest,
+};
 
 /// Get all items
 pub async fn list_items(
     State(state): State<Arc<AppState>>,
-) -> Result<Json<Vec<ItemResponse>>, StatusCode> {
-    let items = sqlx::query_as::<_, Item>("SELECT * FROM items ORDER BY created_at DESC")
-        .fetch_all(&state.db)
+    Query(params): Query<PaginationQuery>,
+) -> Result<Json<PaginatedResponse<ItemResponse>>, StatusCode> {
+    let limit = params.limit.unwrap_or(50).min(1000).max(1);
+    let offset = params.offset.unwrap_or(0).max(0);
+
+    // Get total count
+    let total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM items")
+        .fetch_one(&state.db)
         .await
         .map_err(|e| {
-            tracing::error!("Failed to fetch items: {:?}", e);
+            tracing::error!("Failed to count items: {:?}", e);
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
 
+    // Get paginated items
+    let items = sqlx::query_as::<_, Item>(
+        "SELECT * FROM items ORDER BY created_at DESC LIMIT $1 OFFSET $2"
+    )
+    .bind(limit)
+    .bind(offset)
+    .fetch_all(&state.db)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to fetch items: {:?}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
     let responses: Vec<ItemResponse> = items.into_iter().map(ItemResponse::from).collect();
-    Ok(Json(responses))
+    Ok(Json(PaginatedResponse::new(responses, total, limit, offset)))
 }
 
 /// Get items by shelf
 pub async fn list_items_by_shelf(
     State(state): State<Arc<AppState>>,
     Path(shelf_id): Path<Uuid>,
-) -> Result<Json<Vec<ItemResponse>>, StatusCode> {
+    Query(params): Query<PaginationQuery>,
+) -> Result<Json<PaginatedResponse<ItemResponse>>, StatusCode> {
+    let limit = params.limit.unwrap_or(50).min(1000).max(1);
+    let offset = params.offset.unwrap_or(0).max(0);
+
+    // Get total count
+    let total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM items WHERE shelf_id = $1")
+        .bind(shelf_id)
+        .fetch_one(&state.db)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to count items: {:?}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    // Get paginated items
     let items = sqlx::query_as::<_, Item>(
-        "SELECT * FROM items WHERE shelf_id = $1 ORDER BY created_at"
+        "SELECT * FROM items WHERE shelf_id = $1 ORDER BY created_at LIMIT $2 OFFSET $3"
     )
         .bind(shelf_id)
+        .bind(limit)
+        .bind(offset)
         .fetch_all(&state.db)
         .await
         .map_err(|e| {
@@ -44,18 +81,35 @@ pub async fn list_items_by_shelf(
         })?;
 
     let responses: Vec<ItemResponse> = items.into_iter().map(ItemResponse::from).collect();
-    Ok(Json(responses))
+    Ok(Json(PaginatedResponse::new(responses, total, limit, offset)))
 }
 
 /// Get items by container
 pub async fn list_items_by_container(
     State(state): State<Arc<AppState>>,
     Path(container_id): Path<Uuid>,
-) -> Result<Json<Vec<ItemResponse>>, StatusCode> {
+    Query(params): Query<PaginationQuery>,
+) -> Result<Json<PaginatedResponse<ItemResponse>>, StatusCode> {
+    let limit = params.limit.unwrap_or(50).min(1000).max(1);
+    let offset = params.offset.unwrap_or(0).max(0);
+
+    // Get total count
+    let total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM items WHERE container_id = $1")
+        .bind(container_id)
+        .fetch_one(&state.db)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to count items: {:?}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    // Get paginated items
     let items = sqlx::query_as::<_, Item>(
-        "SELECT * FROM items WHERE container_id = $1 ORDER BY created_at"
+        "SELECT * FROM items WHERE container_id = $1 ORDER BY created_at LIMIT $2 OFFSET $3"
     )
         .bind(container_id)
+        .bind(limit)
+        .bind(offset)
         .fetch_all(&state.db)
         .await
         .map_err(|e| {
@@ -64,7 +118,7 @@ pub async fn list_items_by_container(
         })?;
 
     let responses: Vec<ItemResponse> = items.into_iter().map(ItemResponse::from).collect();
-    Ok(Json(responses))
+    Ok(Json(PaginatedResponse::new(responses, total, limit, offset)))
 }
 
 /// Get a single item by ID

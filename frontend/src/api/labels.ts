@@ -4,6 +4,8 @@ import type {
   GenerateLabelsRequest,
   GenerateLabelsResponse,
   AssignLabelRequest,
+  PaginatedResponse,
+  PaginationQuery,
 } from '../types/generated';
 
 export interface BatchWithLabels {
@@ -14,16 +16,16 @@ export interface BatchWithLabels {
 
 export const labelsApi = {
   // List all batches with their labels
-  listBatches: async (): Promise<BatchWithLabels[]> => {
-    const response = await apiClient.get<BatchWithLabels[]>('/api/labels');
+  listBatches: async (params?: PaginationQuery): Promise<PaginatedResponse<BatchWithLabels>> => {
+    const response = await apiClient.get<PaginatedResponse<BatchWithLabels>>('/api/labels', { params });
     return response.data;
   },
 
   // Get a single batch by ID
   getBatchById: async (batchId: string): Promise<BatchWithLabels> => {
     // Find the batch from the list (we could add a dedicated endpoint later)
-    const batches = await labelsApi.listBatches();
-    const batch = batches.find((b) => b.batch_id === batchId);
+    const batchesResponse = await labelsApi.listBatches({ limit: 1000 });
+    const batch = batchesResponse.data.find((b) => b.batch_id === batchId);
     if (!batch) {
       throw new Error(`Batch ${batchId} not found`);
     }

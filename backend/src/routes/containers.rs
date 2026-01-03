@@ -1,5 +1,5 @@
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::StatusCode,
     response::Json,
     Router,
@@ -10,16 +10,33 @@ use uuid::Uuid;
 
 use crate::app::AppState;
 use crate::models::{
-    Container, ContainerResponse, CreateContainerRequest, UpdateContainerRequest,
+    Container, ContainerResponse, CreateContainerRequest, PaginatedResponse, PaginationQuery,
+    UpdateContainerRequest,
 };
 
 /// Get all containers
 pub async fn list_containers(
     State(state): State<Arc<AppState>>,
-) -> Result<Json<Vec<ContainerResponse>>, StatusCode> {
+    Query(params): Query<PaginationQuery>,
+) -> Result<Json<PaginatedResponse<ContainerResponse>>, StatusCode> {
+    let limit = params.limit.unwrap_or(50).min(1000).max(1);
+    let offset = params.offset.unwrap_or(0).max(0);
+
+    // Get total count
+    let total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM containers")
+        .fetch_one(&state.db)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to count containers: {:?}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    // Get paginated containers
     let containers = sqlx::query_as::<_, Container>(
-        "SELECT * FROM containers ORDER BY created_at DESC"
+        "SELECT * FROM containers ORDER BY created_at DESC LIMIT $1 OFFSET $2"
     )
+        .bind(limit)
+        .bind(offset)
         .fetch_all(&state.db)
         .await
         .map_err(|e| {
@@ -31,18 +48,35 @@ pub async fn list_containers(
         .into_iter()
         .map(ContainerResponse::from)
         .collect();
-    Ok(Json(responses))
+    Ok(Json(PaginatedResponse::new(responses, total, limit, offset)))
 }
 
 /// Get containers by shelf
 pub async fn list_containers_by_shelf(
     State(state): State<Arc<AppState>>,
     Path(shelf_id): Path<Uuid>,
-) -> Result<Json<Vec<ContainerResponse>>, StatusCode> {
+    Query(params): Query<PaginationQuery>,
+) -> Result<Json<PaginatedResponse<ContainerResponse>>, StatusCode> {
+    let limit = params.limit.unwrap_or(50).min(1000).max(1);
+    let offset = params.offset.unwrap_or(0).max(0);
+
+    // Get total count
+    let total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM containers WHERE shelf_id = $1")
+        .bind(shelf_id)
+        .fetch_one(&state.db)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to count containers: {:?}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    // Get paginated containers
     let containers = sqlx::query_as::<_, Container>(
-        "SELECT * FROM containers WHERE shelf_id = $1 ORDER BY created_at"
+        "SELECT * FROM containers WHERE shelf_id = $1 ORDER BY created_at LIMIT $2 OFFSET $3"
     )
         .bind(shelf_id)
+        .bind(limit)
+        .bind(offset)
         .fetch_all(&state.db)
         .await
         .map_err(|e| {
@@ -54,18 +88,35 @@ pub async fn list_containers_by_shelf(
         .into_iter()
         .map(ContainerResponse::from)
         .collect();
-    Ok(Json(responses))
+    Ok(Json(PaginatedResponse::new(responses, total, limit, offset)))
 }
 
 /// Get containers by parent container
 pub async fn list_containers_by_parent(
     State(state): State<Arc<AppState>>,
     Path(parent_id): Path<Uuid>,
-) -> Result<Json<Vec<ContainerResponse>>, StatusCode> {
+    Query(params): Query<PaginationQuery>,
+) -> Result<Json<PaginatedResponse<ContainerResponse>>, StatusCode> {
+    let limit = params.limit.unwrap_or(50).min(1000).max(1);
+    let offset = params.offset.unwrap_or(0).max(0);
+
+    // Get total count
+    let total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM containers WHERE parent_container_id = $1")
+        .bind(parent_id)
+        .fetch_one(&state.db)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to count containers: {:?}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    // Get paginated containers
     let containers = sqlx::query_as::<_, Container>(
-        "SELECT * FROM containers WHERE parent_container_id = $1 ORDER BY created_at"
+        "SELECT * FROM containers WHERE parent_container_id = $1 ORDER BY created_at LIMIT $2 OFFSET $3"
     )
         .bind(parent_id)
+        .bind(limit)
+        .bind(offset)
         .fetch_all(&state.db)
         .await
         .map_err(|e| {
@@ -77,7 +128,7 @@ pub async fn list_containers_by_parent(
         .into_iter()
         .map(ContainerResponse::from)
         .collect();
-    Ok(Json(responses))
+    Ok(Json(PaginatedResponse::new(responses, total, limit, offset)))
 }
 
 /// Get a single container by ID

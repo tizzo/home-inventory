@@ -4,30 +4,32 @@ import type {
   ContainerResponse,
   CreateContainerRequest,
   UpdateContainerRequest,
+  PaginatedResponse,
+  PaginationQuery,
 } from '../types/generated';
 
 // Get all containers
-export const useContainers = () => {
-  return useQuery<ContainerResponse[], Error>({
-    queryKey: ['containers'],
-    queryFn: containersApi.getAll,
+export const useContainers = (params?: PaginationQuery) => {
+  return useQuery<PaginatedResponse<ContainerResponse>, Error>({
+    queryKey: ['containers', params],
+    queryFn: () => containersApi.getAll(params),
   });
 };
 
 // Get containers by shelf
-export const useContainersByShelf = (shelfId: string) => {
-  return useQuery<ContainerResponse[], Error>({
-    queryKey: ['containers', 'shelf', shelfId],
-    queryFn: () => containersApi.getByShelf(shelfId),
+export const useContainersByShelf = (shelfId: string, params?: PaginationQuery) => {
+  return useQuery<PaginatedResponse<ContainerResponse>, Error>({
+    queryKey: ['containers', 'shelf', shelfId, params],
+    queryFn: () => containersApi.getByShelf(shelfId, params),
     enabled: !!shelfId,
   });
 };
 
 // Get containers by parent
-export const useContainersByParent = (parentId: string) => {
-  return useQuery<ContainerResponse[], Error>({
-    queryKey: ['containers', 'parent', parentId],
-    queryFn: () => containersApi.getByParent(parentId),
+export const useContainersByParent = (parentId: string, params?: PaginationQuery) => {
+  return useQuery<PaginatedResponse<ContainerResponse>, Error>({
+    queryKey: ['containers', 'parent', parentId, params],
+    queryFn: () => containersApi.getByParent(parentId, params),
     enabled: !!parentId,
   });
 };

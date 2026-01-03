@@ -3,20 +3,23 @@ import type {
   ShelvingUnitResponse,
   CreateShelvingUnitRequest,
   UpdateShelvingUnitRequest,
+  PaginatedResponse,
+  PaginationQuery,
 } from '../types/generated';
 
 export const shelvingUnitsApi = {
   // Get all shelving units
-  getAll: async (): Promise<ShelvingUnitResponse[]> => {
+  getAll: async (params?: PaginationQuery): Promise<PaginatedResponse<ShelvingUnitResponse>> => {
     const response =
-      await apiClient.get<ShelvingUnitResponse[]>('/api/units');
+      await apiClient.get<PaginatedResponse<ShelvingUnitResponse>>('/api/units', { params });
     return response.data;
   },
 
   // Get shelving units in a specific room
-  getByRoom: async (roomId: string): Promise<ShelvingUnitResponse[]> => {
-    const response = await apiClient.get<ShelvingUnitResponse[]>(
-      `/api/rooms/${roomId}/units`
+  getByRoom: async (roomId: string, params?: PaginationQuery): Promise<PaginatedResponse<ShelvingUnitResponse>> => {
+    const response = await apiClient.get<PaginatedResponse<ShelvingUnitResponse>>(
+      `/api/rooms/${roomId}/units`,
+      { params }
     );
     return response.data;
   },

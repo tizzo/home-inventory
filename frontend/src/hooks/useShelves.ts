@@ -4,21 +4,23 @@ import type {
   ShelfResponse,
   CreateShelfRequest,
   UpdateShelfRequest,
+  PaginatedResponse,
+  PaginationQuery,
 } from '../types/generated';
 
 // Get all shelves
-export const useShelves = () => {
-  return useQuery<ShelfResponse[], Error>({
-    queryKey: ['shelves'],
-    queryFn: shelvesApi.getAll,
+export const useShelves = (params?: PaginationQuery) => {
+  return useQuery<PaginatedResponse<ShelfResponse>, Error>({
+    queryKey: ['shelves', params],
+    queryFn: () => shelvesApi.getAll(params),
   });
 };
 
 // Get shelves by unit
-export const useShelvesByUnit = (unitId: string) => {
-  return useQuery<ShelfResponse[], Error>({
-    queryKey: ['shelves', 'unit', unitId],
-    queryFn: () => shelvesApi.getByUnit(unitId),
+export const useShelvesByUnit = (unitId: string, params?: PaginationQuery) => {
+  return useQuery<PaginatedResponse<ShelfResponse>, Error>({
+    queryKey: ['shelves', 'unit', unitId, params],
+    queryFn: () => shelvesApi.getByUnit(unitId, params),
     enabled: !!unitId,
   });
 };

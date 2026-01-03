@@ -3,27 +3,31 @@ import type {
   ContainerResponse,
   CreateContainerRequest,
   UpdateContainerRequest,
+  PaginatedResponse,
+  PaginationQuery,
 } from '../types/generated';
 
 export const containersApi = {
   // Get all containers
-  getAll: async (): Promise<ContainerResponse[]> => {
-    const response = await apiClient.get<ContainerResponse[]>('/api/containers');
+  getAll: async (params?: PaginationQuery): Promise<PaginatedResponse<ContainerResponse>> => {
+    const response = await apiClient.get<PaginatedResponse<ContainerResponse>>('/api/containers', { params });
     return response.data;
   },
 
   // Get containers by shelf
-  getByShelf: async (shelfId: string): Promise<ContainerResponse[]> => {
-    const response = await apiClient.get<ContainerResponse[]>(
-      `/api/shelves/${shelfId}/containers`
+  getByShelf: async (shelfId: string, params?: PaginationQuery): Promise<PaginatedResponse<ContainerResponse>> => {
+    const response = await apiClient.get<PaginatedResponse<ContainerResponse>>(
+      `/api/shelves/${shelfId}/containers`,
+      { params }
     );
     return response.data;
   },
 
   // Get containers by parent
-  getByParent: async (parentId: string): Promise<ContainerResponse[]> => {
-    const response = await apiClient.get<ContainerResponse[]>(
-      `/api/containers/${parentId}/children`
+  getByParent: async (parentId: string, params?: PaginationQuery): Promise<PaginatedResponse<ContainerResponse>> => {
+    const response = await apiClient.get<PaginatedResponse<ContainerResponse>>(
+      `/api/containers/${parentId}/children`,
+      { params }
     );
     return response.data;
   },

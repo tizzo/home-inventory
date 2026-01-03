@@ -300,3 +300,15 @@ export interface AuditLogResponse {
   metadata?: any;
   created_at: string;
 }
+
+export interface PaginationQuery {
+  limit?: number;
+  offset?: number;
+}
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  limit: number;
+  offset: number;
+}

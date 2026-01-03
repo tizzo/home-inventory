@@ -3,12 +3,16 @@ import type {
   RoomResponse,
   CreateRoomRequest,
   UpdateRoomRequest,
+  PaginatedResponse,
+  PaginationQuery,
 } from '../types/generated';
 
 export const roomsApi = {
   // Get all rooms
-  getAll: async (): Promise<RoomResponse[]> => {
-    const response = await apiClient.get<RoomResponse[]>('/api/rooms');
+  getAll: async (params?: PaginationQuery): Promise<PaginatedResponse<RoomResponse>> => {
+    const response = await apiClient.get<PaginatedResponse<RoomResponse>>('/api/rooms', {
+      params,
+    });
     return response.data;
   },
 

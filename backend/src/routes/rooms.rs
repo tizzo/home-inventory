@@ -1,5 +1,5 @@
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::StatusCode,
     response::Json,
     routing::{delete, get, post, put},
@@ -10,22 +10,42 @@ use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::app::AppState;
-use crate::models::{CreateRoomRequest, Room, RoomResponse, UpdateRoomRequest};
+use crate::models::{
+    CreateRoomRequest, PaginatedResponse, PaginationQuery, Room, RoomResponse, UpdateRoomRequest,
+};
 
 /// Get all rooms
 pub async fn list_rooms(
     State(state): State<Arc<AppState>>,
-) -> Result<Json<Vec<RoomResponse>>, StatusCode> {
-    let rooms = sqlx::query_as::<_, Room>("SELECT * FROM rooms ORDER BY created_at DESC")
-        .fetch_all(&state.db)
+    Query(params): Query<PaginationQuery>,
+) -> Result<Json<PaginatedResponse<RoomResponse>>, StatusCode> {
+    let limit = params.limit.unwrap_or(50).min(1000).max(1);
+    let offset = params.offset.unwrap_or(0).max(0);
+
+    // Get total count
+    let total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM rooms")
+        .fetch_one(&state.db)
         .await
         .map_err(|e| {
-            tracing::error!("Failed to fetch rooms: {:?}", e);
+            tracing::error!("Failed to count rooms: {:?}", e);
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
 
+    // Get paginated rooms
+    let rooms = sqlx::query_as::<_, Room>(
+        "SELECT * FROM rooms ORDER BY created_at DESC LIMIT $1 OFFSET $2"
+    )
+    .bind(limit)
+    .bind(offset)
+    .fetch_all(&state.db)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to fetch rooms: {:?}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
     let responses: Vec<RoomResponse> = rooms.into_iter().map(RoomResponse::from).collect();
-    Ok(Json(responses))
+    Ok(Json(PaginatedResponse::new(responses, total, limit, offset)))
 }
 
 /// Get a single room by ID

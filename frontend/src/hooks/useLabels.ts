@@ -5,13 +5,15 @@ import type {
   GenerateLabelsRequest,
   GenerateLabelsResponse,
   AssignLabelRequest,
+  PaginatedResponse,
+  PaginationQuery,
 } from '../types/generated';
 
 // List all batches
-export const useBatches = () => {
-  return useQuery<BatchWithLabels[], Error>({
-    queryKey: ['labels', 'batches'],
-    queryFn: () => labelsApi.listBatches(),
+export const useBatches = (params?: PaginationQuery) => {
+  return useQuery<PaginatedResponse<BatchWithLabels>, Error>({
+    queryKey: ['labels', 'batches', params],
+    queryFn: () => labelsApi.listBatches(params),
   });
 };
 

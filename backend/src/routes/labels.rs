@@ -10,6 +10,7 @@ use uuid::Uuid;
 
 use crate::app::AppState;
 use crate::models::label::{BatchWithLabels, *};
+use crate::models::{PaginatedResponse, PaginationQuery};
 use crate::services::generate_label_pdf;
 
 /// Generate a batch of labels
@@ -154,11 +155,28 @@ pub struct PrintQuery {
 /// List all batches with their labels
 pub async fn list_batches(
     State(state): State<Arc<AppState>>,
-) -> Result<axum::Json<Vec<BatchWithLabels>>, StatusCode> {
-    // Get all unique batch IDs
-    let batch_ids: Vec<Uuid> = sqlx::query_scalar(
-        "SELECT DISTINCT batch_id FROM labels WHERE batch_id IS NOT NULL ORDER BY batch_id DESC"
+    Query(params): Query<PaginationQuery>,
+) -> Result<axum::Json<PaginatedResponse<BatchWithLabels>>, StatusCode> {
+    let limit = params.limit.unwrap_or(50).min(1000).max(1);
+    let offset = params.offset.unwrap_or(0).max(0);
+
+    // Get total count of unique batches
+    let total: i64 = sqlx::query_scalar(
+        "SELECT COUNT(DISTINCT batch_id) FROM labels WHERE batch_id IS NOT NULL"
     )
+    .fetch_one(&state.db)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to count batches: {:?}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    // Get paginated batch IDs
+    let batch_ids: Vec<Uuid> = sqlx::query_scalar(
+        "SELECT DISTINCT batch_id FROM labels WHERE batch_id IS NOT NULL ORDER BY batch_id DESC LIMIT $1 OFFSET $2"
+    )
+    .bind(limit)
+    .bind(offset)
     .fetch_all(&state.db)
     .await
     .map_err(|e| {
@@ -190,7 +208,7 @@ pub async fn list_batches(
         }
     }
 
-    Ok(axum::Json(batches))
+    Ok(axum::Json(PaginatedResponse::new(batches, total, limit, offset)))
 }
 
 /// Generate PDF for a batch of labels

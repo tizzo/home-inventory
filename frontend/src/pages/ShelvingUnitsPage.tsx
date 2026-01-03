@@ -9,7 +9,7 @@ import {
   useRooms,
   usePhotos,
 } from '../hooks';
-import { Modal, PhotoUpload, PhotoGallery } from '../components';
+import { Modal, PhotoUpload, PhotoGallery, Pagination } from '../components';
 import type {
   CreateShelvingUnitRequest,
   UpdateShelvingUnitRequest,
@@ -19,15 +19,20 @@ import type {
 export default function ShelvingUnitsPage() {
   const navigate = useNavigate();
   const { roomId, unitId } = useParams<{ roomId?: string; unitId?: string }>();
-  const { data: allUnits, isLoading: isLoadingAll } = useShelvingUnits();
-  const { data: roomUnits, isLoading: isLoadingByRoom } =
-    useShelvingUnitsByRoom(roomId || '');
-  const { data: rooms } = useRooms();
+  const [pagination, setPagination] = useState({ limit: 50, offset: 0 });
+  const { data: allUnitsResponse, isLoading: isLoadingAll } = useShelvingUnits(pagination);
+  const { data: roomUnitsResponse, isLoading: isLoadingByRoom } =
+    useShelvingUnitsByRoom(roomId || '', pagination);
+  const { data: roomsResponse } = useRooms();
+  const allUnits = allUnitsResponse?.data || [];
+  const roomUnits = roomUnitsResponse?.data || [];
+  const rooms = roomsResponse?.data || [];
   const createUnit = useCreateShelvingUnit();
   const updateUnit = useUpdateShelvingUnit();
   const deleteUnit = useDeleteShelvingUnit();
 
   const units = roomId ? roomUnits : allUnits;
+  const unitsResponse = roomId ? roomUnitsResponse : allUnitsResponse;
   const isLoading = roomId ? isLoadingByRoom : isLoadingAll;
 
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -155,7 +160,7 @@ export default function ShelvingUnitsPage() {
   }) {
     const { data: photos } = usePhotos('shelving_unit', unit.id);
     const firstPhoto = photos && photos.length > 0 ? photos[0] : null;
-    const room = rooms?.find((r) => r.id === unit.room_id);
+    const room = rooms.find((r) => r.id === unit.room_id);
 
     return (
       <div className="room-card">
@@ -390,13 +395,13 @@ export default function ShelvingUnitsPage() {
 
       {/* Units Grid */}
       <div className="rooms-grid">
-        {units?.length === 0 ? (
+        {units.length === 0 ? (
           <p className="empty-state">
             No shelving units yet. Click "Add Shelving Unit" to create your first
             one.
           </p>
         ) : (
-          units?.map((unit) => (
+          units.map((unit) => (
             <UnitCard
               key={unit.id}
               unit={unit}
@@ -408,6 +413,16 @@ export default function ShelvingUnitsPage() {
           ))
         )}
       </div>
+
+      {/* Pagination */}
+      {unitsResponse && (
+        <Pagination
+          total={unitsResponse.total}
+          limit={unitsResponse.limit}
+          offset={unitsResponse.offset}
+          onPageChange={(newOffset) => setPagination({ ...pagination, offset: newOffset })}
+        />
+      )}
     </div>
   );
 }

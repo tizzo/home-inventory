@@ -3,19 +3,22 @@ import type {
   ShelfResponse,
   CreateShelfRequest,
   UpdateShelfRequest,
+  PaginatedResponse,
+  PaginationQuery,
 } from '../types/generated';
 
 export const shelvesApi = {
   // Get all shelves
-  getAll: async (): Promise<ShelfResponse[]> => {
-    const response = await apiClient.get<ShelfResponse[]>('/api/shelves');
+  getAll: async (params?: PaginationQuery): Promise<PaginatedResponse<ShelfResponse>> => {
+    const response = await apiClient.get<PaginatedResponse<ShelfResponse>>('/api/shelves', { params });
     return response.data;
   },
 
   // Get shelves by unit
-  getByUnit: async (unitId: string): Promise<ShelfResponse[]> => {
-    const response = await apiClient.get<ShelfResponse[]>(
-      `/api/units/${unitId}/shelves`
+  getByUnit: async (unitId: string, params?: PaginationQuery): Promise<PaginatedResponse<ShelfResponse>> => {
+    const response = await apiClient.get<PaginatedResponse<ShelfResponse>>(
+      `/api/units/${unitId}/shelves`,
+      { params }
     );
     return response.data;
   },

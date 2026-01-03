@@ -23,13 +23,18 @@ import type {
 export default function ShelvesPage() {
   const navigate = useNavigate();
   const { unitId, shelfId } = useParams<{ unitId?: string; shelfId?: string }>();
-  const { data: allShelves, isLoading: isLoadingAll } = useShelves();
-  const { data: unitShelves, isLoading: isLoadingByUnit } = useShelvesByUnit(
-    unitId || ''
+  const [pagination, setPagination] = useState({ limit: 50, offset: 0 });
+  const { data: allShelvesResponse, isLoading: isLoadingAll } = useShelves(pagination);
+  const { data: unitShelvesResponse, isLoading: isLoadingByUnit } = useShelvesByUnit(
+    unitId || '',
+    pagination
   );
   const { data: unit } = useShelvingUnit(unitId || '');
   const { data: room } = useRoom(unit?.room_id || '');
-  const { data: allUnits } = useShelvingUnits();
+  const { data: allUnitsResponse } = useShelvingUnits();
+  const allShelves = allShelvesResponse?.data || [];
+  const unitShelves = unitShelvesResponse?.data || [];
+  const allUnits = allUnitsResponse?.data || [];
   const createShelf = useCreateShelf();
   const updateShelf = useUpdateShelf();
   const deleteShelf = useDeleteShelf();
@@ -37,6 +42,7 @@ export default function ShelvesPage() {
   const { showError, showSuccess } = useToast();
 
   const shelves = unitId ? unitShelves : allShelves;
+  const shelvesResponse = unitId ? unitShelvesResponse : allShelvesResponse;
   const isLoading = unitId ? isLoadingByUnit : isLoadingAll;
 
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -314,7 +320,7 @@ export default function ShelvesPage() {
                 required
               >
                 <option value="">Select a shelving unit</option>
-                {allUnits?.map((u) => (
+                {allUnits.map((u) => (
                   <option key={u.id} value={u.id}>
                     {u.name}
                   </option>
@@ -550,14 +556,14 @@ export default function ShelvesPage() {
 
       {/* Shelves Grid */}
       <div className="rooms-grid">
-        {shelves?.length === 0 ? (
+        {shelves.length === 0 ? (
           <p className="empty-state">
             {unitId
               ? 'No shelves yet. Click "Add Shelf" to create your first shelf.'
               : 'No shelves found.'}
           </p>
         ) : (
-          shelves?.map((shelf) => (
+          shelves.map((shelf) => (
             <ShelfCard
               key={shelf.id}
               shelf={shelf}
@@ -571,6 +577,16 @@ export default function ShelvesPage() {
           ))
         )}
       </div>
+
+      {/* Pagination */}
+      {shelvesResponse && (
+        <Pagination
+          total={shelvesResponse.total}
+          limit={shelvesResponse.limit}
+          offset={shelvesResponse.offset}
+          onPageChange={(newOffset) => setPagination({ ...pagination, offset: newOffset })}
+        />
+      )}
     </div>
   );
 }

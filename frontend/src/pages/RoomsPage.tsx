@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useRooms, useCreateRoom, useUpdateRoom, useDeleteRoom, usePhotos } from '../hooks';
-import { Modal, PhotoUpload, PhotoGallery } from '../components';
+import { Modal, PhotoUpload, PhotoGallery, Pagination } from '../components';
 import type { CreateRoomRequest, UpdateRoomRequest, RoomResponse } from '../types/generated';
 
 export default function RoomsPage() {
   const navigate = useNavigate();
   const { roomId } = useParams<{ roomId: string }>();
-  const { data: rooms, isLoading, error } = useRooms();
+  const [pagination, setPagination] = useState({ limit: 50, offset: 0 });
+  const { data: roomsResponse, isLoading, error } = useRooms(pagination);
+  const rooms = roomsResponse?.data || [];
   const createRoom = useCreateRoom();
   const updateRoom = useUpdateRoom();
   const deleteRoom = useDeleteRoom();
@@ -22,8 +24,8 @@ export default function RoomsPage() {
     description: '',
   });
 
-  // Get the room being edited from URL
-  const editingRoom = rooms?.find((r) => r.id === roomId);
+  // Get the room being edited from URL - need to fetch it separately if not in current page
+  const editingRoom = rooms.find((r) => r.id === roomId);
 
   // Handle URL-based edit modal
   useEffect(() => {
@@ -328,6 +330,16 @@ export default function RoomsPage() {
           ))
         )}
       </div>
+
+      {/* Pagination */}
+      {roomsResponse && (
+        <Pagination
+          total={roomsResponse.total}
+          limit={roomsResponse.limit}
+          offset={roomsResponse.offset}
+          onPageChange={(newOffset) => setPagination({ ...pagination, offset: newOffset })}
+        />
+      )}
     </div>
   );
 }

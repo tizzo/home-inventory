@@ -1,5 +1,5 @@
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::StatusCode,
     response::Json,
     Router,
@@ -9,15 +9,34 @@ use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::app::AppState;
-use crate::models::{CreateShelfRequest, Shelf, ShelfResponse, UpdateShelfRequest};
+use crate::models::{
+    CreateShelfRequest, PaginatedResponse, PaginationQuery, Shelf, ShelfResponse,
+    UpdateShelfRequest,
+};
 
 /// Get all shelves
 pub async fn list_shelves(
     State(state): State<Arc<AppState>>,
-) -> Result<Json<Vec<ShelfResponse>>, StatusCode> {
+    Query(params): Query<PaginationQuery>,
+) -> Result<Json<PaginatedResponse<ShelfResponse>>, StatusCode> {
+    let limit = params.limit.unwrap_or(50).min(1000).max(1);
+    let offset = params.offset.unwrap_or(0).max(0);
+
+    // Get total count
+    let total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM shelves")
+        .fetch_one(&state.db)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to count shelves: {:?}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    // Get paginated shelves
     let shelves = sqlx::query_as::<_, Shelf>(
-        "SELECT * FROM shelves ORDER BY shelving_unit_id, COALESCE(position, 0), created_at",
+        "SELECT * FROM shelves ORDER BY shelving_unit_id, COALESCE(position, 0), created_at LIMIT $1 OFFSET $2",
     )
+    .bind(limit)
+    .bind(offset)
     .fetch_all(&state.db)
     .await
     .map_err(|e| {
@@ -26,18 +45,35 @@ pub async fn list_shelves(
     })?;
 
     let responses: Vec<ShelfResponse> = shelves.into_iter().map(ShelfResponse::from).collect();
-    Ok(Json(responses))
+    Ok(Json(PaginatedResponse::new(responses, total, limit, offset)))
 }
 
 /// Get shelves by shelving unit
 pub async fn list_shelves_by_unit(
     State(state): State<Arc<AppState>>,
     Path(unit_id): Path<Uuid>,
-) -> Result<Json<Vec<ShelfResponse>>, StatusCode> {
+    Query(params): Query<PaginationQuery>,
+) -> Result<Json<PaginatedResponse<ShelfResponse>>, StatusCode> {
+    let limit = params.limit.unwrap_or(50).min(1000).max(1);
+    let offset = params.offset.unwrap_or(0).max(0);
+
+    // Get total count
+    let total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM shelves WHERE shelving_unit_id = $1")
+        .bind(unit_id)
+        .fetch_one(&state.db)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to count shelves: {:?}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    // Get paginated shelves
     let shelves = sqlx::query_as::<_, Shelf>(
-        "SELECT * FROM shelves WHERE shelving_unit_id = $1 ORDER BY COALESCE(position, 0), created_at"
+        "SELECT * FROM shelves WHERE shelving_unit_id = $1 ORDER BY COALESCE(position, 0), created_at LIMIT $2 OFFSET $3"
     )
         .bind(unit_id)
+        .bind(limit)
+        .bind(offset)
         .fetch_all(&state.db)
         .await
         .map_err(|e| {
@@ -46,7 +82,7 @@ pub async fn list_shelves_by_unit(
         })?;
 
     let responses: Vec<ShelfResponse> = shelves.into_iter().map(ShelfResponse::from).collect();
-    Ok(Json(responses))
+    Ok(Json(PaginatedResponse::new(responses, total, limit, offset)))
 }
 
 /// Get a single shelf by ID

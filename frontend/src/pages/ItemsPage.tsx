@@ -17,7 +17,7 @@ import {
   useRoom,
   usePhotos,
 } from '../hooks';
-import { Modal, PhotoUpload, PhotoGallery } from '../components';
+import { Modal, PhotoUpload, PhotoGallery, Pagination } from '../components';
 import type {
   CreateItemRequest,
   UpdateItemRequest,
@@ -36,12 +36,18 @@ export default function ItemsPage() {
 
   // Determine context and fetch appropriate data
   const context = shelfId ? 'shelf' : containerId ? 'container' : 'all';
-  const { data: allItems, isLoading: isLoadingAll } = useItems();
-  const { data: shelfItems, isLoading: isLoadingShelf } = useItemsByShelf(
-    shelfId || ''
+  const [pagination, setPagination] = useState({ limit: 50, offset: 0 });
+  const { data: allItemsResponse, isLoading: isLoadingAll } = useItems(pagination);
+  const { data: shelfItemsResponse, isLoading: isLoadingShelf } = useItemsByShelf(
+    shelfId || '',
+    pagination
   );
-  const { data: containerItems, isLoading: isLoadingContainer } =
-    useItemsByContainer(containerId || '');
+  const { data: containerItemsResponse, isLoading: isLoadingContainer } =
+    useItemsByContainer(containerId || '', pagination);
+
+  const allItems = allItemsResponse?.data || [];
+  const shelfItems = shelfItemsResponse?.data || [];
+  const containerItems = containerItemsResponse?.data || [];
 
   const items =
     context === 'shelf'
@@ -49,6 +55,12 @@ export default function ItemsPage() {
       : context === 'container'
         ? containerItems
         : allItems;
+  const itemsResponse =
+    context === 'shelf'
+      ? shelfItemsResponse
+      : context === 'container'
+        ? containerItemsResponse
+        : allItemsResponse;
   const isLoading =
     context === 'shelf'
       ? isLoadingShelf
@@ -61,8 +73,10 @@ export default function ItemsPage() {
   const { data: container } = useContainer(containerId || '');
   const { data: unit } = useShelvingUnit(shelf?.shelving_unit_id || '');
   const { data: room } = useRoom(unit?.room_id || '');
-  const { data: allShelves } = useShelves();
-  const { data: allContainers } = useContainers();
+  const { data: allShelvesResponse } = useShelves();
+  const { data: allContainersResponse } = useContainers();
+  const allShelves = allShelvesResponse?.data || [];
+  const allContainers = allContainersResponse?.data || [];
 
   const createItem = useCreateItem();
   const updateItem = useUpdateItem();
@@ -461,7 +475,7 @@ export default function ItemsPage() {
                 required
               >
                 <option value="">Select a shelf</option>
-                {allShelves?.map((s: ShelfResponse) => (
+                {allShelves.map((s: ShelfResponse) => (
                   <option key={s.id} value={s.id}>
                     {s.name}
                   </option>
@@ -485,7 +499,7 @@ export default function ItemsPage() {
                 required
               >
                 <option value="">Select a container</option>
-                {allContainers?.map((c: ContainerResponse) => (
+                {allContainers.map((c: ContainerResponse) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
                   </option>
@@ -787,14 +801,14 @@ export default function ItemsPage() {
 
       {/* Items Grid */}
       <div className="rooms-grid">
-        {items?.length === 0 ? (
+        {items.length === 0 ? (
           <p className="empty-state">
             {shelfId || containerId
               ? 'No items yet. Click "Add Item" to create your first item.'
               : 'No items found.'}
           </p>
         ) : (
-          items?.map((item) => (
+          items.map((item) => (
             <ItemCard
               key={item.id}
               item={item}
@@ -808,6 +822,16 @@ export default function ItemsPage() {
           ))
         )}
       </div>
+
+      {/* Pagination */}
+      {itemsResponse && (
+        <Pagination
+          total={itemsResponse.total}
+          limit={itemsResponse.limit}
+          offset={itemsResponse.offset}
+          onPageChange={(newOffset) => setPagination({ ...pagination, offset: newOffset })}
+        />
+      )}
     </div>
   );
 }

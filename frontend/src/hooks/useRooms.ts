@@ -4,13 +4,15 @@ import type {
   RoomResponse,
   CreateRoomRequest,
   UpdateRoomRequest,
+  PaginatedResponse,
+  PaginationQuery,
 } from '../types/generated';
 
 // Get all rooms
-export const useRooms = () => {
-  return useQuery<RoomResponse[], Error>({
-    queryKey: ['rooms'],
-    queryFn: roomsApi.getAll,
+export const useRooms = (params?: PaginationQuery) => {
+  return useQuery<PaginatedResponse<RoomResponse>, Error>({
+    queryKey: ['rooms', params],
+    queryFn: () => roomsApi.getAll(params),
   });
 };
 

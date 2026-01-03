@@ -1,12 +1,15 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useGenerateLabels, useDownloadLabelPdf, useBatches } from '../hooks';
+import { Pagination } from '../components';
 import type { GenerateLabelsRequest } from '../types/generated';
 
 export default function LabelsPage() {
   const generateLabels = useGenerateLabels();
   const downloadPdf = useDownloadLabelPdf();
-  const { data: batches, isLoading: batchesLoading, error: batchesError } = useBatches();
+  const [pagination, setPagination] = useState({ limit: 50, offset: 0 });
+  const { data: batchesResponse, isLoading: batchesLoading, error: batchesError } = useBatches(pagination);
+  const batches = batchesResponse?.data || [];
 
   // Default count matches template (Avery 18660 = 30 labels per sheet)
   const [formData, setFormData] = useState<GenerateLabelsRequest>({
@@ -170,6 +173,16 @@ export default function LabelsPage() {
               </tbody>
             </table>
           </div>
+        )}
+
+        {/* Pagination */}
+        {batchesResponse && (
+          <Pagination
+            total={batchesResponse.total}
+            limit={batchesResponse.limit}
+            offset={batchesResponse.offset}
+            onPageChange={(newOffset) => setPagination({ ...pagination, offset: newOffset })}
+          />
         )}
       </div>
     </div>

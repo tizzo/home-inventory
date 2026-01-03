@@ -4,21 +4,23 @@ import type {
   ShelvingUnitResponse,
   CreateShelvingUnitRequest,
   UpdateShelvingUnitRequest,
+  PaginatedResponse,
+  PaginationQuery,
 } from '../types/generated';
 
 // Get all shelving units
-export const useShelvingUnits = () => {
-  return useQuery<ShelvingUnitResponse[], Error>({
-    queryKey: ['shelving-units'],
-    queryFn: shelvingUnitsApi.getAll,
+export const useShelvingUnits = (params?: PaginationQuery) => {
+  return useQuery<PaginatedResponse<ShelvingUnitResponse>, Error>({
+    queryKey: ['shelving-units', params],
+    queryFn: () => shelvingUnitsApi.getAll(params),
   });
 };
 
 // Get shelving units for a specific room
-export const useShelvingUnitsByRoom = (roomId: string) => {
-  return useQuery<ShelvingUnitResponse[], Error>({
-    queryKey: ['shelving-units', 'room', roomId],
-    queryFn: () => shelvingUnitsApi.getByRoom(roomId),
+export const useShelvingUnitsByRoom = (roomId: string, params?: PaginationQuery) => {
+  return useQuery<PaginatedResponse<ShelvingUnitResponse>, Error>({
+    queryKey: ['shelving-units', 'room', roomId, params],
+    queryFn: () => shelvingUnitsApi.getByRoom(roomId, params),
     enabled: !!roomId,
   });
 };

@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
+import { ToastProvider } from './context/ToastContext';
 import {
   HomePage,
   RoomsPage,
@@ -104,77 +105,79 @@ function NavBar() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <div className="app">
-          <NavBar />
+      <ToastProvider>
+        <BrowserRouter>
+          <div className="app">
+            <NavBar />
 
-          <main className="main-content">
-            <Routes>
-              <Route path="/" element={<HomePage />} />
-              <Route path="/rooms" element={<RoomsPage />} />
-              <Route path="/rooms/:roomId/edit" element={<RoomsPage />} />
-              <Route path="/units" element={<ShelvingUnitsPage />} />
-              <Route path="/units/:unitId/edit" element={<ShelvingUnitsPage />} />
-              <Route path="/rooms/:roomId/units" element={<ShelvingUnitsPage />} />
-              <Route
-                path="/rooms/:roomId/units/:unitId/edit"
-                element={<ShelvingUnitsPage />}
-              />
-              <Route path="/shelves" element={<ShelvesPage />} />
-              <Route path="/shelves/:shelfId/edit" element={<ShelvesPage />} />
-              <Route path="/units/:unitId/shelves" element={<ShelvesPage />} />
-              <Route
-                path="/units/:unitId/shelves/:shelfId/edit"
-                element={<ShelvesPage />}
-              />
-              <Route path="/containers" element={<ContainersPage />} />
-              <Route
-                path="/containers/:containerId/edit"
-                element={<ContainersPage />}
-              />
-              <Route
-                path="/shelves/:shelfId/containers"
-                element={<ContainersPage />}
-              />
-              <Route
-                path="/shelves/:shelfId/containers/:containerId/edit"
-                element={<ContainersPage />}
-              />
-              <Route
-                path="/containers/:parentId/children"
-                element={<ContainersPage />}
-              />
-              <Route
-                path="/containers/:parentId/children/:containerId/edit"
-                element={<ContainersPage />}
-              />
-              <Route path="/items" element={<ItemsPage />} />
-              <Route path="/items/:itemId/edit" element={<ItemsPage />} />
-              <Route path="/shelves/:shelfId/items" element={<ItemsPage />} />
-              <Route
-                path="/shelves/:shelfId/items/:itemId/edit"
-                element={<ItemsPage />}
-              />
-              <Route
-                path="/containers/:containerId/items"
-                element={<ItemsPage />}
-              />
-              <Route
-                path="/containers/:containerId/items/:itemId/edit"
-                element={<ItemsPage />}
-              />
-              <Route path="/labels" element={<LabelsPage />} />
-              <Route path="/audit" element={<AuditLogPage />} />
-            </Routes>
-          </main>
+            <main className="main-content">
+              <Routes>
+                <Route path="/" element={<HomePage />} />
+                <Route path="/rooms" element={<RoomsPage />} />
+                <Route path="/rooms/:roomId/edit" element={<RoomsPage />} />
+                <Route path="/units" element={<ShelvingUnitsPage />} />
+                <Route path="/units/:unitId/edit" element={<ShelvingUnitsPage />} />
+                <Route path="/rooms/:roomId/units" element={<ShelvingUnitsPage />} />
+                <Route
+                  path="/rooms/:roomId/units/:unitId/edit"
+                  element={<ShelvingUnitsPage />}
+                />
+                <Route path="/shelves" element={<ShelvesPage />} />
+                <Route path="/shelves/:shelfId/edit" element={<ShelvesPage />} />
+                <Route path="/units/:unitId/shelves" element={<ShelvesPage />} />
+                <Route
+                  path="/units/:unitId/shelves/:shelfId/edit"
+                  element={<ShelvesPage />}
+                />
+                <Route path="/containers" element={<ContainersPage />} />
+                <Route
+                  path="/containers/:containerId/edit"
+                  element={<ContainersPage />}
+                />
+                <Route
+                  path="/shelves/:shelfId/containers"
+                  element={<ContainersPage />}
+                />
+                <Route
+                  path="/shelves/:shelfId/containers/:containerId/edit"
+                  element={<ContainersPage />}
+                />
+                <Route
+                  path="/containers/:parentId/children"
+                  element={<ContainersPage />}
+                />
+                <Route
+                  path="/containers/:parentId/children/:containerId/edit"
+                  element={<ContainersPage />}
+                />
+                <Route path="/items" element={<ItemsPage />} />
+                <Route path="/items/:itemId/edit" element={<ItemsPage />} />
+                <Route path="/shelves/:shelfId/items" element={<ItemsPage />} />
+                <Route
+                  path="/shelves/:shelfId/items/:itemId/edit"
+                  element={<ItemsPage />}
+                />
+                <Route
+                  path="/containers/:containerId/items"
+                  element={<ItemsPage />}
+                />
+                <Route
+                  path="/containers/:containerId/items/:itemId/edit"
+                  element={<ItemsPage />}
+                />
+                <Route path="/labels" element={<LabelsPage />} />
+                <Route path="/audit" element={<AuditLogPage />} />
+              </Routes>
+            </main>
 
-          <footer className="footer">
-            <p>
-              Home Inventory System | Built with React + TypeScript + Rust
-            </p>
-          </footer>
-        </div>
-      </BrowserRouter>
+            <footer className="footer">
+              <p>
+                Home Inventory System | Built with React + TypeScript + Rust
+              </p>
+            </footer>
+          </div>
+        </BrowserRouter>
+      </ToastProvider>
     </QueryClientProvider>
   );
 }

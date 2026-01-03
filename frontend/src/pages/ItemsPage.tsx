@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
+import { useToast } from '../context/ToastContext';
 import {
   useItems,
   useItemsByShelf,
@@ -67,6 +68,7 @@ export default function ItemsPage() {
   const updateItem = useUpdateItem();
   const deleteItem = useDeleteItem();
   const moveItem = useMoveItem();
+  const { showError, showSuccess } = useToast();
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [moveModalItem, setMoveModalItem] = useState<ItemResponse | null>(null);
@@ -133,7 +135,7 @@ export default function ItemsPage() {
       (!createFormData.shelf_id && !createFormData.container_id) ||
       (createFormData.shelf_id && createFormData.container_id)
     ) {
-      alert('Please select either a shelf or a container (not both)');
+      showError('Please select either a shelf or a container (not both)');
       return;
     }
     try {
@@ -151,9 +153,10 @@ export default function ItemsPage() {
         barcode_type: '',
       });
       setShowCreateModal(false);
+      showSuccess('Item created successfully');
     } catch (err) {
       console.error('Failed to create item:', err);
-      alert('Failed to create item. Please try again.');
+      showError('Failed to create item. Please try again.');
     }
   };
 
@@ -171,6 +174,7 @@ export default function ItemsPage() {
         },
       });
       setEditFormData({ name: '', description: '', barcode: '', barcode_type: '' });
+      showSuccess('Item updated successfully');
       if (shelfId) {
         navigate(`/shelves/${shelfId}/items`);
       } else if (containerId) {
@@ -180,7 +184,7 @@ export default function ItemsPage() {
       }
     } catch (err) {
       console.error('Failed to update item:', err);
-      alert('Failed to update item. Please try again.');
+      showError('Failed to update item. Please try again.');
     }
   };
 
@@ -243,11 +247,11 @@ export default function ItemsPage() {
 
   const handleMove = async (item: ItemResponse) => {
     if (moveLocationType === 'shelf' && !moveTargetShelf) {
-      alert('Please select a target shelf');
+      showError('Please select a target shelf');
       return;
     }
     if (moveLocationType === 'container' && !moveTargetContainer) {
-      alert('Please select a target container');
+      showError('Please select a target container');
       return;
     }
     try {
@@ -261,10 +265,10 @@ export default function ItemsPage() {
       setMoveModalItem(null);
       setMoveTargetShelf('');
       setMoveTargetContainer('');
-      alert('Item moved successfully');
+      showSuccess('Item moved successfully');
     } catch (err) {
       console.error('Failed to move item:', err);
-      alert('Failed to move item. Please try again.');
+      showError('Failed to move item. Please try again.');
     }
   };
 

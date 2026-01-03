@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
+import { useToast } from '../context/ToastContext';
 import {
   useContainers,
   useContainersByShelf,
@@ -62,6 +63,7 @@ export default function ContainersPage() {
   const updateContainer = useUpdateContainer();
   const deleteContainer = useDeleteContainer();
   const moveContainer = useMoveContainer();
+  const { showError, showSuccess } = useToast();
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [moveModalContainer, setMoveModalContainer] = useState<ContainerResponse | null>(null);
@@ -227,11 +229,11 @@ export default function ContainersPage() {
 
   const handleMove = async (container: ContainerResponse) => {
     if (moveLocationType === 'shelf' && !moveTargetShelf) {
-      alert('Please select a target shelf');
+      showError('Please select a target shelf');
       return;
     }
     if (moveLocationType === 'container' && !moveTargetParent) {
-      alert('Please select a target parent container');
+      showError('Please select a target parent container');
       return;
     }
     try {
@@ -245,10 +247,10 @@ export default function ContainersPage() {
       setMoveModalContainer(null);
       setMoveTargetShelf('');
       setMoveTargetParent('');
-      alert('Container moved successfully');
+      showSuccess('Container moved successfully');
     } catch (err) {
       console.error('Failed to move container:', err);
-      alert('Failed to move container. Please try again.');
+      showError('Failed to move container. Please try again.');
     }
   };
 

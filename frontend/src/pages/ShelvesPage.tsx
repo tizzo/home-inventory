@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useToast } from '../context/ToastContext';
 import {
   useShelves,
   useShelvesByUnit,
@@ -33,6 +34,7 @@ export default function ShelvesPage() {
   const updateShelf = useUpdateShelf();
   const deleteShelf = useDeleteShelf();
   const moveShelf = useMoveShelf();
+  const { showError, showSuccess } = useToast();
 
   const shelves = unitId ? unitShelves : allShelves;
   const isLoading = unitId ? isLoadingByUnit : isLoadingAll;
@@ -77,21 +79,16 @@ export default function ShelvesPage() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!createFormData.shelving_unit_id) {
-      alert('Please select a shelving unit');
+      showError('Please select a shelving unit');
       return;
     }
     try {
       await createShelf.mutateAsync(createFormData);
-      setCreateFormData({
-        shelving_unit_id: unitId || '',
-        name: '',
-        description: '',
-        position: undefined,
-      });
       setShowCreateModal(false);
+      showSuccess('Shelf created successfully');
     } catch (err) {
       console.error('Failed to create shelf:', err);
-      alert('Failed to create shelf. Please try again.');
+      showError('Failed to create shelf. Please try again.');
     }
   };
 
@@ -105,10 +102,11 @@ export default function ShelvesPage() {
         data: editFormData,
       });
       setEditFormData({ name: '', description: '', position: undefined });
+      showSuccess('Shelf updated successfully');
       navigate(unitId ? `/units/${unitId}/shelves` : '/shelves');
     } catch (err) {
       console.error('Failed to update shelf:', err);
-      alert('Failed to update shelf. Please try again.');
+      showError('Failed to update shelf. Please try again.');
     }
   };
 
@@ -119,9 +117,10 @@ export default function ShelvesPage() {
         if (shelfId === id) {
           navigate(unitId ? `/units/${unitId}/shelves` : '/shelves');
         }
+        showSuccess('Shelf deleted successfully');
       } catch (err) {
         console.error('Failed to delete shelf:', err);
-        alert('Failed to delete shelf. Please try again.');
+        showError('Failed to delete shelf. Please try again.');
       }
     }
   };
@@ -164,20 +163,22 @@ export default function ShelvesPage() {
 
   const handleMove = async (shelf: ShelfResponse) => {
     if (!moveTargetUnit) {
-      alert('Please select a target shelving unit');
+      showError('Please select a target shelving unit');
       return;
     }
     try {
       await moveShelf.mutateAsync({
         shelfId: shelf.id,
-        data: { target_unit_id: moveTargetUnit },
+        data: {
+          target_unit_id: moveTargetUnit,
+        },
       });
       setMoveModalShelf(null);
       setMoveTargetUnit('');
-      alert('Shelf moved successfully');
+      showSuccess('Shelf moved successfully');
     } catch (err) {
       console.error('Failed to move shelf:', err);
-      alert('Failed to move shelf. Please try again.');
+      showError('Failed to move shelf. Please try again.');
     }
   };
 

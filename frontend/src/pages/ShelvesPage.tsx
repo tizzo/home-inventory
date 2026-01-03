@@ -13,7 +13,7 @@ import {
   useRoom,
   usePhotos,
 } from '../hooks';
-import { Modal, PhotoUpload, PhotoGallery, Breadcrumb } from '../components';
+import { Modal, PhotoUpload, PhotoGallery, Breadcrumb, Pagination } from '../components';
 import type {
   CreateShelfRequest,
   UpdateShelfRequest,

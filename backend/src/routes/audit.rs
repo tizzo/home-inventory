@@ -32,19 +32,19 @@ pub async fn get_audit_logs(
     let mut query = "SELECT * FROM audit_logs WHERE 1=1".to_string();
     let mut bind_count = 1;
 
-    if let Some(ref entity_type) = params.entity_type {
+    if let Some(ref _entity_type) = params.entity_type {
         query.push_str(&format!(" AND entity_type = ${}", bind_count));
         bind_count += 1;
     }
-    if let Some(entity_id) = params.entity_id {
+    if let Some(_entity_id) = params.entity_id {
         query.push_str(&format!(" AND entity_id = ${}", bind_count));
         bind_count += 1;
     }
-    if let Some(user_id) = params.user_id {
+    if let Some(_user_id) = params.user_id {
         query.push_str(&format!(" AND user_id = ${}", bind_count));
         bind_count += 1;
     }
-    if let Some(ref action) = params.action {
+    if let Some(ref _action) = params.action {
         query.push_str(&format!(" AND action = ${}", bind_count));
         bind_count += 1;
     }

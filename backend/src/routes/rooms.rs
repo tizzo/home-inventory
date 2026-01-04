@@ -18,7 +18,7 @@ pub async fn list_rooms(
     State(state): State<Arc<AppState>>,
     Query(params): Query<PaginationQuery>,
 ) -> Result<Json<PaginatedResponse<RoomResponse>>, StatusCode> {
-    let limit = params.limit.unwrap_or(50).min(1000).max(1);
+    let limit = params.limit.unwrap_or(50).clamp(1, 1000);
     let offset = params.offset.unwrap_or(0).max(0);
 
     // Get total count

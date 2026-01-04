@@ -18,7 +18,7 @@ pub async fn list_items(
     State(state): State<Arc<AppState>>,
     Query(params): Query<PaginationQuery>,
 ) -> Result<Json<PaginatedResponse<ItemResponse>>, StatusCode> {
-    let limit = params.limit.unwrap_or(50).min(1000).max(1);
+    let limit = params.limit.unwrap_or(50).clamp(1, 1000);
     let offset = params.offset.unwrap_or(0).max(0);
 
     // Get total count
@@ -55,7 +55,7 @@ pub async fn list_items_by_shelf(
     Path(shelf_id): Path<Uuid>,
     Query(params): Query<PaginationQuery>,
 ) -> Result<Json<PaginatedResponse<ItemResponse>>, StatusCode> {
-    let limit = params.limit.unwrap_or(50).min(1000).max(1);
+    let limit = params.limit.unwrap_or(50).clamp(1, 1000);
     let offset = params.offset.unwrap_or(0).max(0);
 
     // Get total count
@@ -94,7 +94,7 @@ pub async fn list_items_by_container(
     Path(container_id): Path<Uuid>,
     Query(params): Query<PaginationQuery>,
 ) -> Result<Json<PaginatedResponse<ItemResponse>>, StatusCode> {
-    let limit = params.limit.unwrap_or(50).min(1000).max(1);
+    let limit = params.limit.unwrap_or(50).clamp(1, 1000);
     let offset = params.offset.unwrap_or(0).max(0);
 
     // Get total count

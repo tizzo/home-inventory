@@ -1,7 +1,5 @@
-use crate::app::AppState;
 use axum::http::StatusCode;
 use sqlx::PgPool;
-use std::sync::Arc;
 use uuid::Uuid;
 
 /// Move a shelf to a different shelving unit

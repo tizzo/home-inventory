@@ -22,13 +22,16 @@ impl Avery18660 {
     pub const LABEL_WIDTH_INCHES: f32 = 2.625; // 2-5/8"
     pub const LABEL_HEIGHT_INCHES: f32 = 1.0;
     pub const LABELS_PER_ROW: usize = 3;
+    #[allow(dead_code)]
     pub const LABELS_PER_COLUMN: usize = 10;
     pub const LABELS_PER_SHEET: usize = 30;
     pub const HORIZONTAL_SPACING_INCHES: f32 = 0.125;
     pub const VERTICAL_SPACING_INCHES: f32 = 0.0; // Labels touch vertically
     pub const TOP_MARGIN_INCHES: f32 = 0.5;
+    #[allow(dead_code)]
     pub const BOTTOM_MARGIN_INCHES: f32 = 0.5;
     pub const LEFT_MARGIN_INCHES: f32 = 0.19;
+    #[allow(dead_code)]
     pub const RIGHT_MARGIN_INCHES: f32 = 0.19;
     pub const SHEET_WIDTH_INCHES: f32 = 8.5;
     pub const SHEET_HEIGHT_INCHES: f32 = 11.0;
@@ -79,7 +82,7 @@ pub fn generate_label_pdf(labels: &[(String, i32)], // (qr_data, number)
     let label_width_pt = Avery18660::LABEL_WIDTH_INCHES * 72.0;
     let label_height_pt = Avery18660::LABEL_HEIGHT_INCHES * 72.0;
     let horizontal_spacing = Avery18660::HORIZONTAL_SPACING_INCHES * 72.0;
-    let vertical_spacing = Avery18660::VERTICAL_SPACING_INCHES * 72.0;
+    let _vertical_spacing = Avery18660::VERTICAL_SPACING_INCHES * 72.0;
     let top_margin_pt = Avery18660::TOP_MARGIN_INCHES * 72.0;
     let left_margin_pt = Avery18660::LEFT_MARGIN_INCHES * 72.0;
     let sheet_height_pt = Avery18660::SHEET_HEIGHT_INCHES * 72.0;

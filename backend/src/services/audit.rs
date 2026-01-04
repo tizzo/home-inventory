@@ -11,14 +11,15 @@ pub enum AuditAction {
     Move,
 }
 
-impl ToString for AuditAction {
-    fn to_string(&self) -> String {
-        match self {
-            AuditAction::Create => "CREATE".to_string(),
-            AuditAction::Update => "UPDATE".to_string(),
-            AuditAction::Delete => "DELETE".to_string(),
-            AuditAction::Move => "MOVE".to_string(),
-        }
+impl std::fmt::Display for AuditAction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = match self {
+            AuditAction::Create => "CREATE",
+            AuditAction::Update => "UPDATE",
+            AuditAction::Delete => "DELETE",
+            AuditAction::Move => "MOVE",
+        };
+        write!(f, "{}", s)
     }
 }
 

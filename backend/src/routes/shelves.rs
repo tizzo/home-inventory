@@ -19,7 +19,7 @@ pub async fn list_shelves(
     State(state): State<Arc<AppState>>,
     Query(params): Query<PaginationQuery>,
 ) -> Result<Json<PaginatedResponse<ShelfResponse>>, StatusCode> {
-    let limit = params.limit.unwrap_or(50).min(1000).max(1);
+    let limit = params.limit.unwrap_or(50).clamp(1, 1000);
     let offset = params.offset.unwrap_or(0).max(0);
 
     // Get total count
@@ -56,7 +56,7 @@ pub async fn list_shelves_by_unit(
     Path(unit_id): Path<Uuid>,
     Query(params): Query<PaginationQuery>,
 ) -> Result<Json<PaginatedResponse<ShelfResponse>>, StatusCode> {
-    let limit = params.limit.unwrap_or(50).min(1000).max(1);
+    let limit = params.limit.unwrap_or(50).clamp(1, 1000);
     let offset = params.offset.unwrap_or(0).max(0);
 
     // Get total count
@@ -272,7 +272,7 @@ pub async fn update_shelf(
     )
     .bind(&name)
     .bind(&description)
-    .bind(&position)
+    .bind(position)
     .bind(shelving_unit_id)
     .bind(id)
     .fetch_one(&state.db)

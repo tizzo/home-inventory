@@ -157,7 +157,7 @@ pub async fn list_batches(
     State(state): State<Arc<AppState>>,
     Query(params): Query<PaginationQuery>,
 ) -> Result<axum::Json<PaginatedResponse<BatchWithLabels>>, StatusCode> {
-    let limit = params.limit.unwrap_or(50).min(1000).max(1);
+    let limit = params.limit.unwrap_or(50).clamp(1, 1000);
     let offset = params.offset.unwrap_or(0).max(0);
 
     // Get total count of unique batches

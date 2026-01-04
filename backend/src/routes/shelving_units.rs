@@ -19,7 +19,7 @@ pub async fn list_shelving_units(
     State(state): State<Arc<AppState>>,
     Query(params): Query<PaginationQuery>,
 ) -> Result<Json<PaginatedResponse<ShelvingUnitResponse>>, StatusCode> {
-    let limit = params.limit.unwrap_or(50).min(1000).max(1);
+    let limit = params.limit.unwrap_or(50).clamp(1, 1000);
     let offset = params.offset.unwrap_or(0).max(0);
 
     // Get total count
@@ -57,7 +57,7 @@ pub async fn list_shelving_units_by_room(
     Path(room_id): Path<Uuid>,
     Query(params): Query<PaginationQuery>,
 ) -> Result<Json<PaginatedResponse<ShelvingUnitResponse>>, StatusCode> {
-    let limit = params.limit.unwrap_or(50).min(1000).max(1);
+    let limit = params.limit.unwrap_or(50).clamp(1, 1000);
     let offset = params.offset.unwrap_or(0).max(0);
 
     // Get total count

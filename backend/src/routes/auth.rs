@@ -34,7 +34,9 @@ pub struct UserSession {
     pub user_id: uuid::Uuid,
     pub email: String,
     pub name: String,
+    pub picture: Option<String>,
 }
+
 
 pub fn auth_routes() -> Router<Arc<AppState>> {
     Router::new()
@@ -123,7 +125,9 @@ async fn auth_callback(
         user_id,
         email: google_user.email,
         name: google_user.name,
+        picture: google_user.picture,
     };
+
     session.insert("user", user_session).await.expect("Failed to create session");
 
     // Redirect to frontend

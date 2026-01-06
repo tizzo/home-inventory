@@ -8,7 +8,8 @@ A serverless home inventory management system with QR code labeling, barcode sca
 - **Backend**: Rust (Axum + aws-lambda-web)
 - **Frontend**: TypeScript React (Mobile-first PWA)
 - **Database**: Aurora DSQL (PostgreSQL locally)
-- **Auth**: AWS Cognito with Google OAuth
+- **Auth**: Direct Google OAuth2 (No Cognito)
+
 - **Hosting**: 
   - Frontend: Cloudflare Pages (`app.yourdomain.com`)
   - Backend: AWS Lambda + API Gateway (`api.yourdomain.com`)
@@ -201,19 +202,23 @@ npm run build
 npx wrangler pages deploy dist --project-name=home-inventory
 ```
 
-## Authentication Flow
+## Authentication & Security
 
-1. User visits `app.yourdomain.com`
-2. Clicks "Login with Google"
-3. Redirects to Cognito Hosted UI
-4. User authenticates with Google
-5. Cognito redirects to `/auth/callback?code=xxx`
-6. Backend exchanges code for Cognito tokens
-7. Backend creates session in DynamoDB
-8. Backend sets HttpOnly session cookie (`Domain=.yourdomain.com`)
-9. Backend redirects to `/dashboard`
-10. All API calls automatically include session cookie
-11. Backend validates session on each request
+We integrate directly with **Google OAuth 2.0** for authentication, bypassing the need for AWS Cognito.
+
+1.  **Direct Google Integration**:
+    *   Backend directly exchanges authorization codes with Google.
+    *   Uses secure `httpOnly`, `SameSite=Lax` cookies for session management.
+    *   No passwords are ever stored or handled by our application.
+
+2.  **Session Management**:
+    *   Sessions are stored in-memory (development) or a persistent store (production).
+    *   Session cookies are automatically handled by the browser.
+
+3.  **Route Protection**:
+    *   **Backend**: An `auth_guard` middleware protects all sensitive API routes. Any request without a valid session returns `401 Unauthorized`.
+    *   **Frontend**: A `ProtectedRoute` component wraps all application pages. Unauthenticated users are shown an "Access Denied" screen and prompted to log in.
+
 
 ## API Endpoints
 
@@ -267,7 +272,8 @@ npx wrangler pages deploy dist --project-name=home-inventory
 
 ### Phase 1: Foundation ✓ (80% Complete)
 - [x] Project structure
-- [ ] Auth flow (Cognito + Google + Session cookies)
+- [x] Auth flow (Direct Google OAuth2 + Session cookies)
+
 - [x] Basic CRUD for Rooms
 - [x] Database setup with migrations
 - [x] Type generation pipeline
@@ -307,16 +313,15 @@ npx wrangler pages deploy dist --project-name=home-inventory
 
 **Backend:**
 ```bash
-DATABASE_URL=postgresql://...           # Database connection
-APP_BASE_URL=https://app.yourdomain.com # Base URL for QR code labels (defaults to http://localhost:5173)
-AWS_REGION=us-east-1                    # AWS region
-COGNITO_USER_POOL_ID=us-east-1_xxx      # Cognito pool
-COGNITO_CLIENT_ID=xxx                   # Cognito app client
-COGNITO_DOMAIN=auth.yourdomain.com      # Cognito domain
-SESSION_TABLE=sessions                  # DynamoDB table
-PHOTOS_BUCKET=inventory-photos          # S3 bucket
-FRONTEND_URL=https://app.yourdomain.com # For OAuth redirect
+DATABASE_URL=postgresql://...
+APP_BASE_URL=http://localhost:5173          # Frontend URL for redirects
+GOOGLE_CLIENT_ID=...                        # Google OAuth Credential
+GOOGLE_CLIENT_SECRET=...                    # Google OAuth Secret
+GOOGLE_REDIRECT_URL=http://localhost:3000/api/auth/callback # Backend Callback URL
+AWS_REGION=us-east-1
+PHOTOS_BUCKET=inventory-photos
 ```
+
 
 **Frontend:**
 ```bash

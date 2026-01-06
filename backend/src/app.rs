@@ -10,6 +10,10 @@ use sqlx::PgPool;
 use std::env;
 use std::sync::Arc;
 use tower_http::cors::{Any, CorsLayer};
+use tower_sessions::{Expiry, MemoryStore, SessionManagerLayer};
+use oauth2::{basic::BasicClient, AuthUrl, ClientId, ClientSecret, RedirectUrl, TokenUrl};
+
+
 
 use crate::services::audit::AuditService;
 use crate::services::s3::S3Service;
@@ -20,7 +24,9 @@ pub struct AppState {
     pub s3: Arc<S3Service>,
     pub app_base_url: String,
     pub audit: Arc<crate::services::audit::AuditService>,
+    pub oauth_client: BasicClient,
 }
+
 
 #[derive(Serialize, Deserialize)]
 pub struct HealthResponse {
@@ -76,12 +82,40 @@ pub async fn create_app(db: PgPool) -> anyhow::Result<Router> {
 
     let audit_service = Arc::new(AuditService::new(Arc::new(db.clone())));
 
+    tracing::info!("Initializing OAuth client...");
+    let google_client_id = ClientId::new(
+        env::var("GOOGLE_CLIENT_ID").expect("Missing GOOGLE_CLIENT_ID environment variable"),
+    );
+    let google_client_secret = ClientSecret::new(
+        env::var("GOOGLE_CLIENT_SECRET")
+            .expect("Missing GOOGLE_CLIENT_SECRET environment variable"),
+    );
+    let auth_url = AuthUrl::new("https://accounts.google.com/o/oauth2/v2/auth".to_string())
+        .expect("Invalid authorization endpoint URL");
+    let token_url = TokenUrl::new("https://oauth2.googleapis.com/token".to_string())
+        .expect("Invalid token endpoint URL");
+
+    let oauth_client = BasicClient::new(
+        google_client_id,
+        Some(google_client_secret),
+        auth_url,
+        Some(token_url),
+    )
+    .set_redirect_uri(
+        RedirectUrl::new(
+            env::var("GOOGLE_REDIRECT_URL").expect("Missing GOOGLE_REDIRECT_URL environment variable"),
+        )
+        .expect("Invalid redirect URL"),
+    );
+
     let state = Arc::new(AppState {
         db,
         s3: s3_service,
         app_base_url,
         audit: audit_service,
+        oauth_client,
     });
+
 
     // Configure CORS for local development
     let cors = CorsLayer::new()
@@ -89,8 +123,17 @@ pub async fn create_app(db: PgPool) -> anyhow::Result<Router> {
         .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE])
         .allow_headers([header::CONTENT_TYPE, header::AUTHORIZATION]);
 
-    Ok(Router::new()
-        .route("/health", get(health_check))
+    use tower_sessions::cookie::SameSite;
+
+    // Session Layer
+    let session_store = MemoryStore::default();
+    let session_layer = SessionManagerLayer::new(session_store)
+        .with_secure(false) // Keep false for localhost (http)
+        .with_same_site(SameSite::Lax) // Allow cookies on redirects from external sites
+        .with_expiry(Expiry::OnInactivity(time::Duration::days(1)));
+
+
+    let protected_routes = Router::new()
         .merge(crate::routes::room_routes())
         .merge(crate::routes::shelving_unit_routes())
         .merge(crate::routes::shelf_routes())
@@ -100,9 +143,19 @@ pub async fn create_app(db: PgPool) -> anyhow::Result<Router> {
         .merge(crate::routes::label_routes())
         .merge(crate::routes::move_routes())
         .merge(crate::routes::audit_routes())
+        .route_layer(axum::middleware::from_fn(crate::middleware::auth::auth_guard));
+
+    Ok(Router::new()
+        .route("/health", get(health_check))
+        .merge(crate::routes::auth_routes())
+        .merge(protected_routes)
+        .layer(session_layer)
         .with_state(state)
         .layer(cors))
 }
+
+
+
 
 #[cfg(test)]
 mod tests {

@@ -4,6 +4,8 @@ mod error;
 mod models;
 mod routes;
 mod services;
+mod middleware;
+
 
 use std::env;
 

@@ -791,3 +791,58 @@ body {
     flex-direction: column;
   }
 }
+
+/* Auth Styles */
+.auth-nav-item {
+  display: flex;
+  align-items: center;
+}
+
+.auth-user {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.user-name {
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.btn-login-google {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background-color: var(--surface-color);
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
+  border-radius: 0.5rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all 0.2s;
+  box-shadow: var(--shadow);
+}
+
+.btn-login-google:hover {
+  background-color: var(--bg-color);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-lg);
+}
+
+.btn-logout {
+  padding: 0.25rem 0.75rem;
+  font-size: 0.875rem;
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-logout:hover {
+  background: var(--danger-color);
+  color: white;
+  border-color: var(--danger-color);
+}

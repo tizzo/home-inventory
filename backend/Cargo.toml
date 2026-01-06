@@ -10,6 +10,8 @@ lambda_http = "0.13"
 lambda_runtime = "0.13"
 tower = "0.4"
 tower-http = { version = "0.5", features = ["cors", "trace"] }
+tower-sessions = "0.13"
+
 
 # Database
 sqlx = { version = "0.8", features = [
@@ -61,6 +63,13 @@ printpdf = "0.7"
 aws-sdk-s3 = { version = "1", features = ["behavior-version-latest"] }
 aws-config = { version = "1", features = ["behavior-version-latest"] }
 aws-sigv4 = "1"
+
+# Auth
+oauth2 = "4.4"
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+time = "0.3"
+
+
 
 [build-dependencies]
 typeshare = "1"

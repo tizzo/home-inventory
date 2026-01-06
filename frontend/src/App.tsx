@@ -13,7 +13,11 @@ import {
   LabelDetailPage,
   AuditLogPage,
 } from './pages';
+import { LoginButton } from './components/LoginButton';
+import { ProtectedRoute } from './components/ProtectedRoute';
 import './App.css';
+
+
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -98,7 +102,11 @@ function NavBar() {
               Audit Logs
             </Link>
           </li>
+          <li className="auth-nav-item">
+            <LoginButton />
+          </li>
         </ul>
+
       </div>
     </nav>
   );
@@ -115,63 +123,68 @@ function App() {
             <main className="main-content">
               <Routes>
                 <Route path="/" element={<HomePage />} />
-                <Route path="/rooms" element={<RoomsPage />} />
-                <Route path="/rooms/:roomId/edit" element={<RoomsPage />} />
-                <Route path="/units" element={<ShelvingUnitsPage />} />
-                <Route path="/units/:unitId/edit" element={<ShelvingUnitsPage />} />
-                <Route path="/rooms/:roomId/units" element={<ShelvingUnitsPage />} />
-                <Route
-                  path="/rooms/:roomId/units/:unitId/edit"
-                  element={<ShelvingUnitsPage />}
-                />
-                <Route path="/shelves" element={<ShelvesPage />} />
-                <Route path="/shelves/:shelfId/edit" element={<ShelvesPage />} />
-                <Route path="/units/:unitId/shelves" element={<ShelvesPage />} />
-                <Route
-                  path="/units/:unitId/shelves/:shelfId/edit"
-                  element={<ShelvesPage />}
-                />
-                <Route path="/containers" element={<ContainersPage />} />
-                <Route
-                  path="/containers/:containerId/edit"
-                  element={<ContainersPage />}
-                />
-                <Route
-                  path="/shelves/:shelfId/containers"
-                  element={<ContainersPage />}
-                />
-                <Route
-                  path="/shelves/:shelfId/containers/:containerId/edit"
-                  element={<ContainersPage />}
-                />
-                <Route
-                  path="/containers/:parentId/children"
-                  element={<ContainersPage />}
-                />
-                <Route
-                  path="/containers/:parentId/children/:containerId/edit"
-                  element={<ContainersPage />}
-                />
-                <Route path="/items" element={<ItemsPage />} />
-                <Route path="/items/:itemId/edit" element={<ItemsPage />} />
-                <Route path="/shelves/:shelfId/items" element={<ItemsPage />} />
-                <Route
-                  path="/shelves/:shelfId/items/:itemId/edit"
-                  element={<ItemsPage />}
-                />
-                <Route
-                  path="/containers/:containerId/items"
-                  element={<ItemsPage />}
-                />
-                <Route
-                  path="/containers/:containerId/items/:itemId/edit"
-                  element={<ItemsPage />}
-                />
-                <Route path="/labels" element={<LabelsPage />} />
-                <Route path="/labels/batches/:batchId" element={<BatchDetailPage />} />
-                <Route path="/l/:labelId" element={<LabelDetailPage />} />
-                <Route path="/audit" element={<AuditLogPage />} />
+
+                {/* Protected Routes */}
+                <Route element={<ProtectedRoute />}>
+                  <Route path="/rooms" element={<RoomsPage />} />
+                  <Route path="/rooms/:roomId/edit" element={<RoomsPage />} />
+                  <Route path="/units" element={<ShelvingUnitsPage />} />
+                  <Route path="/units/:unitId/edit" element={<ShelvingUnitsPage />} />
+                  <Route path="/rooms/:roomId/units" element={<ShelvingUnitsPage />} />
+                  <Route
+                    path="/rooms/:roomId/units/:unitId/edit"
+                    element={<ShelvingUnitsPage />}
+                  />
+                  <Route path="/shelves" element={<ShelvesPage />} />
+                  <Route path="/shelves/:shelfId/edit" element={<ShelvesPage />} />
+                  <Route path="/units/:unitId/shelves" element={<ShelvesPage />} />
+                  <Route
+                    path="/units/:unitId/shelves/:shelfId/edit"
+                    element={<ShelvesPage />}
+                  />
+                  <Route path="/containers" element={<ContainersPage />} />
+                  <Route
+                    path="/containers/:containerId/edit"
+                    element={<ContainersPage />}
+                  />
+                  <Route
+                    path="/shelves/:shelfId/containers"
+                    element={<ContainersPage />}
+                  />
+                  <Route
+                    path="/shelves/:shelfId/containers/:containerId/edit"
+                    element={<ContainersPage />}
+                  />
+                  <Route
+                    path="/containers/:parentId/children"
+                    element={<ContainersPage />}
+                  />
+                  <Route
+                    path="/containers/:parentId/children/:containerId/edit"
+                    element={<ContainersPage />}
+                  />
+                  <Route path="/items" element={<ItemsPage />} />
+                  <Route path="/items/:itemId/edit" element={<ItemsPage />} />
+                  <Route path="/shelves/:shelfId/items" element={<ItemsPage />} />
+                  <Route
+                    path="/shelves/:shelfId/items/:itemId/edit"
+                    element={<ItemsPage />}
+                  />
+                  <Route
+                    path="/containers/:containerId/items"
+                    element={<ItemsPage />}
+                  />
+                  <Route
+                    path="/containers/:containerId/items/:itemId/edit"
+                    element={<ItemsPage />}
+                  />
+                  <Route path="/labels" element={<LabelsPage />} />
+                  <Route path="/labels/batches/:batchId" element={<BatchDetailPage />} />
+                  <Route path="/l/:labelId" element={<LabelDetailPage />} />
+                  <Route path="/audit" element={<AuditLogPage />} />
+                </Route>
               </Routes>
+
             </main>
 
             <footer className="footer">

@@ -137,7 +137,7 @@ pub async fn create_shelf(
         let max_position: Option<i32> =
             sqlx::query_scalar("SELECT MAX(position) FROM shelves WHERE shelving_unit_id = $1")
                 .bind(payload.shelving_unit_id)
-                .fetch_optional(&state.db)
+                .fetch_one(&state.db)
                 .await
                 .map_err(|e| {
                     tracing::error!("Failed to get max position: {:?}", e);

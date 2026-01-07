@@ -11,10 +11,11 @@ Title: Quality gates (backend + frontend)
 Steps:
 
 1. Backend checks:
-   - `cargo fmt`
-   - `cargo clippy -- -D warnings`
-   - `cargo build`
-   - `cargo test`
+   - Run from `backend/`:
+     - `cargo fmt`
+     - `cargo clippy -- -D warnings`
+     - `cargo build`
+     - `cargo test`
 
 2. Frontend checks:
    - `npm run type-check`

@@ -29,10 +29,11 @@ Below are rules derived from `CLAUDE.md` and `.cursorrules`.
 ## Backend Quality Gates
 
 - Run:
-  - `cargo fmt`
-  - `cargo clippy -- -D warnings`
-  - `cargo build`
-  - `cargo test`
+  - Run from `backend/`:
+    - `cargo fmt`
+    - `cargo clippy -- -D warnings`
+    - `cargo build`
+    - `cargo test`
 
 ## Frontend Quality Gates
 

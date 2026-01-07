@@ -18,6 +18,10 @@ To use the Rules content tracked in this repo:
 - Alternatively, paste the rules into Windsurf:
   - `Cascade -> Customizations -> Rules`
 
+## Running backend commands
+
+When running backend commands via Windsurf/Cascade terminal tools, always set the working directory to `backend/` and run commands like `cargo run`, `cargo test`, etc. Do not rely on `--manifest-path` or on the binary searching for `.env` in parent directories.
+
 ## Optional: Windsurf Workflows
 
 Windsurf "Workflows" live in `.windsurf/workflows/` folders.

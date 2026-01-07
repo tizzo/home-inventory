@@ -13,6 +13,7 @@ import {
   LabelDetailPage,
   AuditLogPage,
   QRScanPage,
+  ItemImportDraftPage,
 } from './pages';
 import { LoginButton } from './components/LoginButton';
 import { ProtectedRoute } from './components/ProtectedRoute';
@@ -201,7 +202,11 @@ function App() {
                   <Route path="/labels/batches/:batchId" element={<BatchDetailPage />} />
                   <Route path="/l/:labelId" element={<LabelDetailPage />} />
                   <Route path="/audit" element={<AuditLogPage />} />
+<<<<<<< HEAD
                   <Route path="/scan" element={<QRScanPage />} />
+=======
+                  <Route path="/drafts/:draftId" element={<ItemImportDraftPage />} />
+>>>>>>> f269cba (feat(frontend): add deep-linkable item import draft editor page)
                 </Route>
               </Routes>
             </main>

@@ -9,3 +9,4 @@ export { default as BatchDetailPage } from './BatchDetailPage';
 export { default as LabelDetailPage } from './LabelDetailPage';
 export { default as AuditLogPage } from './AuditLogPage';
 export { default as QRScanPage } from './QRScanPage';
+export { default as ItemImportDraftPage } from './ItemImportDraftPage';

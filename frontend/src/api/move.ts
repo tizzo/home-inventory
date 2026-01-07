@@ -1,5 +1,9 @@
 import apiClient from './client';
 
+export interface MoveShelvingUnitRequest {
+  target_room_id: string;
+}
+
 export interface MoveShelfRequest {
   target_unit_id: string;
 }
@@ -19,6 +23,15 @@ export interface MoveResponse {
 }
 
 export const moveApi = {
+  // Move a shelving unit to a different room
+  moveShelvingUnit: async (unitId: string, data: MoveShelvingUnitRequest): Promise<MoveResponse> => {
+    const response = await apiClient.post<MoveResponse>(
+      `/api/units/${unitId}/move`,
+      data
+    );
+    return response.data;
+  },
+
   // Move a shelf to a different shelving unit
   moveShelf: async (shelfId: string, data: MoveShelfRequest): Promise<MoveResponse> => {
     const response = await apiClient.post<MoveResponse>(

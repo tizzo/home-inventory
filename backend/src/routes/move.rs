@@ -12,6 +12,11 @@ use crate::app::AppState;
 use crate::services::r#move as move_service;
 
 #[derive(Debug, Deserialize)]
+pub struct MoveShelvingUnitRequest {
+    pub target_room_id: Uuid,
+}
+
+#[derive(Debug, Deserialize)]
 pub struct MoveShelfRequest {
     pub target_unit_id: Uuid,
 }
@@ -31,6 +36,47 @@ pub struct MoveItemRequest {
 #[derive(Debug, Serialize)]
 pub struct MoveResponse {
     pub message: String,
+}
+
+/// Move a shelving unit to a different room
+pub async fn move_shelving_unit(
+    State(state): State<Arc<AppState>>,
+    Path(unit_id): Path<Uuid>,
+    Json(payload): Json<MoveShelvingUnitRequest>,
+) -> Result<Json<MoveResponse>, StatusCode> {
+    // Get current location for audit
+    let current: Option<(Uuid,)> =
+        sqlx::query_as("SELECT room_id FROM shelving_units WHERE id = $1")
+            .bind(unit_id)
+            .fetch_optional(&state.db)
+            .await
+            .map_err(|e| {
+                tracing::error!("Failed to get shelving unit location: {:?}", e);
+                StatusCode::INTERNAL_SERVER_ERROR
+            })?;
+
+    move_service::move_shelving_unit(&state.db, unit_id, payload.target_room_id).await?;
+
+    // Log audit
+    let user_id = Uuid::new_v4(); // TODO: get from auth
+    if let Some((from_room_id,)) = current {
+        state
+            .audit
+            .log_move(
+                "shelving_unit",
+                unit_id,
+                Some(user_id),
+                serde_json::json!({ "room_id": from_room_id }),
+                serde_json::json!({ "room_id": payload.target_room_id }),
+                None,
+            )
+            .await
+            .ok();
+    }
+
+    Ok(Json(MoveResponse {
+        message: "Shelving unit moved successfully".to_string(),
+    }))
 }
 
 /// Move a shelf to a different shelving unit
@@ -185,6 +231,7 @@ pub fn move_routes() -> Router<Arc<AppState>> {
     use axum::routing::post;
 
     Router::new()
+        .route("/api/units/:id/move", post(move_shelving_unit))
         .route("/api/shelves/:id/move", post(move_shelf))
         .route("/api/containers/:id/move", post(move_container))
         .route("/api/items/:id/move", post(move_item))

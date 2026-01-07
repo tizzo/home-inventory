@@ -2,6 +2,41 @@ use axum::http::StatusCode;
 use sqlx::PgPool;
 use uuid::Uuid;
 
+/// Move a shelving unit to a different room
+pub async fn move_shelving_unit(
+    db: &PgPool,
+    unit_id: Uuid,
+    target_room_id: Uuid,
+) -> Result<(), StatusCode> {
+    // Verify target room exists
+    let room_exists = sqlx::query("SELECT id FROM rooms WHERE id = $1")
+        .bind(target_room_id)
+        .fetch_optional(db)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to verify room: {:?}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?
+        .is_some();
+
+    if !room_exists {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
+    // Update shelving unit's room_id
+    sqlx::query("UPDATE shelving_units SET room_id = $1, updated_at = NOW() WHERE id = $2")
+        .bind(target_room_id)
+        .bind(unit_id)
+        .execute(db)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to move shelving unit: {:?}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    Ok(())
+}
+
 /// Move a shelf to a different shelving unit
 pub async fn move_shelf(
     db: &PgPool,

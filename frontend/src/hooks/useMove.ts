@@ -1,5 +1,21 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { moveApi, type MoveShelfRequest, type MoveContainerRequest, type MoveItemRequest } from '../api/move';
+import { moveApi, type MoveShelvingUnitRequest, type MoveShelfRequest, type MoveContainerRequest, type MoveItemRequest } from '../api/move';
+
+// Move a shelving unit
+export const useMoveShelvingUnit = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation<
+    { message: string },
+    Error,
+    { unitId: string; data: MoveShelvingUnitRequest }
+  >({
+    mutationFn: ({ unitId, data }) => moveApi.moveShelvingUnit(unitId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['shelving-units'] });
+    },
+  });
+};
 
 // Move a shelf
 export const useMoveShelf = () => {

@@ -57,6 +57,18 @@ pub struct ItemResponse {
     pub updated_at: DateTime<Utc>,
 }
 
+#[typeshare]
+#[derive(Debug, Deserialize)]
+pub struct BulkCreateItemsRequest {
+    pub items: Vec<CreateItemRequest>,
+}
+
+#[typeshare]
+#[derive(Debug, Serialize)]
+pub struct BulkCreateItemsResponse {
+    pub items: Vec<ItemResponse>,
+}
+
 impl From<Item> for ItemResponse {
     fn from(item: Item) -> Self {
         Self {

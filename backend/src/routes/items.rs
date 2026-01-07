@@ -10,7 +10,8 @@ use uuid::Uuid;
 
 use crate::app::AppState;
 use crate::models::{
-    CreateItemRequest, Item, ItemResponse, PaginatedResponse, PaginationQuery, UpdateItemRequest,
+    BulkCreateItemsRequest, BulkCreateItemsResponse, CreateItemRequest, Item, ItemResponse,
+    PaginatedResponse, PaginationQuery, UpdateItemRequest,
 };
 
 /// Get all items
@@ -143,6 +144,110 @@ pub async fn get_item(
         .ok_or(StatusCode::NOT_FOUND)?;
 
     Ok(Json(ItemResponse::from(item)))
+}
+
+/// Bulk create new items
+pub async fn bulk_create_items(
+    State(state): State<Arc<AppState>>,
+    Json(payload): Json<BulkCreateItemsRequest>,
+) -> Result<Json<BulkCreateItemsResponse>, StatusCode> {
+    // For now, use a hardcoded user ID (we'll implement auth later)
+    let user_id = Uuid::new_v4();
+
+    if payload.items.is_empty() {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
+    let mut tx = state.db.begin().await.map_err(|e| {
+        tracing::error!("Failed to start transaction for bulk item create: {:?}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    let mut created_items: Vec<ItemResponse> = Vec::with_capacity(payload.items.len());
+
+    for item_req in payload.items {
+        // Validate location constraint: exactly one of shelf_id or container_id must be provided
+        let (shelf_id, container_id) = match (item_req.shelf_id, item_req.container_id) {
+            (Some(sid), None) => (Some(sid), None),
+            (None, Some(cid)) => (None, Some(cid)),
+            (Some(_), Some(_)) => return Err(StatusCode::BAD_REQUEST),
+            (None, None) => return Err(StatusCode::BAD_REQUEST),
+        };
+
+        // Verify location exists
+        if let Some(sid) = shelf_id {
+            let shelf_exists = sqlx::query("SELECT id FROM shelves WHERE id = $1")
+                .bind(sid)
+                .fetch_optional(&mut *tx)
+                .await
+                .map_err(|e| {
+                    tracing::error!("Failed to verify shelf in bulk item create: {:?}", e);
+                    StatusCode::INTERNAL_SERVER_ERROR
+                })?
+                .is_some();
+
+            if !shelf_exists {
+                return Err(StatusCode::BAD_REQUEST);
+            }
+        }
+
+        if let Some(cid) = container_id {
+            let container_exists = sqlx::query("SELECT id FROM containers WHERE id = $1")
+                .bind(cid)
+                .fetch_optional(&mut *tx)
+                .await
+                .map_err(|e| {
+                    tracing::error!("Failed to verify container in bulk item create: {:?}", e);
+                    StatusCode::INTERNAL_SERVER_ERROR
+                })?
+                .is_some();
+
+            if !container_exists {
+                return Err(StatusCode::BAD_REQUEST);
+            }
+        }
+
+        let item = sqlx::query_as::<_, Item>(
+            r#"
+            INSERT INTO items (id, shelf_id, container_id, name, description, barcode, barcode_type, created_by)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            RETURNING *
+            "#,
+        )
+        .bind(Uuid::new_v4())
+        .bind(shelf_id)
+        .bind(container_id)
+        .bind(&item_req.name)
+        .bind(&item_req.description)
+        .bind(&item_req.barcode)
+        .bind(&item_req.barcode_type)
+        .bind(user_id)
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to create item in bulk create: {:?}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+        created_items.push(ItemResponse::from(item));
+    }
+
+    tx.commit().await.map_err(|e| {
+        tracing::error!("Failed to commit bulk item create: {:?}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    for item in &created_items {
+        state
+            .audit
+            .log_create("item", item.id, Some(user_id), None)
+            .await
+            .ok();
+    }
+
+    Ok(Json(BulkCreateItemsResponse {
+        items: created_items,
+    }))
 }
 
 /// Get item by barcode
@@ -449,10 +554,11 @@ pub async fn delete_item(
 
 /// Create item routes
 pub fn item_routes() -> Router<Arc<AppState>> {
-    use axum::routing::get;
+    use axum::routing::{get, post};
 
     Router::new()
         .route("/api/items", get(list_items).post(create_item))
+        .route("/api/items/bulk", post(bulk_create_items))
         .route(
             "/api/items/:id",
             get(get_item).put(update_item).delete(delete_item),

@@ -1,8 +1,9 @@
 -- Home Inventory Database Schema
 -- PostgreSQL / Aurora DSQL compatible
 
--- Enable UUID extension
+-- Enable UUID and pg_trgm extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
 -- Users table
 CREATE TABLE users (

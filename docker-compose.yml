@@ -13,7 +13,7 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./schema.sql:/docker-entrypoint-initdb.d/001-schema.sql
+      # Note: schema.sql is NOT mounted here; SQLx migrations are the source of truth
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d inventory"]
       interval: 5s

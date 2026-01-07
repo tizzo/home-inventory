@@ -26,6 +26,16 @@ Below are rules derived from `CLAUDE.md` and `.cursorrules`.
 - Use React Router for navigation.
 - Modal states, filters, and tabs should be reflected in the URL when possible.
 
+## Database Migrations
+
+- Migrations live in `backend/migrations/` and run on startup via SQLx.
+- **NEVER edit an already-applied migration.** SQLx checksums migrations; editing causes `VersionMismatch` errors.
+- **Always fix forward:** create a new migration for schema changes, even if correcting a mistake.
+- If you encounter a `VersionMismatch` error:
+  1. Restore the original migration file via `git checkout <commit> -- <file>`.
+  2. Create a new migration with the corrected/additional schema.
+  3. If the DB is disposable (local dev), reset it: `docker compose down -v postgres && docker compose up -d postgres`.
+
 ## Backend Quality Gates
 
 - Run:

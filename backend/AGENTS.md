@@ -47,7 +47,13 @@
 
 ## Migrations
 
-- Migrations live in `backend/migrations/` and run on startup.
+- Migrations live in `backend/migrations/` and run on startup via SQLx.
+- **NEVER edit an already-applied migration.** SQLx checksums migrations; editing causes `VersionMismatch` errors.
+- **Always fix forward:** create a new migration for schema changes, even if correcting a mistake.
+- If you encounter a `VersionMismatch` error:
+  1. Restore the original migration file via `git checkout <commit> -- <file>`.
+  2. Create a new migration with the corrected/additional schema.
+  3. If the DB is disposable (local dev), reset it: `docker compose down -v postgres && docker compose up -d postgres`.
 - New route modules must be added to `routes/mod.rs` and then merged into the router in `app.rs`.
 
 ## Quality Gates

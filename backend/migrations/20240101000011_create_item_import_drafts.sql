@@ -1,4 +1,3 @@
-
 CREATE TABLE item_import_drafts (
     id UUID PRIMARY KEY,
     container_id UUID NOT NULL,
@@ -14,4 +13,3 @@ CREATE INDEX idx_item_import_drafts_container_id ON item_import_drafts(container
 CREATE INDEX idx_item_import_drafts_status ON item_import_drafts(status);
 CREATE INDEX idx_item_import_drafts_created_at ON item_import_drafts(created_at);
 CREATE INDEX idx_item_import_drafts_created_by ON item_import_drafts(created_by);
-

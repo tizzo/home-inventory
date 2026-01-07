@@ -6,3 +6,6 @@ export { default as Breadcrumb } from './Breadcrumb';
 export type { BreadcrumbItem } from './Breadcrumb';
 export { default as EntitySelector } from './EntitySelector';
 export type { EntityType } from './EntitySelector';
+export { default as EntityField } from './EntityField';
+export { default as MoveModal } from './MoveModal';
+export { default as EntityCreateModal } from './EntityCreateModal';

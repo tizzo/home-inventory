@@ -10,7 +10,7 @@ import {
   useRooms,
   usePhotos,
 } from '../hooks';
-import { Modal, PhotoUpload, PhotoGallery, Pagination } from '../components';
+import { Modal, PhotoUpload, PhotoGallery, Pagination, MoveModal } from '../components';
 import type {
   CreateShelvingUnitRequest,
   UpdateShelvingUnitRequest,
@@ -48,7 +48,6 @@ export default function ShelvingUnitsPage() {
     description: '',
   });
   const [moveModalUnit, setMoveModalUnit] = useState<ShelvingUnitResponse | null>(null);
-  const [moveTargetRoom, setMoveTargetRoom] = useState<string>('');
 
   // Update create form when roomId changes
   useEffect(() => {
@@ -146,24 +145,15 @@ export default function ShelvingUnitsPage() {
     setCreateFormData({ room_id: roomId || '', name: '', description: '' });
   };
 
-  const handleMove = async (unit: ShelvingUnitResponse) => {
-    if (!moveTargetRoom) {
-      alert('Please select a target room');
-      return;
-    }
-    try {
-      await moveUnit.mutateAsync({
-        unitId: unit.id,
-        data: {
-          target_room_id: moveTargetRoom,
-        },
-      });
-      setMoveModalUnit(null);
-      setMoveTargetRoom('');
-    } catch (err) {
-      console.error('Failed to move shelving unit:', err);
-      alert('Failed to move shelving unit. Please try again.');
-    }
+  const handleMove = async (targetRoomId: string) => {
+    if (!moveModalUnit) return;
+
+    await moveUnit.mutateAsync({
+      unitId: moveModalUnit.id,
+      data: {
+        target_room_id: targetRoomId,
+      },
+    });
   };
 
   if (isLoading) return <div className="loading">Loading shelving units...</div>;
@@ -429,64 +419,18 @@ export default function ShelvingUnitsPage() {
       </Modal>
 
       {/* Move Modal */}
-      <Modal
-        isOpen={!!moveModalUnit}
-        onClose={() => {
-          setMoveModalUnit(null);
-          setMoveTargetRoom('');
-        }}
-        title="Move Shelving Unit"
-      >
-        {moveModalUnit && (
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleMove(moveModalUnit);
-            }}
-          >
-            <p>Move "{moveModalUnit.name}" to a different room:</p>
-
-            <div className="form-group">
-              <label htmlFor="move-target-room">Target Room *</label>
-              <select
-                id="move-target-room"
-                value={moveTargetRoom}
-                onChange={(e) => setMoveTargetRoom(e.target.value)}
-                required
-              >
-                <option value="">Select a room</option>
-                {rooms
-                  ?.filter((r) => r.id !== moveModalUnit.room_id)
-                  .map((room) => (
-                    <option key={room.id} value={room.id}>
-                      {room.name}
-                    </option>
-                  ))}
-              </select>
-            </div>
-
-            <div className="form-actions">
-              <button
-                type="submit"
-                className="btn btn-primary"
-                disabled={moveUnit.isPending}
-              >
-                {moveUnit.isPending ? 'Moving...' : 'Move Unit'}
-              </button>
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={() => {
-                  setMoveModalUnit(null);
-                  setMoveTargetRoom('');
-                }}
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
-        )}
-      </Modal>
+      {moveModalUnit && (
+        <MoveModal
+          isOpen={!!moveModalUnit}
+          onClose={() => setMoveModalUnit(null)}
+          title="Move Shelving Unit"
+          entityName={moveModalUnit.name}
+          targetEntityType="room"
+          targetLabel="Target Room"
+          onMove={handleMove}
+          isPending={moveUnit.isPending}
+        />
+      )}
 
       {/* Units Grid */}
       <div className="rooms-grid">

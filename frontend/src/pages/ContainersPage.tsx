@@ -16,7 +16,8 @@ import {
   useRoom,
   usePhotos,
 } from '../hooks';
-import { Modal, PhotoUpload, PhotoGallery, Pagination } from '../components';
+import { Modal, PhotoUpload, PhotoGallery, Pagination, MoveModal } from '../components';
+import type { EntityType } from '../components/EntitySelector';
 import type {
   CreateContainerRequest,
   UpdateContainerRequest,
@@ -75,13 +76,10 @@ export default function ContainersPage() {
   const updateContainer = useUpdateContainer();
   const deleteContainer = useDeleteContainer();
   const moveContainer = useMoveContainer();
-  const { showError, showSuccess } = useToast();
+  const { showSuccess } = useToast();
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [moveModalContainer, setMoveModalContainer] = useState<ContainerResponse | null>(null);
-  const [moveLocationType, setMoveLocationType] = useState<'shelf' | 'container'>('shelf');
-  const [moveTargetShelf, setMoveTargetShelf] = useState<string>('');
-  const [moveTargetParent, setMoveTargetParent] = useState<string>('');
   const [locationType, setLocationType] = useState<'shelf' | 'container'>(
     shelfId ? 'shelf' : 'container'
   );
@@ -239,31 +237,17 @@ export default function ContainersPage() {
 
   if (isLoading) return <div className="loading">Loading containers...</div>;
 
-  const handleMove = async (container: ContainerResponse) => {
-    if (moveLocationType === 'shelf' && !moveTargetShelf) {
-      showError('Please select a target shelf');
-      return;
-    }
-    if (moveLocationType === 'container' && !moveTargetParent) {
-      showError('Please select a target parent container');
-      return;
-    }
-    try {
-      await moveContainer.mutateAsync({
-        containerId: container.id,
-        data: {
-          target_shelf_id: moveLocationType === 'shelf' ? moveTargetShelf : undefined,
-          target_parent_id: moveLocationType === 'container' ? moveTargetParent : undefined,
-        },
-      });
-      setMoveModalContainer(null);
-      setMoveTargetShelf('');
-      setMoveTargetParent('');
-      showSuccess('Container moved successfully');
-    } catch (err) {
-      console.error('Failed to move container:', err);
-      showError('Failed to move container. Please try again.');
-    }
+  const handleMove = async (targetId: string, selectedType?: EntityType) => {
+    if (!moveModalContainer) return;
+
+    await moveContainer.mutateAsync({
+      containerId: moveModalContainer.id,
+      data: {
+        target_shelf_id: selectedType === 'shelf' ? targetId : undefined,
+        target_parent_id: selectedType === 'container' ? targetId : undefined,
+      },
+    });
+    showSuccess(`Container "${moveModalContainer.name}" moved successfully`);
   };
 
   // Container card component with photos
@@ -612,117 +596,20 @@ export default function ContainersPage() {
       </Modal>
 
       {/* Move Modal */}
-      <Modal
-        isOpen={!!moveModalContainer}
-        onClose={() => {
-          setMoveModalContainer(null);
-          setMoveTargetShelf('');
-          setMoveTargetParent('');
-        }}
-        title="Move Container"
-      >
-        {moveModalContainer && (
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleMove(moveModalContainer);
-            }}
-          >
-            <div className="form-group">
-              <label>Location Type</label>
-              <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
-                <label>
-                  <input
-                    type="radio"
-                    value="shelf"
-                    checked={moveLocationType === 'shelf'}
-                    onChange={() => {
-                      setMoveLocationType('shelf');
-                      setMoveTargetParent('');
-                    }}
-                  />
-                  {' '}On Shelf
-                </label>
-                <label>
-                  <input
-                    type="radio"
-                    value="container"
-                    checked={moveLocationType === 'container'}
-                    onChange={() => {
-                      setMoveLocationType('container');
-                      setMoveTargetShelf('');
-                    }}
-                  />
-                  {' '}Inside Container
-                </label>
-              </div>
-            </div>
-
-            {moveLocationType === 'shelf' && (
-              <div className="form-group">
-                <label htmlFor="move-target-shelf">Target Shelf *</label>
-                <select
-                  id="move-target-shelf"
-                  value={moveTargetShelf}
-                  onChange={(e) => setMoveTargetShelf(e.target.value)}
-                  required
-                >
-                  <option value="">Select a shelf</option>
-                  {allShelves
-                    ?.filter((s) => s.id !== moveModalContainer.shelf_id)
-                    .map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name}
-                      </option>
-                    ))}
-                </select>
-              </div>
-            )}
-
-            {moveLocationType === 'container' && (
-              <div className="form-group">
-                <label htmlFor="move-target-parent">Target Parent Container *</label>
-                <select
-                  id="move-target-parent"
-                  value={moveTargetParent}
-                  onChange={(e) => setMoveTargetParent(e.target.value)}
-                  required
-                >
-                  <option value="">Select a parent container</option>
-                  {allContainers
-                    ?.filter((c) => c.id !== moveModalContainer.id && c.id !== moveModalContainer.parent_container_id)
-                    .map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                </select>
-              </div>
-            )}
-
-            <div className="form-actions">
-              <button
-                type="submit"
-                className="btn btn-primary"
-                disabled={moveContainer.isPending}
-              >
-                {moveContainer.isPending ? 'Moving...' : 'Move Container'}
-              </button>
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={() => {
-                  setMoveModalContainer(null);
-                  setMoveTargetShelf('');
-                  setMoveTargetParent('');
-                }}
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
-        )}
-      </Modal>
+      {moveModalContainer && (
+        <MoveModal
+          isOpen={!!moveModalContainer}
+          onClose={() => setMoveModalContainer(null)}
+          title="Move Container"
+          entityName={moveModalContainer.name}
+          locationTypes={[
+            { type: 'shelf', label: 'Target Shelf', displayName: 'On Shelf' },
+            { type: 'container', label: 'Parent Container', displayName: 'Inside Container' },
+          ]}
+          onMove={handleMove}
+          isPending={moveContainer.isPending}
+        />
+      )}
 
       {/* Containers Grid */}
       <div className="rooms-grid">

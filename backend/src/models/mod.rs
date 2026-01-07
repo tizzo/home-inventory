@@ -1,6 +1,7 @@
 pub mod audit;
 pub mod container;
 pub mod item;
+pub mod item_import_draft;
 pub mod label;
 pub mod pagination;
 pub mod photo;
@@ -17,6 +18,8 @@ pub use audit::*;
 pub use container::*;
 #[allow(unused_imports)]
 pub use item::*;
+#[allow(unused_imports)]
+pub use item_import_draft::*;
 #[allow(unused_imports)]
 pub use label::*;
 #[allow(unused_imports)]

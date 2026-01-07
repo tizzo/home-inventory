@@ -2,6 +2,7 @@ pub mod audit;
 pub mod auth;
 
 pub mod containers;
+pub mod item_import_drafts;
 pub mod items;
 pub mod labels;
 pub mod r#move;
@@ -15,6 +16,7 @@ pub use audit::*;
 pub use auth::*;
 
 pub use containers::*;
+pub use item_import_drafts::*;
 pub use items::*;
 pub use labels::*;
 pub use photos::*;

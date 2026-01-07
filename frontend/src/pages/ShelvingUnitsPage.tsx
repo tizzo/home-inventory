@@ -10,9 +10,8 @@ import {
   useRooms,
   usePhotos,
 } from '../hooks';
-import { Modal, PhotoUpload, PhotoGallery, Pagination, MoveModal } from '../components';
+import { Modal, PhotoUpload, PhotoGallery, Pagination, MoveModal, EntityCreateModal } from '../components';
 import type {
-  CreateShelvingUnitRequest,
   UpdateShelvingUnitRequest,
   ShelvingUnitResponse,
 } from '../types/generated';
@@ -38,26 +37,11 @@ export default function ShelvingUnitsPage() {
   const isLoading = roomId ? isLoadingByRoom : isLoadingAll;
 
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [createFormData, setCreateFormData] = useState<CreateShelvingUnitRequest>({
-    room_id: roomId || '',
-    name: '',
-    description: '',
-  });
   const [editFormData, setEditFormData] = useState<UpdateShelvingUnitRequest>({
     name: '',
     description: '',
   });
   const [moveModalUnit, setMoveModalUnit] = useState<ShelvingUnitResponse | null>(null);
-
-  // Update create form when roomId changes
-  useEffect(() => {
-    if (roomId) {
-      setCreateFormData((prev) => ({
-        ...prev,
-        room_id: roomId,
-      }));
-    }
-  }, [roomId]);
 
   // Get the unit being edited from URL
   const editingUnit = units?.find((u) => u.id === unitId);
@@ -72,20 +56,12 @@ export default function ShelvingUnitsPage() {
     }
   }, [unitId, editingUnit]);
 
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!createFormData.room_id) {
-      alert('Please select a room');
-      return;
-    }
-    try {
-      await createUnit.mutateAsync(createFormData);
-      setCreateFormData({ room_id: roomId || '', name: '', description: '' });
-      setShowCreateModal(false);
-    } catch (err) {
-      console.error('Failed to create shelving unit:', err);
-      alert('Failed to create shelving unit. Please try again.');
-    }
+  const handleCreate = async (data: Record<string, any>) => {
+    await createUnit.mutateAsync({
+      room_id: data.room_id || roomId!,
+      name: data.name,
+      description: data.description || '',
+    });
   };
 
   const handleEdit = async (e: React.FormEvent) => {
@@ -142,7 +118,6 @@ export default function ShelvingUnitsPage() {
 
   const closeCreateModal = () => {
     setShowCreateModal(false);
-    setCreateFormData({ room_id: roomId || '', name: '', description: '' });
   };
 
   const handleMove = async (targetRoomId: string) => {
@@ -269,81 +244,32 @@ export default function ShelvingUnitsPage() {
       </div>
 
       {/* Create Modal */}
-      <Modal
+      <EntityCreateModal
         isOpen={showCreateModal}
         onClose={closeCreateModal}
         title="Create New Shelving Unit"
-      >
-        <form onSubmit={handleCreate}>
-          <div className="form-group">
-            <label htmlFor="create-room">Room *</label>
-            <select
-              id="create-room"
-              value={createFormData.room_id}
-              onChange={(e) =>
-                setCreateFormData({ ...createFormData, room_id: e.target.value })
-              }
-              required
-              disabled={!!roomId}
-            >
-              <option value="">Select a room</option>
-              {rooms?.map((room) => (
-                <option key={room.id} value={room.id}>
-                  {room.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="create-name">Shelving Unit Name *</label>
-            <input
-              id="create-name"
-              type="text"
-              value={createFormData.name}
-              onChange={(e) =>
-                setCreateFormData({ ...createFormData, name: e.target.value })
-              }
-              required
-              placeholder="e.g., Bookcase, Storage Rack"
-              autoFocus
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="create-description">Description</label>
-            <textarea
-              id="create-description"
-              value={createFormData.description}
-              onChange={(e) =>
-                setCreateFormData({
-                  ...createFormData,
-                  description: e.target.value,
-                })
-              }
-              placeholder="Optional description"
-              rows={3}
-            />
-          </div>
-
-          <div className="form-actions">
-            <button
-              type="submit"
-              className="btn btn-primary"
-              disabled={createUnit.isPending}
-            >
-              {createUnit.isPending ? 'Creating...' : 'Create Shelving Unit'}
-            </button>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={closeCreateModal}
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
-      </Modal>
+        parentEntityType={roomId ? undefined : 'room'}
+        parentEntityLabel={roomId ? undefined : 'Room'}
+        parentEntityId={roomId}
+        fields={[
+          {
+            name: 'name',
+            label: 'Shelving Unit Name',
+            type: 'text',
+            required: true,
+            placeholder: 'e.g., Bookcase, Storage Rack',
+          },
+          {
+            name: 'description',
+            label: 'Description',
+            type: 'textarea',
+            placeholder: 'Optional description',
+            rows: 3,
+          },
+        ]}
+        onSubmit={handleCreate}
+        isPending={createUnit.isPending}
+      />
 
       {/* Edit Modal */}
       <Modal

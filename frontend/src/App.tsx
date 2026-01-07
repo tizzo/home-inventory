@@ -28,8 +28,11 @@ const queryClient = new QueryClient({
   },
 });
 
+import { useAuth } from './hooks/useAuth';
+
 function NavBar() {
   const location = useLocation();
+  const { user } = useAuth();
 
   return (
     <nav className="navbar">
@@ -46,62 +49,68 @@ function NavBar() {
               Home
             </Link>
           </li>
-          <li>
-            <Link
-              to="/rooms"
-              className={location.pathname.startsWith('/rooms') ? 'active' : ''}
-            >
-              Rooms
-            </Link>
-          </li>
-          <li>
-            <Link
-              to="/units"
-              className={location.pathname.startsWith('/units') ? 'active' : ''}
-            >
-              Units
-            </Link>
-          </li>
-          <li>
-            <Link
-              to="/shelves"
-              className={location.pathname.startsWith('/shelves') ? 'active' : ''}
-            >
-              Shelves
-            </Link>
-          </li>
-          <li>
-            <Link
-              to="/containers"
-              className={location.pathname.startsWith('/containers') ? 'active' : ''}
-            >
-              Containers
-            </Link>
-          </li>
-          <li>
-            <Link
-              to="/items"
-              className={location.pathname.startsWith('/items') ? 'active' : ''}
-            >
-              Items
-            </Link>
-          </li>
-          <li>
-            <Link
-              to="/labels"
-              className={location.pathname.startsWith('/labels') ? 'active' : ''}
-            >
-              Labels
-            </Link>
-          </li>
-          <li>
-            <Link
-              to="/audit"
-              className={location.pathname.startsWith('/audit') ? 'active' : ''}
-            >
-              Audit Logs
-            </Link>
-          </li>
+
+          {user && (
+            <>
+              <li>
+                <Link
+                  to="/rooms"
+                  className={location.pathname.startsWith('/rooms') ? 'active' : ''}
+                >
+                  Rooms
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/units"
+                  className={location.pathname.startsWith('/units') ? 'active' : ''}
+                >
+                  Units
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/shelves"
+                  className={location.pathname.startsWith('/shelves') ? 'active' : ''}
+                >
+                  Shelves
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/containers"
+                  className={location.pathname.startsWith('/containers') ? 'active' : ''}
+                >
+                  Containers
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/items"
+                  className={location.pathname.startsWith('/items') ? 'active' : ''}
+                >
+                  Items
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/labels"
+                  className={location.pathname.startsWith('/labels') ? 'active' : ''}
+                >
+                  Labels
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/audit"
+                  className={location.pathname.startsWith('/audit') ? 'active' : ''}
+                >
+                  Audit Logs
+                </Link>
+              </li>
+            </>
+          )}
+
           <li className="auth-nav-item">
             <LoginButton />
           </li>
@@ -111,6 +120,7 @@ function NavBar() {
     </nav>
   );
 }
+
 
 function App() {
   return (

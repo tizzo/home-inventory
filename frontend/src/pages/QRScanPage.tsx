@@ -142,7 +142,7 @@ export default function QRScanPage() {
               setScanning(false);
             }
           },
-          (errorMessage) => {
+          (_errorMessage) => {
             // Ignore scanning errors (they're frequent during scanning)
           }
         );

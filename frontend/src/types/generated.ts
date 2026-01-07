@@ -47,6 +47,11 @@ export interface CommitItemImportDraftResponse {
 	created_items: ItemResponse[];
 }
 
+export interface AnalyzePhotoRequest {
+	container_id: string;
+	photo_id: string;
+}
+
 export interface AuditLog {
 	id: string;
 	entity_type: string;

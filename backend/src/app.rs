@@ -16,6 +16,7 @@ use tower_sessions_sqlx_store::PostgresStore;
 
 use crate::services::audit::AuditService;
 use crate::services::s3::S3Service;
+use crate::services::VisionService;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -24,6 +25,7 @@ pub struct AppState {
     pub app_base_url: String,
     pub audit: Arc<crate::services::audit::AuditService>,
     pub oauth_client: BasicClient,
+    pub vision: Option<Arc<VisionService>>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -80,6 +82,19 @@ pub async fn create_app(db: PgPool) -> anyhow::Result<Router> {
 
     let audit_service = Arc::new(AuditService::new(Arc::new(db.clone())));
 
+    // Initialize vision service (optional - requires ANTHROPIC_API_KEY)
+    let vision_service = match VisionService::new() {
+        Ok(service) => {
+            tracing::info!("Vision service initialized successfully");
+            Some(Arc::new(service))
+        }
+        Err(e) => {
+            tracing::warn!("Vision service not available: {}", e);
+            tracing::warn!("Set ANTHROPIC_API_KEY to enable AI-powered item import");
+            None
+        }
+    };
+
     tracing::info!("Initializing OAuth client...");
     let google_client_id = ClientId::new(
         env::var("GOOGLE_CLIENT_ID").expect("Missing GOOGLE_CLIENT_ID environment variable"),
@@ -113,6 +128,7 @@ pub async fn create_app(db: PgPool) -> anyhow::Result<Router> {
         app_base_url,
         audit: audit_service,
         oauth_client,
+        vision: vision_service,
     });
 
     // Configure CORS for local development

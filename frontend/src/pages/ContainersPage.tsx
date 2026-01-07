@@ -15,7 +15,7 @@ import {
   useRoom,
   usePhotos,
 } from '../hooks';
-import { Modal, PhotoUpload, PhotoGallery, Pagination, MoveModal, EntityCreateModal } from '../components';
+import { Modal, PhotoUpload, PhotoGallery, Pagination, MoveModal, EntityCreateModal, ImportItemsFromPhoto } from '../components';
 import type { EntityType } from '../components/EntitySelector';
 import type {
   UpdateContainerRequest,
@@ -275,13 +275,14 @@ export default function ContainersPage() {
             </>
           )}
         </div>
-        <div className="card-actions" style={{ marginTop: '0.5rem' }}>
+        <div className="card-actions" style={{ marginTop: '0.5rem', gap: '0.5rem' }}>
           <Link
             to={`/containers/${container.id}/children`}
             className="btn btn-secondary btn-sm"
           >
             View Contents
           </Link>
+          <ImportItemsFromPhoto containerId={container.id} />
         </div>
       </div>
     );

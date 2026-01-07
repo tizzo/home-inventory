@@ -4,6 +4,7 @@ import type {
   CreateItemImportDraftRequest,
   UpdateItemImportDraftRequest,
   CommitItemImportDraftResponse,
+  AnalyzePhotoRequest,
 } from '../types/generated';
 
 export const itemImportDraftsApi = {
@@ -42,6 +43,17 @@ export const itemImportDraftsApi = {
   commit: async (id: string): Promise<CommitItemImportDraftResponse> => {
     const response = await apiClient.post<CommitItemImportDraftResponse>(
       `/api/item-import-drafts/${id}/commit`
+    );
+    return response.data;
+  },
+
+  // Analyze a photo with AI and create a draft
+  analyzePhoto: async (
+    data: AnalyzePhotoRequest
+  ): Promise<ItemImportDraftResponse> => {
+    const response = await apiClient.post<ItemImportDraftResponse>(
+      '/api/item-import-drafts/analyze',
+      data
     );
     return response.data;
   },

@@ -9,3 +9,4 @@ export type { EntityType } from './EntitySelector';
 export { default as EntityField } from './EntityField';
 export { default as MoveModal } from './MoveModal';
 export { default as EntityCreateModal } from './EntityCreateModal';
+export { default as ImportItemsFromPhoto } from './ImportItemsFromPhoto';

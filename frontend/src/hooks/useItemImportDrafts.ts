@@ -5,6 +5,7 @@ import type {
   CreateItemImportDraftRequest,
   UpdateItemImportDraftRequest,
   CommitItemImportDraftResponse,
+  AnalyzePhotoRequest,
 } from '../types/generated';
 
 // Get a single draft
@@ -63,6 +64,19 @@ export const useCommitItemImportDraft = () => {
           queryKey: ['items', 'container', data.draft.container_id],
         });
       }
+    },
+  });
+};
+
+// Analyze a photo with AI and create a draft
+export const useAnalyzePhotoAndCreateDraft = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation<ItemImportDraftResponse, Error, AnalyzePhotoRequest>({
+    mutationFn: itemImportDraftsApi.analyzePhoto,
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['itemImportDrafts'] });
+      queryClient.setQueryData(['itemImportDrafts', data.id], data);
     },
   });
 };

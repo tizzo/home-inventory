@@ -135,6 +135,20 @@ impl S3Service {
         Ok(presigned_request.uri().to_string())
     }
 
+    /// Download file bytes from S3
+    pub async fn get_object_bytes(&self, s3_key: &str) -> anyhow::Result<Vec<u8>> {
+        let response = self
+            .client
+            .get_object()
+            .bucket(&self.bucket)
+            .key(s3_key)
+            .send()
+            .await?;
+
+        let bytes = response.body.collect().await?.into_bytes().to_vec();
+        Ok(bytes)
+    }
+
     /// Delete a file from S3
     pub async fn delete_file(&self, s3_key: &str) -> anyhow::Result<()> {
         self.client

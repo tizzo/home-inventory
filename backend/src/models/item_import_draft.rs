@@ -59,3 +59,10 @@ pub struct CommitItemImportDraftResponse {
     pub draft: ItemImportDraftResponse,
     pub created_items: Vec<ItemResponse>,
 }
+
+#[typeshare]
+#[derive(Debug, Deserialize)]
+pub struct AnalyzePhotoRequest {
+    pub container_id: Uuid,
+    pub photo_id: Uuid,
+}

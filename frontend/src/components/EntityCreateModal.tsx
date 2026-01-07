@@ -12,6 +12,13 @@ interface FormField {
   rows?: number;
 }
 
+interface ParentTypeOption {
+  type: EntityType;
+  label: string;
+  displayName: string;
+  preSelectedId?: string; // Pre-selected parent for this type (from route params)
+}
+
 interface EntityCreateModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -19,6 +26,7 @@ interface EntityCreateModalProps {
   parentEntityType?: EntityType;
   parentEntityLabel?: string;
   parentEntityId?: string; // Pre-selected parent (e.g., when creating from a specific parent page)
+  parentTypes?: ParentTypeOption[]; // For entities that can have multiple parent types
   fields: FormField[];
   onSubmit: (data: Record<string, any>) => Promise<void>;
   isPending?: boolean;
@@ -27,6 +35,10 @@ interface EntityCreateModalProps {
 /**
  * Reusable modal for creating entities with optional parent selection
  * Handles the common pattern of: select parent + fill in fields + submit
+ *
+ * Supports two modes:
+ * 1. Single parent type: Pass parentEntityType, parentEntityLabel, parentEntityId
+ * 2. Multiple parent types: Pass parentTypes array with radio button options
  */
 export default function EntityCreateModal({
   isOpen,
@@ -35,31 +47,56 @@ export default function EntityCreateModal({
   parentEntityType,
   parentEntityLabel,
   parentEntityId,
+  parentTypes,
   fields,
   onSubmit,
   isPending = false,
 }: EntityCreateModalProps) {
   const [formData, setFormData] = useState<Record<string, any>>({});
+  const [selectedParentType, setSelectedParentType] = useState<EntityType | undefined>(
+    parentTypes ? parentTypes[0].type : parentEntityType
+  );
 
   // Initialize parent entity if provided
   useEffect(() => {
     if (parentEntityId && parentEntityType) {
       setFormData((prev) => ({ ...prev, [`${parentEntityType}_id`]: parentEntityId }));
+    } else if (parentTypes) {
+      // Initialize with pre-selected parent IDs for each type
+      const initialData: Record<string, any> = {};
+      parentTypes.forEach((pt) => {
+        if (pt.preSelectedId) {
+          initialData[`${pt.type}_id`] = pt.preSelectedId;
+        }
+      });
+      setFormData((prev) => ({ ...prev, ...initialData }));
     }
-  }, [parentEntityId, parentEntityType]);
+  }, [parentEntityId, parentEntityType, parentTypes]);
+
+  const currentParentType = parentTypes?.find((pt) => pt.type === selectedParentType);
+  const effectiveParentType = parentTypes ? selectedParentType : parentEntityType;
+  const effectiveParentLabel = parentTypes
+    ? currentParentType?.label
+    : parentEntityLabel;
+  const effectiveParentId = parentTypes
+    ? currentParentType?.preSelectedId
+    : parentEntityId;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     // Validate parent entity if required
-    if (parentEntityType && !formData[`${parentEntityType}_id`]) {
-      alert(`Please select a ${parentEntityLabel?.toLowerCase() || parentEntityType}`);
+    if (effectiveParentType && !formData[`${effectiveParentType}_id`]) {
+      alert(`Please select a ${effectiveParentLabel?.toLowerCase() || effectiveParentType}`);
       return;
     }
 
     try {
       await onSubmit(formData);
       setFormData({});
+      if (parentTypes) {
+        setSelectedParentType(parentTypes[0].type);
+      }
       onClose();
     } catch (err) {
       console.error('Create failed:', err);
@@ -69,23 +106,63 @@ export default function EntityCreateModal({
 
   const handleClose = () => {
     setFormData({});
+    if (parentTypes) {
+      setSelectedParentType(parentTypes[0].type);
+    }
     onClose();
+  };
+
+  const handleParentTypeChange = (type: EntityType) => {
+    setSelectedParentType(type);
+    // Clear all parent IDs when switching types
+    const clearedData = { ...formData };
+    if (parentTypes) {
+      parentTypes.forEach((pt) => {
+        delete clearedData[`${pt.type}_id`];
+      });
+      // Set the pre-selected ID for the new type if it exists
+      const newParentType = parentTypes.find((pt) => pt.type === type);
+      if (newParentType?.preSelectedId) {
+        clearedData[`${type}_id`] = newParentType.preSelectedId;
+      }
+    }
+    setFormData(clearedData);
   };
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title={title}>
       <form onSubmit={handleSubmit}>
+        {/* Parent Type Selector (for multiple parent types) */}
+        {parentTypes && parentTypes.length > 1 && (
+          <div className="form-group">
+            <label>Location Type</label>
+            <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+              {parentTypes.map((pt) => (
+                <label key={pt.type}>
+                  <input
+                    type="radio"
+                    value={pt.type}
+                    checked={selectedParentType === pt.type}
+                    onChange={() => handleParentTypeChange(pt.type)}
+                  />
+                  {' '}{pt.displayName}
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Parent Entity Selector (if applicable) */}
-        {parentEntityType && (
+        {effectiveParentType && !effectiveParentId && (
           <EntityField
-            label={parentEntityLabel || parentEntityType}
-            entityType={parentEntityType}
-            value={formData[`${parentEntityType}_id`]}
+            label={effectiveParentLabel || effectiveParentType}
+            entityType={effectiveParentType}
+            value={formData[`${effectiveParentType}_id`]}
             onChange={(value) =>
-              setFormData({ ...formData, [`${parentEntityType}_id`]: value })
+              setFormData({ ...formData, [`${effectiveParentType}_id`]: value })
             }
             required
-            placeholder={`Select ${parentEntityLabel?.toLowerCase() || parentEntityType}`}
+            placeholder={`Select ${effectiveParentLabel?.toLowerCase() || effectiveParentType}`}
             helpText="Type to search or click the camera icon to scan a QR code"
           />
         )}

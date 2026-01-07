@@ -10,15 +10,10 @@ use uuid::Uuid;
 
 use crate::app::AppState;
 use crate::models::{
-    CreateItemImportDraftRequest, CreateItemRequest, Item, ItemImportDraft, ItemImportDraftItem,
-    ItemImportDraftResponse, ItemResponse, UpdateItemImportDraftRequest,
+    CommitItemImportDraftResponse, CreateItemImportDraftRequest, CreateItemRequest, Item,
+    ItemImportDraft, ItemImportDraftItem, ItemImportDraftResponse, ItemResponse,
+    UpdateItemImportDraftRequest,
 };
-
-#[derive(serde::Serialize)]
-pub struct CommitItemImportDraftResponse {
-    pub draft: ItemImportDraftResponse,
-    pub created_items: Vec<ItemResponse>,
-}
 
 fn draft_to_response(draft: ItemImportDraft) -> Result<ItemImportDraftResponse, StatusCode> {
     let items: Vec<ItemImportDraftItem> =

@@ -4,6 +4,8 @@ use sqlx::FromRow;
 use typeshare::typeshare;
 use uuid::Uuid;
 
+use crate::models::ItemResponse;
+
 #[typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ItemImportDraftItem {
@@ -49,4 +51,11 @@ pub struct ItemImportDraftResponse {
     pub source_photo_ids: Vec<Uuid>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+}
+
+#[typeshare]
+#[derive(Debug, Serialize)]
+pub struct CommitItemImportDraftResponse {
+    pub draft: ItemImportDraftResponse,
+    pub created_items: Vec<ItemResponse>,
 }

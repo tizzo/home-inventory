@@ -234,22 +234,16 @@ export default function EntitySelector({
     });
   }, [scannerActive, handleQrScan, entityType]);
 
-  // Start scanner when dropdown opens
+  // Stop scanner when dropdown closes
   useEffect(() => {
-    if (isOpen && !scannerActive) {
-      console.log('EntitySelector: Dropdown opened, starting scanner...');
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      startScanner().catch((err) => {
-        console.error('EntitySelector: Failed to start scanner:', err);
-      });
-    } else if (!isOpen && scannerActive) {
+    if (!isOpen && scannerActive) {
       console.log('EntitySelector: Dropdown closed, stopping scanner...');
-       
+
       stopScanner().catch((err) => {
         console.error('EntitySelector: Failed to stop scanner:', err);
       });
     }
-  }, [isOpen, scannerActive, startScanner, stopScanner]);
+  }, [isOpen, scannerActive, stopScanner]);
 
   // Close dropdown when clicking outside (but not when scanner is active)
   useEffect(() => {

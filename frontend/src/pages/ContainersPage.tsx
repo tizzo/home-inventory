@@ -11,15 +11,13 @@ import {
   useMoveContainer,
   useShelf,
   useContainer,
-  useShelves,
   useShelvingUnit,
   useRoom,
   usePhotos,
 } from '../hooks';
-import { Modal, PhotoUpload, PhotoGallery, Pagination, MoveModal } from '../components';
+import { Modal, PhotoUpload, PhotoGallery, Pagination, MoveModal, EntityCreateModal } from '../components';
 import type { EntityType } from '../components/EntitySelector';
 import type {
-  CreateContainerRequest,
   UpdateContainerRequest,
   ContainerResponse,
 } from '../types/generated';
@@ -69,8 +67,6 @@ export default function ContainersPage() {
   const { data: parentContainer } = useContainer(parentId || '');
   const { data: unit } = useShelvingUnit(shelf?.shelving_unit_id || '');
   const { data: room } = useRoom(unit?.room_id || '');
-  const { data: allShelvesResponse } = useShelves();
-  const allShelves = allShelvesResponse?.data || [];
 
   const createContainer = useCreateContainer();
   const updateContainer = useUpdateContainer();
@@ -80,38 +76,10 @@ export default function ContainersPage() {
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [moveModalContainer, setMoveModalContainer] = useState<ContainerResponse | null>(null);
-  const [locationType, setLocationType] = useState<'shelf' | 'container'>(
-    shelfId ? 'shelf' : 'container'
-  );
-  const [createFormData, setCreateFormData] = useState<CreateContainerRequest>({
-    shelf_id: shelfId,
-    parent_container_id: undefined,
-    name: '',
-    description: '',
-  });
   const [editFormData, setEditFormData] = useState<UpdateContainerRequest>({
     name: '',
     description: '',
   });
-
-  // Update create form when context changes
-  useEffect(() => {
-    if (shelfId) {
-      setLocationType('shelf');
-      setCreateFormData((prev) => ({
-        ...prev,
-        shelf_id: shelfId,
-        parent_container_id: undefined,
-      }));
-    } else if (parentId) {
-      setLocationType('container');
-      setCreateFormData((prev) => ({
-        ...prev,
-        shelf_id: undefined,
-        parent_container_id: parentId,
-      }));
-    }
-  }, [shelfId, parentId]);
 
   // Get the container being edited from URL
   const editingContainer = containers?.find((c) => c.id === containerId);
@@ -126,29 +94,14 @@ export default function ContainersPage() {
     }
   }, [containerId, editingContainer]);
 
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    // Validate location constraint
-    if (
-      (!createFormData.shelf_id && !createFormData.parent_container_id) ||
-      (createFormData.shelf_id && createFormData.parent_container_id)
-    ) {
-      alert('Please select either a shelf or a parent container (not both)');
-      return;
-    }
-    try {
-      await createContainer.mutateAsync(createFormData);
-      setCreateFormData({
-        shelf_id: shelfId,
-        parent_container_id: parentId,
-        name: '',
-        description: '',
-      });
-      setShowCreateModal(false);
-    } catch (err) {
-      console.error('Failed to create container:', err);
-      alert('Failed to create container. Please try again.');
-    }
+  const handleCreate = async (data: Record<string, any>) => {
+    await createContainer.mutateAsync({
+      shelf_id: data.shelf_id,
+      parent_container_id: data.container_id,
+      name: data.name,
+      description: data.description || '',
+    });
+    showSuccess('Container created successfully');
   };
 
   const handleEdit = async (e: React.FormEvent) => {
@@ -227,12 +180,6 @@ export default function ContainersPage() {
 
   const closeCreateModal = () => {
     setShowCreateModal(false);
-    setCreateFormData({
-      shelf_id: shelfId,
-      parent_container_id: parentId,
-      name: '',
-      description: '',
-    });
   };
 
   if (isLoading) return <div className="loading">Loading containers...</div>;
@@ -380,147 +327,43 @@ export default function ContainersPage() {
       </div>
 
       {/* Create Modal */}
-      <Modal
+      <EntityCreateModal
         isOpen={showCreateModal}
         onClose={closeCreateModal}
         title="Create New Container"
-      >
-        <form onSubmit={handleCreate}>
-          <div className="form-group">
-            <label>Location Type</label>
-            <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
-              <label>
-                <input
-                  type="radio"
-                  value="shelf"
-                  checked={locationType === 'shelf'}
-                  onChange={() => {
-                    setLocationType('shelf');
-                    setCreateFormData({
-                      ...createFormData,
-                      shelf_id: shelfId || undefined,
-                      parent_container_id: undefined,
-                    });
-                  }}
-                />
-                {' '}On Shelf
-              </label>
-              <label>
-                <input
-                  type="radio"
-                  value="container"
-                  checked={locationType === 'container'}
-                  onChange={() => {
-                    setLocationType('container');
-                    setCreateFormData({
-                      ...createFormData,
-                      shelf_id: undefined,
-                      parent_container_id: parentId || undefined,
-                    });
-                  }}
-                />
-                {' '}Inside Container
-              </label>
-            </div>
-          </div>
-          {locationType === 'shelf' && !shelfId && (
-            <div className="form-group">
-              <label htmlFor="create-shelf">Shelf *</label>
-              <select
-                id="create-shelf"
-                value={createFormData.shelf_id || ''}
-                onChange={(e) =>
-                  setCreateFormData({
-                    ...createFormData,
-                    shelf_id: e.target.value,
-                    parent_container_id: undefined,
-                  })
-                }
-                required
-              >
-                <option value="">Select a shelf</option>
-                {allShelves.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-          {locationType === 'container' && !parentId && (
-            <div className="form-group">
-              <label htmlFor="create-parent">Parent Container *</label>
-              <select
-                id="create-parent"
-                value={createFormData.parent_container_id || ''}
-                onChange={(e) =>
-                  setCreateFormData({
-                    ...createFormData,
-                    shelf_id: undefined,
-                    parent_container_id: e.target.value,
-                  })
-                }
-                required
-              >
-                <option value="">Select a parent container</option>
-                {allContainers.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          <div className="form-group">
-            <label htmlFor="create-name">Container Name *</label>
-            <input
-              id="create-name"
-              type="text"
-              value={createFormData.name}
-              onChange={(e) =>
-                setCreateFormData({ ...createFormData, name: e.target.value })
-              }
-              required
-              placeholder="e.g., Box A, Drawer 1"
-              autoFocus
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="create-description">Description</label>
-            <textarea
-              id="create-description"
-              value={createFormData.description}
-              onChange={(e) =>
-                setCreateFormData({
-                  ...createFormData,
-                  description: e.target.value,
-                })
-              }
-              placeholder="Optional description"
-              rows={3}
-            />
-          </div>
-
-          <div className="form-actions">
-            <button
-              type="submit"
-              className="btn btn-primary"
-              disabled={createContainer.isPending}
-            >
-              {createContainer.isPending ? 'Creating...' : 'Create Container'}
-            </button>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={closeCreateModal}
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
-      </Modal>
+        parentTypes={[
+          {
+            type: 'shelf',
+            label: 'Shelf',
+            displayName: 'On Shelf',
+            preSelectedId: shelfId,
+          },
+          {
+            type: 'container',
+            label: 'Parent Container',
+            displayName: 'Inside Container',
+            preSelectedId: parentId,
+          },
+        ]}
+        fields={[
+          {
+            name: 'name',
+            label: 'Container Name',
+            type: 'text',
+            required: true,
+            placeholder: 'e.g., Box A, Drawer 1',
+          },
+          {
+            name: 'description',
+            label: 'Description',
+            type: 'textarea',
+            placeholder: 'Optional description',
+            rows: 3,
+          },
+        ]}
+        onSubmit={handleCreate}
+        isPending={createContainer.isPending}
+      />
 
       {/* Edit Modal */}
       <Modal

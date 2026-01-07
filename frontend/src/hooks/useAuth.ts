@@ -9,7 +9,7 @@ const fetchUser = async (): Promise<User | null> => {
     try {
         const { data } = await axios.get('/api/auth/me');
         return data;
-    } catch (error) {
+    } catch {
         return null;
     }
 };

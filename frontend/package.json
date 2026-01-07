@@ -8,7 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "generate-types": "cd ../backend && cargo build && cp target/typeshare/bindings.ts ../frontend/src/types/generated.ts",
+    "generate-types": "cd ../backend && cargo run -q --bin generate_types -- ../frontend/src/types/generated.ts",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {

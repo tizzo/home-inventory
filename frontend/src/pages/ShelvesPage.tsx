@@ -13,7 +13,7 @@ import {
   useRoom,
   usePhotos,
 } from '../hooks';
-import { Modal, PhotoUpload, PhotoGallery, Breadcrumb, Pagination } from '../components';
+import { Modal, PhotoUpload, PhotoGallery, Breadcrumb, Pagination, MoveModal } from '../components';
 import type {
   CreateShelfRequest,
   UpdateShelfRequest,
@@ -163,30 +163,20 @@ export default function ShelvesPage() {
   };
 
   const [moveModalShelf, setMoveModalShelf] = useState<ShelfResponse | null>(null);
-  const [moveTargetUnit, setMoveTargetUnit] = useState<string>('');
+
+  const handleMove = async (targetUnitId: string) => {
+    if (!moveModalShelf) return;
+
+    await moveShelf.mutateAsync({
+      shelfId: moveModalShelf.id,
+      data: {
+        target_unit_id: targetUnitId,
+      },
+    });
+    showSuccess(`Shelf "${moveModalShelf.name}" moved successfully`);
+  };
 
   if (isLoading) return <div className="loading">Loading shelves...</div>;
-
-  const handleMove = async (shelf: ShelfResponse) => {
-    if (!moveTargetUnit) {
-      showError('Please select a target shelving unit');
-      return;
-    }
-    try {
-      await moveShelf.mutateAsync({
-        shelfId: shelf.id,
-        data: {
-          target_unit_id: moveTargetUnit,
-        },
-      });
-      setMoveModalShelf(null);
-      setMoveTargetUnit('');
-      showSuccess('Shelf moved successfully');
-    } catch (err) {
-      console.error('Failed to move shelf:', err);
-      showError('Failed to move shelf. Please try again.');
-    }
-  };
 
   // Shelf card component with photos
   function ShelfCard({
@@ -486,73 +476,18 @@ export default function ShelvesPage() {
       </Modal>
 
       {/* Move Modal */}
-      <Modal
-        isOpen={!!moveModalShelf}
-        onClose={() => {
-          setMoveModalShelf(null);
-          setMoveTargetUnit('');
-        }}
-        title="Move Shelf"
-      >
-        {moveModalShelf && (
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleMove(moveModalShelf);
-            }}
-          >
-            <div className="form-group">
-              <label htmlFor="move-current">Current Location</label>
-              <input
-                id="move-current"
-                type="text"
-                value={unit?.name || 'Unknown'}
-                disabled
-                style={{ background: 'var(--bg-color)' }}
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="move-target">Target Shelving Unit *</label>
-              <select
-                id="move-target"
-                value={moveTargetUnit}
-                onChange={(e) => setMoveTargetUnit(e.target.value)}
-                required
-              >
-                <option value="">Select a shelving unit</option>
-                {allUnits
-                  ?.filter((u) => u.id !== moveModalShelf.shelving_unit_id)
-                  .map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.name}
-                    </option>
-                  ))}
-              </select>
-            </div>
-
-            <div className="form-actions">
-              <button
-                type="submit"
-                className="btn btn-primary"
-                disabled={moveShelf.isPending}
-              >
-                {moveShelf.isPending ? 'Moving...' : 'Move Shelf'}
-              </button>
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={() => {
-                  setMoveModalShelf(null);
-                  setMoveTargetUnit('');
-                }}
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
-        )}
-      </Modal>
+      {moveModalShelf && (
+        <MoveModal
+          isOpen={!!moveModalShelf}
+          onClose={() => setMoveModalShelf(null)}
+          title="Move Shelf"
+          entityName={moveModalShelf.name}
+          targetEntityType="unit"
+          targetLabel="Target Shelving Unit"
+          onMove={handleMove}
+          isPending={moveShelf.isPending}
+        />
+      )}
 
       {/* Shelves Grid */}
       <div className="rooms-grid">

@@ -71,5 +71,5 @@ pub struct CreatePhotoRequest {
 pub struct PresignedUploadUrl {
     pub upload_url: String,
     pub s3_key: String,
-    pub expires_in: i64,
+    pub expires_in: i32,
 }

@@ -30,6 +30,7 @@ pub async fn list_items(
             tracing::error!("Failed to count items: {:?}", e);
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
+    let total = total.clamp(0, i32::MAX as i64) as i32;
 
     // Get paginated items
     let items = sqlx::query_as::<_, Item>(
@@ -68,6 +69,7 @@ pub async fn list_items_by_shelf(
             tracing::error!("Failed to count items: {:?}", e);
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
+    let total = total.clamp(0, i32::MAX as i64) as i32;
 
     // Get paginated items
     let items = sqlx::query_as::<_, Item>(
@@ -107,6 +109,7 @@ pub async fn list_items_by_container(
             tracing::error!("Failed to count items: {:?}", e);
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
+    let total = total.clamp(0, i32::MAX as i64) as i32;
 
     // Get paginated items
     let items = sqlx::query_as::<_, Item>(

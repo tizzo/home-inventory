@@ -30,6 +30,7 @@ pub async fn list_containers(
             tracing::error!("Failed to count containers: {:?}", e);
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
+    let total = total.clamp(0, i32::MAX as i64) as i32;
 
     // Get paginated containers
     let containers = sqlx::query_as::<_, Container>(
@@ -71,6 +72,7 @@ pub async fn list_containers_by_shelf(
             tracing::error!("Failed to count containers: {:?}", e);
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
+    let total = total.clamp(0, i32::MAX as i64) as i32;
 
     // Get paginated containers
     let containers = sqlx::query_as::<_, Container>(
@@ -114,6 +116,7 @@ pub async fn list_containers_by_parent(
                 tracing::error!("Failed to count containers: {:?}", e);
                 StatusCode::INTERNAL_SERVER_ERROR
             })?;
+    let total = total.clamp(0, i32::MAX as i64) as i32;
 
     // Get paginated containers
     let containers = sqlx::query_as::<_, Container>(

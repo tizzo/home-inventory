@@ -29,6 +29,7 @@ pub async fn list_rooms(
             tracing::error!("Failed to count rooms: {:?}", e);
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
+    let total = total.clamp(0, i32::MAX as i64) as i32;
 
     // Get paginated rooms
     let rooms = sqlx::query_as::<_, Room>(

@@ -30,6 +30,7 @@ pub async fn list_shelves(
             tracing::error!("Failed to count shelves: {:?}", e);
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
+    let total = total.clamp(0, i32::MAX as i64) as i32;
 
     // Get paginated shelves
     let shelves = sqlx::query_as::<_, Shelf>(
@@ -68,6 +69,7 @@ pub async fn list_shelves_by_unit(
             tracing::error!("Failed to count shelves: {:?}", e);
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
+    let total = total.clamp(0, i32::MAX as i64) as i32;
 
     // Get paginated shelves
     let shelves = sqlx::query_as::<_, Shelf>(

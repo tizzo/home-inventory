@@ -170,6 +170,7 @@ pub async fn list_batches(
         tracing::error!("Failed to count batches: {:?}", e);
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
+    let total = total.clamp(0, i32::MAX as i64) as i32;
 
     // Get paginated batch IDs
     let batch_ids: Vec<Uuid> = sqlx::query_scalar(

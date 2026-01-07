@@ -153,15 +153,15 @@ export default function EntityCreateModal({
         )}
 
         {/* Parent Entity Selector (if applicable) */}
-        {effectiveParentType && !effectiveParentId && (
+        {effectiveParentType && (
           <EntityField
             label={effectiveParentLabel || effectiveParentType}
             entityType={effectiveParentType}
-            value={formData[`${effectiveParentType}_id`]}
+            value={formData[`${effectiveParentType}_id`] || effectiveParentId}
             onChange={(value) =>
               setFormData({ ...formData, [`${effectiveParentType}_id`]: value })
             }
-            required
+            required={!effectiveParentId}
             placeholder={`Select ${effectiveParentLabel?.toLowerCase() || effectiveParentType}`}
             helpText="Type to search or click the camera icon to scan a QR code"
           />

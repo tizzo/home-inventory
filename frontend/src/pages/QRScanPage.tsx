@@ -260,3 +260,4 @@ export default function QRScanPage() {
     </div>
   );
 }
+

@@ -5,6 +5,7 @@ use axum::{
     routing::{get, post},
     Router,
 };
+use serde_json::json;
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -18,13 +19,13 @@ use crate::models::{
 fn draft_to_response(draft: ItemImportDraft) -> Result<ItemImportDraftResponse, StatusCode> {
     let items: Vec<ItemImportDraftItem> =
         serde_json::from_value(draft.proposed_items).map_err(|e| {
-            tracing::error!("Failed to deserialize draft items: {:?}", e);
+            tracing::error!("Failed to parse item import draft items: {e:?}");
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
 
     let source_photo_ids: Vec<Uuid> =
         serde_json::from_value(draft.source_photo_ids).map_err(|e| {
-            tracing::error!("Failed to deserialize draft source_photo_ids: {:?}", e);
+            tracing::error!("Failed to parse item import draft photo ids: {e:?}");
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
 
@@ -39,11 +40,11 @@ fn draft_to_response(draft: ItemImportDraft) -> Result<ItemImportDraftResponse, 
     })
 }
 
-/// Create a new item import draft
 pub async fn create_item_import_draft(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<CreateItemImportDraftRequest>,
 ) -> Result<Json<ItemImportDraftResponse>, StatusCode> {
+    // TODO: pull from session auth once route handlers do that consistently.
     let user_id = Uuid::new_v4();
 
     // Verify container exists
@@ -52,7 +53,7 @@ pub async fn create_item_import_draft(
         .fetch_optional(&state.db)
         .await
         .map_err(|e| {
-            tracing::error!("Failed to verify container for item import draft: {:?}", e);
+            tracing::error!("Failed to verify container exists: {e:?}");
             StatusCode::INTERNAL_SERVER_ERROR
         })?
         .is_some();
@@ -62,12 +63,12 @@ pub async fn create_item_import_draft(
     }
 
     let proposed_items = serde_json::to_value(&payload.items).map_err(|e| {
-        tracing::error!("Failed to serialize draft items: {:?}", e);
+        tracing::error!("Failed to serialize proposed items: {e:?}");
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
 
     let source_photo_ids = serde_json::to_value(&payload.source_photo_ids).map_err(|e| {
-        tracing::error!("Failed to serialize draft source_photo_ids: {:?}", e);
+        tracing::error!("Failed to serialize source_photo_ids: {e:?}");
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
 
@@ -94,14 +95,19 @@ pub async fn create_item_import_draft(
     .fetch_one(&state.db)
     .await
     .map_err(|e| {
-        tracing::error!("Failed to create item import draft: {:?}", e);
+        tracing::error!("Failed to create item import draft: {e:?}");
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
+
+    state
+        .audit
+        .log_create("item_import_draft", draft.id, Some(user_id), None)
+        .await
+        .ok();
 
     Ok(Json(draft_to_response(draft)?))
 }
 
-/// Get an item import draft
 pub async fn get_item_import_draft(
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,
@@ -112,7 +118,7 @@ pub async fn get_item_import_draft(
             .fetch_optional(&state.db)
             .await
             .map_err(|e| {
-                tracing::error!("Failed to fetch item import draft: {:?}", e);
+                tracing::error!("Failed to fetch item import draft: {e:?}");
                 StatusCode::INTERNAL_SERVER_ERROR
             })?
             .ok_or(StatusCode::NOT_FOUND)?;
@@ -120,20 +126,21 @@ pub async fn get_item_import_draft(
     Ok(Json(draft_to_response(draft)?))
 }
 
-/// Update an item import draft
 pub async fn update_item_import_draft(
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,
     Json(payload): Json<UpdateItemImportDraftRequest>,
 ) -> Result<Json<ItemImportDraftResponse>, StatusCode> {
-    // Ensure draft exists and is editable
+    // TODO: pull from session auth once route handlers do that consistently.
+    let user_id = Uuid::new_v4();
+
     let existing =
         sqlx::query_as::<_, ItemImportDraft>("SELECT * FROM item_import_drafts WHERE id = $1")
             .bind(id)
             .fetch_optional(&state.db)
             .await
             .map_err(|e| {
-                tracing::error!("Failed to fetch item import draft: {:?}", e);
+                tracing::error!("Failed to fetch item import draft: {e:?}");
                 StatusCode::INTERNAL_SERVER_ERROR
             })?
             .ok_or(StatusCode::NOT_FOUND)?;
@@ -143,14 +150,15 @@ pub async fn update_item_import_draft(
     }
 
     let proposed_items = serde_json::to_value(&payload.items).map_err(|e| {
-        tracing::error!("Failed to serialize draft items: {:?}", e);
+        tracing::error!("Failed to serialize proposed items: {e:?}");
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
 
-    let draft = sqlx::query_as::<_, ItemImportDraft>(
+    let updated = sqlx::query_as::<_, ItemImportDraft>(
         r#"
         UPDATE item_import_drafts
-        SET proposed_items = $1, updated_at = NOW()
+        SET proposed_items = $1,
+            updated_at = NOW()
         WHERE id = $2
         RETURNING *
         "#,
@@ -160,50 +168,65 @@ pub async fn update_item_import_draft(
     .fetch_one(&state.db)
     .await
     .map_err(|e| {
-        tracing::error!("Failed to update item import draft: {:?}", e);
+        tracing::error!("Failed to update item import draft: {e:?}");
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
 
-    Ok(Json(draft_to_response(draft)?))
+    state
+        .audit
+        .log_update(
+            "item_import_draft",
+            id,
+            Some(user_id),
+            json!({
+                "items": {
+                    "from": existing.proposed_items,
+                    "to": updated.proposed_items,
+                }
+            }),
+            None,
+        )
+        .await
+        .ok();
+
+    Ok(Json(draft_to_response(updated)?))
 }
 
-/// Commit an item import draft (bulk create items and mark draft committed)
 pub async fn commit_item_import_draft(
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<CommitItemImportDraftResponse>, StatusCode> {
+    // TODO: pull from session auth once route handlers do that consistently.
     let user_id = Uuid::new_v4();
 
     let mut tx = state.db.begin().await.map_err(|e| {
-        tracing::error!(
-            "Failed to start transaction for item import draft commit: {:?}",
-            e
-        );
+        tracing::error!("Failed to start transaction: {e:?}");
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
 
-    let draft =
-        sqlx::query_as::<_, ItemImportDraft>("SELECT * FROM item_import_drafts WHERE id = $1")
-            .bind(id)
-            .fetch_optional(&mut *tx)
-            .await
-            .map_err(|e| {
-                tracing::error!("Failed to fetch item import draft for commit: {:?}", e);
-                StatusCode::INTERNAL_SERVER_ERROR
-            })?
-            .ok_or(StatusCode::NOT_FOUND)?;
+    let draft = sqlx::query_as::<_, ItemImportDraft>(
+        "SELECT * FROM item_import_drafts WHERE id = $1 FOR UPDATE",
+    )
+    .bind(id)
+    .fetch_optional(&mut *tx)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to fetch item import draft: {e:?}");
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?
+    .ok_or(StatusCode::NOT_FOUND)?;
 
     if draft.status != "draft" {
         return Err(StatusCode::BAD_REQUEST);
     }
 
-    // Verify container exists
+    // Verify container still exists
     let container_exists = sqlx::query("SELECT id FROM containers WHERE id = $1")
         .bind(draft.container_id)
         .fetch_optional(&mut *tx)
         .await
         .map_err(|e| {
-            tracing::error!("Failed to verify container for item import commit: {:?}", e);
+            tracing::error!("Failed to verify container exists: {e:?}");
             StatusCode::INTERNAL_SERVER_ERROR
         })?
         .is_some();
@@ -212,29 +235,24 @@ pub async fn commit_item_import_draft(
         return Err(StatusCode::BAD_REQUEST);
     }
 
-    let draft_items: Vec<ItemImportDraftItem> =
-        serde_json::from_value(draft.proposed_items.clone()).map_err(|e| {
-            tracing::error!("Failed to deserialize draft items: {:?}", e);
+    let items: Vec<ItemImportDraftItem> = serde_json::from_value(draft.proposed_items.clone())
+        .map_err(|e| {
+            tracing::error!("Failed to parse proposed items: {e:?}");
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
 
-    if draft_items.is_empty() {
-        return Err(StatusCode::BAD_REQUEST);
-    }
-
-    let mut created_items: Vec<ItemResponse> = Vec::with_capacity(draft_items.len());
-
-    for draft_item in draft_items {
+    let mut created_items: Vec<ItemResponse> = Vec::with_capacity(items.len());
+    for item in items {
         let create_req = CreateItemRequest {
             shelf_id: None,
             container_id: Some(draft.container_id),
-            name: draft_item.name,
-            description: draft_item.description,
-            barcode: draft_item.barcode,
-            barcode_type: draft_item.barcode_type,
+            name: item.name,
+            description: item.description,
+            barcode: item.barcode,
+            barcode_type: item.barcode_type,
         };
 
-        let item = sqlx::query_as::<_, Item>(
+        let created = sqlx::query_as::<_, Item>(
             r#"
             INSERT INTO items (id, shelf_id, container_id, name, description, barcode, barcode_type, created_by)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
@@ -252,17 +270,18 @@ pub async fn commit_item_import_draft(
         .fetch_one(&mut *tx)
         .await
         .map_err(|e| {
-            tracing::error!("Failed to create item during draft commit: {:?}", e);
+            tracing::error!("Failed to create item from draft: {e:?}");
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
 
-        created_items.push(ItemResponse::from(item));
+        created_items.push(ItemResponse::from(created));
     }
 
-    let updated_draft = sqlx::query_as::<_, ItemImportDraft>(
+    let updated = sqlx::query_as::<_, ItemImportDraft>(
         r#"
         UPDATE item_import_drafts
-        SET status = $1, updated_at = NOW()
+        SET status = $1,
+            updated_at = NOW()
         WHERE id = $2
         RETURNING *
         "#,
@@ -272,12 +291,12 @@ pub async fn commit_item_import_draft(
     .fetch_one(&mut *tx)
     .await
     .map_err(|e| {
-        tracing::error!("Failed to mark item import draft committed: {:?}", e);
+        tracing::error!("Failed to mark draft committed: {e:?}");
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
 
     tx.commit().await.map_err(|e| {
-        tracing::error!("Failed to commit item import draft transaction: {:?}", e);
+        tracing::error!("Failed to commit transaction: {e:?}");
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
 
@@ -289,12 +308,27 @@ pub async fn commit_item_import_draft(
             .ok();
     }
 
-    let response = CommitItemImportDraftResponse {
-        draft: draft_to_response(updated_draft)?,
-        created_items,
-    };
+    state
+        .audit
+        .log_update(
+            "item_import_draft",
+            id,
+            Some(user_id),
+            json!({
+                "status": {
+                    "from": "draft",
+                    "to": "committed",
+                }
+            }),
+            None,
+        )
+        .await
+        .ok();
 
-    Ok(Json(response))
+    Ok(Json(CommitItemImportDraftResponse {
+        draft: draft_to_response(updated)?,
+        created_items,
+    }))
 }
 
 pub fn item_import_draft_routes() -> Router<Arc<AppState>> {

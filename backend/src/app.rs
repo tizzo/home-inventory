@@ -5,15 +5,14 @@ use axum::{
     routing::get,
     Router,
 };
+use oauth2::{basic::BasicClient, AuthUrl, ClientId, ClientSecret, RedirectUrl, TokenUrl};
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use std::env;
 use std::sync::Arc;
 use tower_http::cors::{Any, CorsLayer};
-use tower_sessions::{Expiry, MemoryStore, SessionManagerLayer};
-use oauth2::{basic::BasicClient, AuthUrl, ClientId, ClientSecret, RedirectUrl, TokenUrl};
-
-
+use tower_sessions::{Expiry, SessionManagerLayer};
+use tower_sessions_sqlx_store::PostgresStore;
 
 use crate::services::audit::AuditService;
 use crate::services::s3::S3Service;
@@ -26,7 +25,6 @@ pub struct AppState {
     pub audit: Arc<crate::services::audit::AuditService>,
     pub oauth_client: BasicClient,
 }
-
 
 #[derive(Serialize, Deserialize)]
 pub struct HealthResponse {
@@ -103,7 +101,8 @@ pub async fn create_app(db: PgPool) -> anyhow::Result<Router> {
     )
     .set_redirect_uri(
         RedirectUrl::new(
-            env::var("GOOGLE_REDIRECT_URL").expect("Missing GOOGLE_REDIRECT_URL environment variable"),
+            env::var("GOOGLE_REDIRECT_URL")
+                .expect("Missing GOOGLE_REDIRECT_URL environment variable"),
         )
         .expect("Invalid redirect URL"),
     );
@@ -116,7 +115,6 @@ pub async fn create_app(db: PgPool) -> anyhow::Result<Router> {
         oauth_client,
     });
 
-
     // Configure CORS for local development
     let cors = CorsLayer::new()
         .allow_origin(Any)
@@ -125,13 +123,19 @@ pub async fn create_app(db: PgPool) -> anyhow::Result<Router> {
 
     use tower_sessions::cookie::SameSite;
 
-    // Session Layer
-    let session_store = MemoryStore::default();
+    // Session Layer - using PostgreSQL for persistent session storage
+    // This allows sessions to persist across server restarts and work with AWS Lambda
+    let session_store = PostgresStore::new(state.db.clone());
+    // Ensure the sessions table exists (migration should have created it)
+    session_store
+        .migrate()
+        .await
+        .expect("Failed to run session store migration");
+
     let session_layer = SessionManagerLayer::new(session_store)
         .with_secure(false) // Keep false for localhost (http)
         .with_same_site(SameSite::Lax) // Allow cookies on redirects from external sites
         .with_expiry(Expiry::OnInactivity(time::Duration::days(1)));
-
 
     let protected_routes = Router::new()
         .merge(crate::routes::room_routes())
@@ -143,7 +147,9 @@ pub async fn create_app(db: PgPool) -> anyhow::Result<Router> {
         .merge(crate::routes::label_routes())
         .merge(crate::routes::move_routes())
         .merge(crate::routes::audit_routes())
-        .route_layer(axum::middleware::from_fn(crate::middleware::auth::auth_guard));
+        .route_layer(axum::middleware::from_fn(
+            crate::middleware::auth::auth_guard,
+        ));
 
     Ok(Router::new()
         .route("/health", get(health_check))
@@ -153,9 +159,6 @@ pub async fn create_app(db: PgPool) -> anyhow::Result<Router> {
         .with_state(state)
         .layer(cors))
 }
-
-
-
 
 #[cfg(test)]
 mod tests {

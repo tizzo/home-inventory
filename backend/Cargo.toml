@@ -11,6 +11,7 @@ lambda_runtime = "0.13"
 tower = "0.4"
 tower-http = { version = "0.5", features = ["cors", "trace"] }
 tower-sessions = "0.13"
+tower-sessions-sqlx-store = { version = "0.14", features = ["postgres"] }
 
 
 # Database

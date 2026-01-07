@@ -1,17 +1,15 @@
+use crate::app::AppState;
 use axum::{
     extract::{Query, State},
-    response::{Redirect, IntoResponse},
+    http::StatusCode,
+    response::{IntoResponse, Redirect},
     routing::{get, post},
     Json, Router,
-    http::StatusCode,
 };
-use oauth2::{
-    reqwest::async_http_client, AuthorizationCode, CsrfToken, Scope, TokenResponse,
-};
+use oauth2::{reqwest::async_http_client, AuthorizationCode, CsrfToken, Scope, TokenResponse};
 use serde::{Deserialize, Serialize};
-use tower_sessions::Session;
 use std::sync::Arc;
-use crate::app::AppState;
+use tower_sessions::Session;
 
 const AUTH_URL: &str = "https://www.googleapis.com/oauth2/v2/userinfo";
 
@@ -37,7 +35,6 @@ pub struct UserSession {
     pub picture: Option<String>,
 }
 
-
 pub fn auth_routes() -> Router<Arc<AppState>> {
     Router::new()
         .route("/api/auth/login", get(login_handler))
@@ -46,11 +43,7 @@ pub fn auth_routes() -> Router<Arc<AppState>> {
         .route("/api/auth/logout", post(logout_handler))
 }
 
-
-async fn login_handler(
-    State(state): State<Arc<AppState>>,
-    session: Session,
-) -> impl IntoResponse {
+async fn login_handler(State(state): State<Arc<AppState>>, session: Session) -> impl IntoResponse {
     let (auth_url, csrf_token) = state
         .oauth_client
         .authorize_url(CsrfToken::new_random)
@@ -59,7 +52,10 @@ async fn login_handler(
         .url();
 
     // Store the csrf_token in the session to verify later
-    session.insert("csrf_token", csrf_token.secret().clone()).await.expect("Failed to insert csrf_token");
+    session
+        .insert("csrf_token", csrf_token.secret().clone())
+        .await
+        .expect("Failed to insert csrf_token");
 
     Redirect::to(auth_url.as_str())
 }
@@ -85,7 +81,11 @@ async fn auth_callback(
         Ok(token) => token,
         Err(e) => {
             tracing::error!("Failed to exchange token: {:?}", e);
-            return (StatusCode::INTERNAL_SERVER_ERROR, "Failed to exchange token").into_response();
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to exchange token",
+            )
+                .into_response();
         }
     };
 
@@ -101,7 +101,11 @@ async fn auth_callback(
             Ok(user) => user,
             Err(e) => {
                 tracing::error!("Failed to parse user info: {:?}", e);
-                return (StatusCode::INTERNAL_SERVER_ERROR, "Failed to parse user info").into_response();
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "Failed to parse user info",
+                )
+                    .into_response();
             }
         },
         Err(e) => {
@@ -128,11 +132,13 @@ async fn auth_callback(
         picture: google_user.picture,
     };
 
-    session.insert("user", user_session).await.expect("Failed to create session");
+    session
+        .insert("user", user_session)
+        .await
+        .expect("Failed to create session");
 
     // Redirect to frontend
-    Redirect::to(&state.app_base_url)
-        .into_response()
+    Redirect::to(&state.app_base_url).into_response()
 }
 
 async fn get_me_handler(session: Session) -> impl IntoResponse {
@@ -168,4 +174,3 @@ async fn upsert_user(pool: &sqlx::PgPool, google_user: &GoogleUser) -> anyhow::R
 
     Ok(row.id)
 }
-

@@ -1,5 +1,5 @@
-pub mod auth;
 pub mod audit;
+pub mod auth;
 
 pub mod containers;
 pub mod items;
@@ -11,8 +11,8 @@ pub mod shelves;
 pub mod shelving_units;
 
 // Re-export for convenience
-pub use auth::*;
 pub use audit::*;
+pub use auth::*;
 
 pub use containers::*;
 pub use items::*;

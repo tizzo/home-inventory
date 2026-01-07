@@ -1,11 +1,10 @@
 mod app;
 mod db;
 mod error;
+mod middleware;
 mod models;
 mod routes;
 mod services;
-mod middleware;
-
 
 use std::env;
 

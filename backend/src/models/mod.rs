@@ -22,6 +22,8 @@ pub use label::*;
 #[allow(unused_imports)]
 pub use pagination::*;
 #[allow(unused_imports)]
+pub use pagination::*;
+#[allow(unused_imports)]
 pub use photo::*;
 #[allow(unused_imports)]
 pub use room::*;
@@ -31,5 +33,3 @@ pub use shelf::*;
 pub use shelving_unit::*;
 #[allow(unused_imports)]
 pub use user::*;
-#[allow(unused_imports)]
-pub use pagination::*;

@@ -119,11 +119,20 @@ impl VisionService {
         if !response.status().is_success() {
             let status = response.status();
             let body = response.text().await.unwrap_or_default();
-            return Err(anyhow::anyhow!(
-                "Anthropic API error: {} - {}",
-                status,
-                body
-            ));
+
+            // Parse error details for better handling
+            let error_msg = if status.as_u16() == 429 {
+                "Rate limit exceeded. Please wait a moment and try again."
+            } else if status.as_u16() == 401 {
+                "Invalid API key. Please check your ANTHROPIC_API_KEY configuration."
+            } else if status.as_u16() == 400 {
+                "Invalid request. The image may be too large or in an unsupported format."
+            } else {
+                "Failed to analyze image. Please try again later."
+            };
+
+            tracing::error!("Anthropic API error: {} - {}", status, body);
+            return Err(anyhow::anyhow!("{}", error_msg));
         }
 
         let anthropic_response: AnthropicResponse = response.json().await?;

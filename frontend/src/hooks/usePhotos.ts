@@ -25,6 +25,15 @@ export const useCreatePhoto = () => {
   });
 };
 
+// Get a single photo by ID
+export const usePhoto = (photoId: string) => {
+  return useQuery<PhotoResponse, Error>({
+    queryKey: ['photo', photoId],
+    queryFn: () => photosApi.getById(photoId),
+    enabled: !!photoId,
+  });
+};
+
 // Delete a photo
 export const useDeletePhoto = () => {
   const queryClient = useQueryClient();

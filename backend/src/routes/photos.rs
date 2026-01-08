@@ -2,7 +2,7 @@ use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
     response::Json,
-    routing::{delete, get, post},
+    routing::{get, post},
     Router,
 };
 use serde::Deserialize;
@@ -223,10 +223,64 @@ pub async fn delete_photo(
     ))
 }
 
+/// Get a single photo by ID
+pub async fn get_photo(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<PhotoResponse>, StatusCode> {
+    let photo = sqlx::query_as::<_, Photo>("SELECT * FROM photos WHERE id = $1")
+        .bind(id)
+        .fetch_optional(&state.db)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to fetch photo: {:?}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?
+        .ok_or(StatusCode::NOT_FOUND)?;
+
+    // Generate presigned URL
+    let url = state
+        .s3
+        .generate_presigned_download_url(&photo.s3_key)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to generate presigned URL: {:?}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    let thumbnail_url = if let Some(thumbnail_key) = &photo.thumbnail_s3_key {
+        Some(
+            state
+                .s3
+                .generate_presigned_download_url(thumbnail_key)
+                .await
+                .map_err(|e| {
+                    tracing::error!("Failed to generate thumbnail presigned URL: {:?}", e);
+                    StatusCode::INTERNAL_SERVER_ERROR
+                })?,
+        )
+    } else {
+        None
+    };
+
+    Ok(Json(PhotoResponse {
+        id: photo.id.to_string(),
+        entity_type: photo.entity_type,
+        entity_id: photo.entity_id.to_string(),
+        url,
+        thumbnail_url,
+        content_type: photo.content_type,
+        file_size: photo.file_size,
+        width: photo.width,
+        height: photo.height,
+        created_at: photo.created_at.to_rfc3339(),
+    }))
+}
+
 /// Create photo routes
 pub fn photo_routes() -> Router<Arc<AppState>> {
     Router::new()
         .route("/api/photos/upload-url", post(get_upload_url))
         .route("/api/photos", get(get_photos).post(create_photo))
-        .route("/api/photos/:id", delete(delete_photo))
+        .route("/api/photos/:id", get(get_photo).delete(delete_photo))
 }

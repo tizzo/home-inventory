@@ -36,6 +36,12 @@ export const photosApi = {
     return response.data;
   },
 
+  // Get a single photo by ID
+  getById: async (id: string): Promise<PhotoResponse> => {
+    const response = await apiClient.get<PhotoResponse>(`/api/photos/${id}`);
+    return response.data;
+  },
+
   // Delete a photo
   delete: async (id: string): Promise<void> => {
     await apiClient.delete(`/api/photos/${id}`);

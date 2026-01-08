@@ -6,6 +6,7 @@ import {
   useUpdateItemImportDraft,
   useCommitItemImportDraft,
   useContainer,
+  usePhoto,
 } from '../hooks';
 import type { ItemImportDraftItem } from '../types/generated';
 
@@ -16,6 +17,7 @@ export default function ItemImportDraftPage() {
 
   const { data: draft, isLoading, error } = useItemImportDraft(draftId || '');
   const { data: container } = useContainer(draft?.container_id || '');
+  const { data: sourcePhoto } = usePhoto(draft?.source_photo_ids?.[0] || '');
   const updateDraft = useUpdateItemImportDraft();
   const commitDraft = useCommitItemImportDraft();
 
@@ -127,6 +129,29 @@ export default function ItemImportDraftPage() {
           )}
         </div>
       </div>
+
+      {sourcePhoto && (
+        <div className="source-photo-section">
+          <h2>Source Photo</h2>
+          <div className="photo-preview">
+            <img
+              src={sourcePhoto.thumbnail_url || sourcePhoto.url}
+              alt="Source photo for import"
+              onClick={() => window.open(sourcePhoto.url, '_blank')}
+              style={{
+                maxWidth: '100%',
+                maxHeight: '300px',
+                cursor: 'pointer',
+                borderRadius: '8px',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+              }}
+            />
+            <p style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: '#666' }}>
+              Click image to view full size
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="draft-items-section">
         <div className="section-header">

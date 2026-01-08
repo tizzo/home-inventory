@@ -167,7 +167,9 @@ For tags, use simple, searchable terms like: "tools", "electronics", "office-sup
 
 Return ONLY the JSON object, no other text."#;
 
-fn parse_items_from_response(text: &str) -> anyhow::Result<(Vec<ItemImportDraftItem>, Option<ContainerUpdateProposal>)> {
+fn parse_items_from_response(
+    text: &str,
+) -> anyhow::Result<(Vec<ItemImportDraftItem>, Option<ContainerUpdateProposal>)> {
     let text = text.trim();
     let json_str = if text.starts_with("```json") {
         text.trim_start_matches("```json")
@@ -198,7 +200,9 @@ fn parse_items_from_response(text: &str) -> anyhow::Result<(Vec<ItemImportDraftI
         })
         .collect();
 
-    let container_updates = if parsed.container_description.is_some() || (parsed.container_tags.is_some() && !parsed.container_tags.as_ref().unwrap().is_empty()) {
+    let container_updates = if parsed.container_description.is_some()
+        || (parsed.container_tags.is_some() && !parsed.container_tags.as_ref().unwrap().is_empty())
+    {
         Some(ContainerUpdateProposal {
             description: parsed.container_description,
             tags: parsed.container_tags,

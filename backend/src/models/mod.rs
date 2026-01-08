@@ -8,6 +8,7 @@ pub mod photo;
 pub mod room;
 pub mod shelf;
 pub mod shelving_unit;
+pub mod tag;
 pub mod user;
 
 // Re-export types for convenience
@@ -34,5 +35,7 @@ pub use room::*;
 pub use shelf::*;
 #[allow(unused_imports)]
 pub use shelving_unit::*;
+#[allow(unused_imports)]
+pub use tag::*;
 #[allow(unused_imports)]
 pub use user::*;

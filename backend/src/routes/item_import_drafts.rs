@@ -10,10 +10,11 @@ use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::app::AppState;
+use crate::middleware::auth::AuthUser;
 use crate::models::{
-    AnalyzePhotoRequest, CommitItemImportDraftResponse, ContainerUpdateProposal, CreateItemImportDraftRequest,
-    CreateItemRequest, Item, ItemImportDraft, ItemImportDraftItem, ItemImportDraftResponse, ItemResponse,
-    Photo, UpdateItemImportDraftRequest,
+    AnalyzePhotoRequest, CommitItemImportDraftResponse, ContainerUpdateProposal,
+    CreateItemImportDraftRequest, CreateItemRequest, Item, ItemImportDraft, ItemImportDraftItem,
+    ItemImportDraftResponse, ItemResponse, Photo, UpdateItemImportDraftRequest,
 };
 
 fn draft_to_response(draft: ItemImportDraft) -> Result<ItemImportDraftResponse, StatusCode> {
@@ -29,7 +30,8 @@ fn draft_to_response(draft: ItemImportDraft) -> Result<ItemImportDraftResponse, 
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
 
-    let container_updates: Option<ContainerUpdateProposal> = match draft.proposed_container_updates {
+    let container_updates: Option<ContainerUpdateProposal> = match draft.proposed_container_updates
+    {
         Some(updates) => serde_json::from_value(updates).map_err(|e| {
             tracing::error!("Failed to parse container updates: {e:?}");
             StatusCode::INTERNAL_SERVER_ERROR
@@ -51,11 +53,9 @@ fn draft_to_response(draft: ItemImportDraft) -> Result<ItemImportDraftResponse, 
 
 pub async fn create_item_import_draft(
     State(state): State<Arc<AppState>>,
+    AuthUser(user_id): AuthUser,
     Json(payload): Json<CreateItemImportDraftRequest>,
 ) -> Result<Json<ItemImportDraftResponse>, StatusCode> {
-    // TODO: pull from session auth once route handlers do that consistently.
-    let user_id = Uuid::new_v4();
-
     // Verify container exists
     let container_exists = sqlx::query("SELECT id FROM containers WHERE id = $1")
         .bind(payload.container_id)
@@ -137,12 +137,10 @@ pub async fn get_item_import_draft(
 
 pub async fn update_item_import_draft(
     State(state): State<Arc<AppState>>,
+    AuthUser(user_id): AuthUser,
     Path(id): Path<Uuid>,
     Json(payload): Json<UpdateItemImportDraftRequest>,
 ) -> Result<Json<ItemImportDraftResponse>, StatusCode> {
-    // TODO: pull from session auth once route handlers do that consistently.
-    let user_id = Uuid::new_v4();
-
     let existing =
         sqlx::query_as::<_, ItemImportDraft>("SELECT * FROM item_import_drafts WHERE id = $1")
             .bind(id)
@@ -203,11 +201,9 @@ pub async fn update_item_import_draft(
 
 pub async fn commit_item_import_draft(
     State(state): State<Arc<AppState>>,
+    AuthUser(user_id): AuthUser,
     Path(id): Path<Uuid>,
 ) -> Result<Json<CommitItemImportDraftResponse>, StatusCode> {
-    // TODO: pull from session auth once route handlers do that consistently.
-    let user_id = Uuid::new_v4();
-
     let mut tx = state.db.begin().await.map_err(|e| {
         tracing::error!("Failed to start transaction: {e:?}");
         StatusCode::INTERNAL_SERVER_ERROR
@@ -249,6 +245,73 @@ pub async fn commit_item_import_draft(
             tracing::error!("Failed to parse proposed items: {e:?}");
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
+
+    // Check if there are container updates to apply
+    if let Some(updates_value) = &draft.proposed_container_updates {
+        let container_updates: ContainerUpdateProposal = serde_json::from_value(updates_value.clone())
+            .map_err(|e| {
+                tracing::error!("Failed to parse container updates: {e:?}");
+                StatusCode::INTERNAL_SERVER_ERROR
+            })?;
+
+        // Update container description if provided
+        if let Some(new_description) = container_updates.description {
+            sqlx::query(
+                "UPDATE containers SET description = $1, updated_at = NOW() WHERE id = $2"
+            )
+            .bind(&new_description)
+            .bind(draft.container_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| {
+                tracing::error!("Failed to update container description: {e:?}");
+                StatusCode::INTERNAL_SERVER_ERROR
+            })?;
+        }
+
+        // Handle tags if provided
+        if let Some(tags) = container_updates.tags {
+            // First, remove existing tags
+            sqlx::query("DELETE FROM entity_tags WHERE entity_type = 'container' AND entity_id = $1")
+                .bind(draft.container_id)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| {
+                    tracing::error!("Failed to delete existing tags: {e:?}");
+                    StatusCode::INTERNAL_SERVER_ERROR
+                })?;
+
+            // Insert new tags
+            for tag_name in tags {
+                // First, ensure the tag exists
+                let tag_id: Uuid = sqlx::query_scalar(
+                    "INSERT INTO tags (id, name) VALUES ($1, $2) ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name RETURNING id"
+                )
+                .bind(Uuid::new_v4())
+                .bind(&tag_name)
+                .fetch_one(&mut *tx)
+                .await
+                .map_err(|e| {
+                    tracing::error!("Failed to create/get tag: {e:?}");
+                    StatusCode::INTERNAL_SERVER_ERROR
+                })?;
+
+                // Link tag to container
+                sqlx::query(
+                    "INSERT INTO entity_tags (entity_type, entity_id, tag_id) VALUES ($1, $2, $3)"
+                )
+                .bind("container")
+                .bind(draft.container_id)
+                .bind(tag_id)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| {
+                    tracing::error!("Failed to link tag to container: {e:?}");
+                    StatusCode::INTERNAL_SERVER_ERROR
+                })?;
+            }
+        }
+    }
 
     let mut created_items: Vec<ItemResponse> = Vec::with_capacity(items.len());
     for item in items {
@@ -343,25 +406,23 @@ pub async fn commit_item_import_draft(
 /// Analyze a photo using AI and create an item import draft
 pub async fn analyze_photo_and_create_draft(
     State(state): State<Arc<AppState>>,
+    AuthUser(user_id): AuthUser,
     Json(payload): Json<AnalyzePhotoRequest>,
 ) -> impl IntoResponse {
     // Check if vision service is available
-    let vision = match state.vision.as_ref() {
+    let vision = match &state.vision {
         Some(v) => v,
         None => {
-            tracing::error!("Vision service not available - ANTHROPIC_API_KEY not set");
             return (
                 StatusCode::SERVICE_UNAVAILABLE,
                 Json(serde_json::json!({
                     "error": "AI service unavailable",
-                    "message": "The AI vision service is not configured. Please ensure ANTHROPIC_API_KEY is set."
-                }))
-            ).into_response();
+                    "message": "Vision analysis is not configured. Please set ANTHROPIC_API_KEY."
+                })),
+            )
+                .into_response();
         }
     };
-
-    // TODO: pull from session auth once route handlers do that consistently
-    let user_id = Uuid::new_v4();
 
     // Verify container exists
     let container_exists = match sqlx::query("SELECT id FROM containers WHERE id = $1")

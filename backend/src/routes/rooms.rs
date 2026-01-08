@@ -9,6 +9,7 @@ use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::app::AppState;
+use crate::middleware::auth::AuthUser;
 use crate::models::{
     CreateRoomRequest, PaginatedResponse, PaginationQuery, Room, RoomResponse, UpdateRoomRequest,
 };
@@ -71,11 +72,9 @@ pub async fn get_room(
 /// Create a new room
 pub async fn create_room(
     State(state): State<Arc<AppState>>,
+    AuthUser(user_id): AuthUser,
     Json(payload): Json<CreateRoomRequest>,
 ) -> Result<Json<RoomResponse>, StatusCode> {
-    // For now, use a hardcoded user ID (we'll implement auth later)
-    let user_id = Uuid::new_v4();
-
     let room = sqlx::query_as::<_, Room>(
         r#"
         INSERT INTO rooms (id, name, description, created_by)
@@ -107,6 +106,7 @@ pub async fn create_room(
 /// Update a room
 pub async fn update_room(
     State(state): State<Arc<AppState>>,
+    AuthUser(user_id): AuthUser,
     Path(id): Path<Uuid>,
     Json(payload): Json<UpdateRoomRequest>,
 ) -> Result<Json<RoomResponse>, StatusCode> {
@@ -168,7 +168,6 @@ pub async fn update_room(
 
     // Log audit
     if !changes.is_empty() {
-        let user_id = Uuid::new_v4(); // TODO: get from auth
         state
             .audit
             .log_update(
@@ -188,10 +187,10 @@ pub async fn update_room(
 /// Delete a room
 pub async fn delete_room(
     State(state): State<Arc<AppState>>,
+    AuthUser(user_id): AuthUser,
     Path(id): Path<Uuid>,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
     // Log audit before deletion
-    let user_id = Uuid::new_v4(); // TODO: get from auth
     state
         .audit
         .log_delete("room", id, Some(user_id), None)

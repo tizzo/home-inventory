@@ -1,7 +1,7 @@
 use axum::{
     extract::{Path, State},
     http::StatusCode,
-    response::Json,
+    response::{IntoResponse, Json},
     routing::{get, post},
     Router,
 };
@@ -335,80 +335,122 @@ pub async fn commit_item_import_draft(
 pub async fn analyze_photo_and_create_draft(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<AnalyzePhotoRequest>,
-) -> Result<Json<ItemImportDraftResponse>, StatusCode> {
+) -> impl IntoResponse {
     // Check if vision service is available
-    let vision = state.vision.as_ref().ok_or_else(|| {
-        tracing::error!("Vision service not available - ANTHROPIC_API_KEY not set");
-        StatusCode::SERVICE_UNAVAILABLE
-    })?;
+    let vision = match state.vision.as_ref() {
+        Some(v) => v,
+        None => {
+            tracing::error!("Vision service not available - ANTHROPIC_API_KEY not set");
+            return (
+                StatusCode::SERVICE_UNAVAILABLE,
+                Json(serde_json::json!({
+                    "error": "AI service unavailable",
+                    "message": "The AI vision service is not configured. Please ensure ANTHROPIC_API_KEY is set."
+                }))
+            ).into_response();
+        }
+    };
 
     // TODO: pull from session auth once route handlers do that consistently
     let user_id = Uuid::new_v4();
 
     // Verify container exists
-    let container_exists = sqlx::query("SELECT id FROM containers WHERE id = $1")
+    let container_exists = match sqlx::query("SELECT id FROM containers WHERE id = $1")
         .bind(payload.container_id)
         .fetch_optional(&state.db)
         .await
-        .map_err(|e| {
+    {
+        Ok(result) => result.is_some(),
+        Err(e) => {
             tracing::error!("Failed to verify container exists: {e:?}");
-            StatusCode::INTERNAL_SERVER_ERROR
-        })?
-        .is_some();
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+    };
 
     if !container_exists {
         tracing::error!("Container not found: {}", payload.container_id);
-        return Err(StatusCode::BAD_REQUEST);
+        return StatusCode::BAD_REQUEST.into_response();
     }
 
     // Fetch photo record
-    let photo = sqlx::query_as::<_, Photo>("SELECT * FROM photos WHERE id = $1")
+    let photo = match sqlx::query_as::<_, Photo>("SELECT * FROM photos WHERE id = $1")
         .bind(payload.photo_id)
         .fetch_optional(&state.db)
         .await
-        .map_err(|e| {
-            tracing::error!("Failed to fetch photo: {e:?}");
-            StatusCode::INTERNAL_SERVER_ERROR
-        })?
-        .ok_or_else(|| {
+    {
+        Ok(Some(photo)) => photo,
+        Ok(None) => {
             tracing::error!("Photo not found: {}", payload.photo_id);
-            StatusCode::NOT_FOUND
-        })?;
+            return StatusCode::NOT_FOUND.into_response();
+        }
+        Err(e) => {
+            tracing::error!("Failed to fetch photo: {e:?}");
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+    };
 
     // Download photo from S3
-    let image_bytes = state
-        .s3
-        .get_object_bytes(&photo.s3_key)
-        .await
-        .map_err(|e| {
+    let image_bytes = match state.s3.get_object_bytes(&photo.s3_key).await {
+        Ok(bytes) => bytes,
+        Err(e) => {
             tracing::error!("Failed to download photo from S3: {e:?}");
-            StatusCode::INTERNAL_SERVER_ERROR
-        })?;
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+    };
 
     // Analyze with AI
     tracing::info!("Analyzing photo {} with AI...", payload.photo_id);
-    let items = vision
+    let items = match vision
         .analyze_image_for_items(&image_bytes, &photo.content_type)
         .await
-        .map_err(|e| {
+    {
+        Ok(items) => items,
+        Err(e) => {
             tracing::error!("AI analysis failed: {e:?}");
-            StatusCode::INTERNAL_SERVER_ERROR
-        })?;
+            let error_message = e.to_string();
+
+            // Return appropriate status code based on error
+            let status = if error_message.contains("Rate limit") {
+                StatusCode::TOO_MANY_REQUESTS
+            } else if error_message.contains("Invalid API key") {
+                StatusCode::UNAUTHORIZED
+            } else if error_message.contains("Invalid request") {
+                StatusCode::BAD_REQUEST
+            } else {
+                StatusCode::INTERNAL_SERVER_ERROR
+            };
+
+            return (
+                status,
+                Json(serde_json::json!({
+                    "error": "AI analysis failed",
+                    "message": error_message
+                })),
+            )
+                .into_response();
+        }
+    };
 
     tracing::info!("AI found {} items in photo", items.len());
 
     // Create the draft
-    let proposed_items = serde_json::to_value(&items).map_err(|e| {
-        tracing::error!("Failed to serialize proposed items: {e:?}");
-        StatusCode::INTERNAL_SERVER_ERROR
-    })?;
+    let proposed_items = match serde_json::to_value(&items) {
+        Ok(value) => value,
+        Err(e) => {
+            tracing::error!("Failed to serialize proposed items: {e:?}");
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+    };
 
-    let source_photo_ids = serde_json::to_value(vec![payload.photo_id]).map_err(|e| {
-        tracing::error!("Failed to serialize source_photo_ids: {e:?}");
-        StatusCode::INTERNAL_SERVER_ERROR
-    })?;
+    let source_photo_ids = match serde_json::to_value(vec![payload.photo_id]) {
+        Ok(value) => value,
+        Err(e) => {
+            tracing::error!("Failed to serialize source_photo_ids: {e:?}");
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+    };
 
-    let draft = sqlx::query_as::<_, ItemImportDraft>(
+    let draft = match sqlx::query_as::<_, ItemImportDraft>(
         r#"
         INSERT INTO item_import_drafts (
             id,
@@ -430,10 +472,13 @@ pub async fn analyze_photo_and_create_draft(
     .bind(user_id)
     .fetch_one(&state.db)
     .await
-    .map_err(|e| {
-        tracing::error!("Failed to create item import draft: {e:?}");
-        StatusCode::INTERNAL_SERVER_ERROR
-    })?;
+    {
+        Ok(draft) => draft,
+        Err(e) => {
+            tracing::error!("Failed to create item import draft: {e:?}");
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+    };
 
     state
         .audit
@@ -441,7 +486,13 @@ pub async fn analyze_photo_and_create_draft(
         .await
         .ok();
 
-    Ok(Json(draft_to_response(draft)?))
+    match draft_to_response(draft) {
+        Ok(response) => Json(response).into_response(),
+        Err(e) => {
+            tracing::error!("Failed to convert draft to response: {e:?}");
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
+    }
 }
 
 pub fn item_import_draft_routes() -> Router<Arc<AppState>> {

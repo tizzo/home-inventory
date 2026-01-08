@@ -111,9 +111,28 @@ export default function ImportItemsFromPhoto({
       console.error('Import error:', error);
       setStatus('error');
       onError?.(error as Error);
-      alert(
-        `Failed to import items: ${error instanceof Error ? error.message : 'Unknown error'}`
-      );
+      
+      // Extract error message from API response
+      let errorMessage = 'Unknown error';
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { data?: { message?: string } } };
+        if (axiosError.response?.data?.message) {
+          errorMessage = axiosError.response.data.message;
+        }
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
+      // Show user-friendly error message
+      if (errorMessage.includes('AI service unavailable')) {
+        alert('The AI service is not configured. Please contact your administrator to set up the AI analysis feature.');
+      } else if (errorMessage.includes('Rate limit')) {
+        alert('Too many requests. Please wait a moment and try again.');
+      } else if (errorMessage.includes('Invalid API key')) {
+        alert('The AI service configuration is invalid. Please contact your administrator.');
+      } else {
+        alert(`Failed to import items: ${errorMessage}`);
+      }
     } finally {
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
@@ -149,13 +168,24 @@ export default function ImportItemsFromPhoto({
   const getButtonText = () => {
     switch (status) {
       case 'uploading':
-        return `Uploading... ${Math.round(progress)}%`;
+        return `📤 Uploading... ${Math.round(progress)}%`;
       case 'analyzing':
-        return 'Analyzing with AI...';
+        return '🤖 Analyzing with AI...';
       case 'error':
-        return 'Error - Try Again';
+        return '❌ Error - Try Again';
       default:
         return '📸 Import Items from Photo';
+    }
+  };
+
+  const getProgressBarColor = () => {
+    switch (status) {
+      case 'analyzing':
+        return '#4CAF50'; // Green for AI processing
+      case 'error':
+        return '#f44336'; // Red for errors
+      default:
+        return '#2196F3'; // Blue for uploading
     }
   };
 
@@ -179,13 +209,48 @@ export default function ImportItemsFromPhoto({
         {getButtonText()}
       </label>
       {isProcessing && (
-        <div className="upload-progress" style={{ marginTop: '0.5rem' }}>
+        <div className="upload-progress" style={{ 
+          marginTop: '0.5rem',
+          backgroundColor: '#e0e0e0',
+          borderRadius: '4px',
+          height: '6px',
+          overflow: 'hidden',
+          position: 'relative'
+        }}>
           <div
             className="upload-progress-bar"
-            style={{ width: `${progress}%` }}
-          />
+            style={{ 
+              width: `${status === 'analyzing' ? 100 : progress}%`,
+              backgroundColor: getProgressBarColor(),
+              height: '100%',
+              transition: 'width 0.3s ease, background-color 0.3s ease',
+              position: 'relative',
+              overflow: 'hidden'
+            }}
+          >
+            {status === 'analyzing' && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  background: 'linear-gradient(45deg, transparent 25%, rgba(255,255,255,0.2) 25%, rgba(255,255,255,0.2) 50%, transparent 50%, transparent 75%, rgba(255,255,255,0.2) 75%)',
+                  backgroundSize: '20px 20px',
+                  animation: 'progress-stripes 1s linear infinite'
+                }}
+              />
+            )}
+          </div>
         </div>
       )}
+      <style>{`
+        @keyframes progress-stripes {
+          from { background-position: 0 0; }
+          to { background-position: 20px 0; }
+        }
+      `}</style>
     </div>
   );
 }

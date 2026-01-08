@@ -11,9 +11,9 @@ use uuid::Uuid;
 
 use crate::app::AppState;
 use crate::models::{
-    AnalyzePhotoRequest, CommitItemImportDraftResponse, CreateItemImportDraftRequest,
-    CreateItemRequest, Item, ItemImportDraft, ItemImportDraftItem, ItemImportDraftResponse,
-    ItemResponse, Photo, UpdateItemImportDraftRequest,
+    AnalyzePhotoRequest, CommitItemImportDraftResponse, ContainerUpdateProposal, CreateItemImportDraftRequest,
+    CreateItemRequest, Item, ItemImportDraft, ItemImportDraftItem, ItemImportDraftResponse, ItemResponse,
+    Photo, UpdateItemImportDraftRequest,
 };
 
 fn draft_to_response(draft: ItemImportDraft) -> Result<ItemImportDraftResponse, StatusCode> {
@@ -29,11 +29,20 @@ fn draft_to_response(draft: ItemImportDraft) -> Result<ItemImportDraftResponse, 
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
 
+    let container_updates: Option<ContainerUpdateProposal> = match draft.proposed_container_updates {
+        Some(updates) => serde_json::from_value(updates).map_err(|e| {
+            tracing::error!("Failed to parse container updates: {e:?}");
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?,
+        None => None,
+    };
+
     Ok(ItemImportDraftResponse {
         id: draft.id,
         container_id: draft.container_id,
         status: draft.status,
         items,
+        container_updates,
         source_photo_ids,
         created_at: draft.created_at,
         updated_at: draft.updated_at,
@@ -400,11 +409,11 @@ pub async fn analyze_photo_and_create_draft(
 
     // Analyze with AI
     tracing::info!("Analyzing photo {} with AI...", payload.photo_id);
-    let items = match vision
+    let (items, container_updates) = match vision
         .analyze_image_for_items(&image_bytes, &photo.content_type)
         .await
     {
-        Ok(items) => items,
+        Ok(result) => result,
         Err(e) => {
             tracing::error!("AI analysis failed: {e:?}");
             let error_message = e.to_string();
@@ -432,6 +441,9 @@ pub async fn analyze_photo_and_create_draft(
     };
 
     tracing::info!("AI found {} items in photo", items.len());
+    if container_updates.is_some() {
+        tracing::info!("AI also suggested container updates");
+    }
 
     // Create the draft
     let proposed_items = match serde_json::to_value(&items) {
@@ -440,6 +452,17 @@ pub async fn analyze_photo_and_create_draft(
             tracing::error!("Failed to serialize proposed items: {e:?}");
             return StatusCode::INTERNAL_SERVER_ERROR.into_response();
         }
+    };
+
+    let proposed_container_updates = match container_updates {
+        Some(updates) => match serde_json::to_value(&updates) {
+            Ok(value) => Some(value),
+            Err(e) => {
+                tracing::error!("Failed to serialize container updates: {e:?}");
+                return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+            }
+        },
+        None => None,
     };
 
     let source_photo_ids = match serde_json::to_value(vec![payload.photo_id]) {
@@ -457,10 +480,11 @@ pub async fn analyze_photo_and_create_draft(
             container_id,
             status,
             proposed_items,
+            proposed_container_updates,
             source_photo_ids,
             created_by
         )
-        VALUES ($1, $2, $3, $4, $5, $6)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
         RETURNING *
         "#,
     )
@@ -468,6 +492,7 @@ pub async fn analyze_photo_and_create_draft(
     .bind(payload.container_id)
     .bind("draft")
     .bind(proposed_items)
+    .bind(proposed_container_updates)
     .bind(source_photo_ids)
     .bind(user_id)
     .fetch_one(&state.db)

@@ -3,7 +3,7 @@ use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::env;
 
-use crate::models::item_import_draft::ItemImportDraftItem;
+use crate::models::{ContainerUpdateProposal, ItemImportDraftItem};
 
 pub struct VisionService {
     client: Client,
@@ -51,8 +51,10 @@ struct ResponseContent {
 }
 
 #[derive(Debug, Deserialize)]
-struct ParsedItems {
+struct ParsedResponse {
     items: Vec<ParsedItem>,
+    container_description: Option<String>,
+    container_tags: Option<Vec<String>>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -73,18 +75,10 @@ impl VisionService {
 
     pub async fn analyze_image_for_items(
         &self,
-        image_bytes: &[u8],
-        content_type: &str,
-    ) -> anyhow::Result<Vec<ItemImportDraftItem>> {
-        let base64_image = base64_encode(image_bytes);
-
-        let media_type = match content_type {
-            ct if ct.contains("jpeg") || ct.contains("jpg") => "image/jpeg",
-            ct if ct.contains("png") => "image/png",
-            ct if ct.contains("webp") => "image/webp",
-            ct if ct.contains("gif") => "image/gif",
-            _ => "image/jpeg",
-        };
+        image_data: &[u8],
+        media_type: &str,
+    ) -> anyhow::Result<(Vec<ItemImportDraftItem>, Option<ContainerUpdateProposal>)> {
+        let base64_image = base64_encode(image_data);
 
         let request = AnthropicRequest {
             model: "claude-sonnet-4-20250514".to_string(),
@@ -147,23 +141,33 @@ impl VisionService {
     }
 }
 
-const PROMPT: &str = r#"Analyze this image and identify all distinct items/objects visible. For each item, provide:
+const PROMPT: &str = r#"Analyze this image and identify all distinct items/objects visible in the container. Also suggest a description for the container and relevant tags.
+
+For each item, provide:
 1. A clear, concise name
 2. A brief description (optional, only if helpful)
+
+For the container, suggest:
+1. A description based on what you see
+2. Relevant tags that categorize the contents
 
 Return your response as a JSON object with this exact structure:
 {
   "items": [
     {"name": "Item name", "description": "Brief description or null"},
     ...
-  ]
+  ],
+  "container_description": "Description of what the container holds",
+  "container_tags": ["tag1", "tag2", ...]
 }
 
-Focus on physical objects that would be stored in a home inventory system (household items, tools, electronics, supplies, etc.). Ignore background elements, furniture the items are sitting on, or the container itself.
+Focus on physical objects that would be stored in a home inventory system (household items, tools, electronics, supplies, etc.). 
+
+For tags, use simple, searchable terms like: "tools", "electronics", "office-supplies", "kitchen", "bathroom", "hardware", "crafts", etc.
 
 Return ONLY the JSON object, no other text."#;
 
-fn parse_items_from_response(text: &str) -> anyhow::Result<Vec<ItemImportDraftItem>> {
+fn parse_items_from_response(text: &str) -> anyhow::Result<(Vec<ItemImportDraftItem>, Option<ContainerUpdateProposal>)> {
     let text = text.trim();
     let json_str = if text.starts_with("```json") {
         text.trim_start_matches("```json")
@@ -177,13 +181,13 @@ fn parse_items_from_response(text: &str) -> anyhow::Result<Vec<ItemImportDraftIt
         text
     };
 
-    let parsed: ParsedItems = serde_json::from_str(json_str).map_err(|e| {
+    let parsed: ParsedResponse = serde_json::from_str(json_str).map_err(|e| {
         tracing::error!("Failed to parse AI response: {}", e);
         tracing::error!("Raw response: {}", text);
         anyhow::anyhow!("Failed to parse AI response: {}", e)
     })?;
 
-    Ok(parsed
+    let items = parsed
         .items
         .into_iter()
         .map(|item| ItemImportDraftItem {
@@ -192,7 +196,18 @@ fn parse_items_from_response(text: &str) -> anyhow::Result<Vec<ItemImportDraftIt
             barcode: None,
             barcode_type: None,
         })
-        .collect())
+        .collect();
+
+    let container_updates = if parsed.container_description.is_some() || (parsed.container_tags.is_some() && !parsed.container_tags.as_ref().unwrap().is_empty()) {
+        Some(ContainerUpdateProposal {
+            description: parsed.container_description,
+            tags: parsed.container_tags,
+        })
+    } else {
+        None
+    };
+
+    Ok((items, container_updates))
 }
 
 fn base64_encode(bytes: &[u8]) -> String {

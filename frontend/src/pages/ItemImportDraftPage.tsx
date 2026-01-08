@@ -147,8 +147,41 @@ export default function ItemImportDraftPage() {
               }}
             />
             <p style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: '#666' }}>
-              Click image to view full size
+              Click to view full size
             </p>
+          </div>
+        </div>
+      )}
+
+      {draft.container_updates && container && (
+        <div className="container-updates-section">
+          <h2>Proposed Container Updates</h2>
+          <div className="proposed-updates">
+            {draft.container_updates.description && (
+              <div className="update-field">
+                <h3>Description</h3>
+                <div className="comparison">
+                  <div className="current">
+                    <strong>Current:</strong>
+                    <p>{container.description || <em>No description</em>}</p>
+                  </div>
+                  <div className="proposed">
+                    <strong>Proposed:</strong>
+                    <p>{draft.container_updates.description}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+            {draft.container_updates.tags && draft.container_updates.tags.length > 0 && (
+              <div className="update-field">
+                <h3>Tags</h3>
+                <div className="tags-list">
+                  {draft.container_updates.tags.map((tag, index) => (
+                    <span key={index} className="tag">{tag}</span>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

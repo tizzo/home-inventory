@@ -314,7 +314,7 @@ export default function ItemsPage() {
             <nav className="breadcrumb">
               <Link to="/containers">Containers</Link>
               {' → '}
-              <span>{container.name}</span>
+              <Link to={`/containers/${container.id}`}>{container.name}</Link>
               {' → Items'}
             </nav>
           )}

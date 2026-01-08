@@ -7,6 +7,7 @@ import {
   ShelvingUnitsPage,
   ShelvesPage,
   ContainersPage,
+  ContainerContentsPage,
   ItemsPage,
   LabelsPage,
   BatchDetailPage,
@@ -176,8 +177,8 @@ function App() {
                     element={<ContainersPage />}
                   />
                   <Route
-                    path="/containers/:parentId/children"
-                    element={<ContainersPage />}
+                    path="/containers/:containerId/children"
+                    element={<ContainerContentsPage />}
                   />
                   <Route
                     path="/containers/:parentId/children/:containerId/edit"

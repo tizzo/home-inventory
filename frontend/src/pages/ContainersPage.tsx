@@ -14,6 +14,7 @@ import {
   useShelvingUnit,
   useRoom,
   usePhotos,
+  useItemsByContainer,
 } from '../hooks';
 import { Modal, PhotoUpload, PhotoGallery, Pagination, MoveModal, EntityCreateModal, ImportItemsFromPhoto } from '../components';
 import type { EntityType } from '../components/EntitySelector';
@@ -214,9 +215,13 @@ export default function ContainersPage() {
     updateContainerPending: boolean;
     deleteContainerPending: boolean;
     moveContainerPending: boolean;
-  }) {
+  ) {
     const { data: photos } = usePhotos('container', container.id);
+    const { data: itemsData } = useItemsByContainer(container.id, { limit: 5, offset: 0 });
+    const { data: childContainers } = useContainersByParent(container.id, { limit: 5, offset: 0 });
     const firstPhoto = photos && photos.length > 0 ? photos[0] : null;
+    const itemCount = itemsData?.total || 0;
+    const containerCount = childContainers?.total || 0;
 
     return (
       <div className="room-card">
@@ -274,6 +279,22 @@ export default function ContainersPage() {
               </small>
             </>
           )}
+        </div>
+        <div className="content-summary" style={{ marginTop: '0.5rem', marginBottom: '0.5rem' }}>
+          <small style={{ color: '#666' }}>
+            {itemCount > 0 && containerCount > 0 && (
+              <>{itemCount} items • {containerCount} containers</>
+            )}
+            {itemCount > 0 && containerCount === 0 && (
+              <>{itemCount} item{itemCount !== 1 ? 's' : ''}</>
+            )}
+            {itemCount === 0 && containerCount > 0 && (
+              <>{containerCount} container{containerCount !== 1 ? 's' : ''}</>
+            )}
+            {itemCount === 0 && containerCount === 0 && (
+              <>Empty</>
+            )}
+          </small>
         </div>
         <div className="card-actions" style={{ marginTop: '0.5rem', gap: '0.5rem' }}>
           <Link

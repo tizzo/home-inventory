@@ -19,11 +19,17 @@ export interface UpdateItemImportDraftRequest {
 	items: ItemImportDraftItem[];
 }
 
+export interface ContainerUpdateProposal {
+	description?: string;
+	tags?: string[];
+}
+
 export interface ItemImportDraftResponse {
 	id: string;
 	container_id: string;
 	status: string;
 	items: ItemImportDraftItem[];
+	container_updates?: ContainerUpdateProposal;
 	source_photo_ids: string[];
 	created_at: Date;
 	updated_at: Date;

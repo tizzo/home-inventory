@@ -21,6 +21,7 @@ pub struct ItemImportDraft {
     pub container_id: Uuid,
     pub status: String,
     pub proposed_items: serde_json::Value,
+    pub proposed_container_updates: Option<serde_json::Value>,
     pub source_photo_ids: serde_json::Value,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -42,12 +43,20 @@ pub struct UpdateItemImportDraftRequest {
 }
 
 #[typeshare]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ContainerUpdateProposal {
+    pub description: Option<String>,
+    pub tags: Option<Vec<String>>,
+}
+
+#[typeshare]
 #[derive(Debug, Serialize)]
 pub struct ItemImportDraftResponse {
     pub id: Uuid,
     pub container_id: Uuid,
     pub status: String,
     pub items: Vec<ItemImportDraftItem>,
+    pub container_updates: Option<ContainerUpdateProposal>,
     pub source_photo_ids: Vec<Uuid>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,

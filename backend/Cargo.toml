@@ -2,6 +2,7 @@
 name = "home-inventory-backend"
 version = "0.1.0"
 edition = "2021"
+default-run = "home-inventory-backend"
 
 [dependencies]
 # Web framework
@@ -80,6 +81,16 @@ typeshare = "1"
 
 [dev-dependencies]
 tokio-test = "0.4"
+
+# Main binary (default)
+[[bin]]
+name = "home-inventory-backend"
+path = "src/main.rs"
+
+# Utility binary for type generation
+[[bin]]
+name = "generate_types"
+path = "src/bin/generate_types.rs"
 
 [profile.release]
 strip = true

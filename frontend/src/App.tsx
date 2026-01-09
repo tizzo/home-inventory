@@ -10,8 +10,6 @@ import {
   ContainerContentsPage,
   ItemsPage,
   LabelsPage,
-  BatchDetailPage,
-  LabelDetailPage,
   AuditLogPage,
   QRScanPage,
   ItemImportDraftPage,
@@ -200,8 +198,6 @@ function App() {
                     element={<ItemsPage />}
                   />
                   <Route path="/labels" element={<LabelsPage />} />
-                  <Route path="/labels/batches/:batchId" element={<BatchDetailPage />} />
-                  <Route path="/l/:labelId" element={<LabelDetailPage />} />
                   <Route path="/audit" element={<AuditLogPage />} />
                   <Route path="/scan" element={<QRScanPage />} />
                   <Route path="/drafts/:draftId" element={<ItemImportDraftPage />} />

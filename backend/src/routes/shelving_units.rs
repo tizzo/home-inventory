@@ -9,6 +9,7 @@ use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::app::AppState;
+use crate::middleware::auth::AuthUser;
 use crate::models::{
     CreateShelvingUnitRequest, PaginatedResponse, PaginationQuery, ShelvingUnit,
     ShelvingUnitResponse, UpdateShelvingUnitRequest,
@@ -114,11 +115,9 @@ pub async fn get_shelving_unit(
 /// Create a new shelving unit
 pub async fn create_shelving_unit(
     State(state): State<Arc<AppState>>,
+    AuthUser(user_id): AuthUser,
     Json(payload): Json<CreateShelvingUnitRequest>,
 ) -> Result<Json<ShelvingUnitResponse>, StatusCode> {
-    // For now, use a hardcoded user ID (we'll implement auth later)
-    let user_id = Uuid::new_v4();
-
     // Verify room exists
     let room_exists = sqlx::query("SELECT id FROM rooms WHERE id = $1")
         .bind(payload.room_id)
@@ -166,6 +165,7 @@ pub async fn create_shelving_unit(
 /// Update a shelving unit
 pub async fn update_shelving_unit(
     State(state): State<Arc<AppState>>,
+    AuthUser(user_id): AuthUser,
     Path(id): Path<Uuid>,
     Json(payload): Json<UpdateShelvingUnitRequest>,
 ) -> Result<Json<ShelvingUnitResponse>, StatusCode> {
@@ -257,7 +257,6 @@ pub async fn update_shelving_unit(
 
     // Log audit
     if !changes.is_empty() {
-        let user_id = Uuid::new_v4(); // TODO: get from auth
         state
             .audit
             .log_update(
@@ -277,10 +276,10 @@ pub async fn update_shelving_unit(
 /// Delete a shelving unit
 pub async fn delete_shelving_unit(
     State(state): State<Arc<AppState>>,
+    AuthUser(user_id): AuthUser,
     Path(id): Path<Uuid>,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
     // Log audit before deletion
-    let user_id = Uuid::new_v4(); // TODO: get from auth
     state
         .audit
         .log_delete("shelving_unit", id, Some(user_id), None)

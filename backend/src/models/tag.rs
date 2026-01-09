@@ -6,6 +6,7 @@ use uuid::Uuid;
 
 #[typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+#[allow(dead_code)]
 pub struct Tag {
     pub id: Uuid,
     pub name: String,
@@ -14,6 +15,7 @@ pub struct Tag {
 
 #[typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+#[allow(dead_code)]
 pub struct EntityTag {
     pub entity_type: String,
     pub entity_id: Uuid,
@@ -23,6 +25,7 @@ pub struct EntityTag {
 
 #[typeshare]
 #[derive(Debug, Serialize)]
+#[allow(dead_code)]
 pub struct TagResponse {
     pub id: Uuid,
     pub name: String,

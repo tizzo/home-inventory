@@ -75,6 +75,7 @@ export interface AuditLogResponse {
 	entity_id: string;
 	action: string;
 	user_id?: string;
+	user_name?: string;
 	changes?: unknown;
 	metadata?: unknown;
 	created_at: string;
@@ -130,6 +131,25 @@ export interface CreateUserRequest {
 	email: string;
 	name: string;
 	cognito_sub: string;
+}
+
+export interface Tag {
+	id: string;
+	name: string;
+	created_at: Date;
+}
+
+export interface EntityTag {
+	entity_type: string;
+	entity_id: string;
+	tag_id: string;
+	created_at: Date;
+}
+
+export interface TagResponse {
+	id: string;
+	name: string;
+	created_at: Date;
 }
 
 export interface Item {

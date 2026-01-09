@@ -30,6 +30,12 @@ Generic modal for creating entities with optional parent selection.
 
 ## What Needs To Be Done
 
+### Status: Partially Complete
+- ✅ ShelvesPage - Already refactored (reference implementation)
+- ⏳ ItemsPage - Needs refactoring
+- ⏳ ContainersPage - Needs refactoring
+- ⏳ ShelvingUnitsPage - Needs refactoring
+
 ### Phase 1: Replace All Move Modals
 
 Replace existing move modals with the new `MoveModal` component. Each replacement should:
@@ -96,12 +102,15 @@ Replace existing move modals with the new `MoveModal` component. Each replacemen
 
 **ShelvesPage.tsx**
 - ✅ Already done! Use as reference implementation
+- Location: Lines ~488-500
 
 ---
 
 ### Phase 2: Replace Create Modals with EntityCreateModal
 
-Replace manual create modals with `EntityCreateModal` to add QR scanning support.
+**Status**: Not started
+
+Replace manual create modals with `EntityCreateModal` to add QR scanning support and reduce code duplication.
 
 #### ShelvesPage.tsx Create Modal (Lines ~280-380)
 ```tsx
@@ -190,12 +199,15 @@ Replace manual create modals with `EntityCreateModal` to add QR scanning support
 
 ### Phase 3: Replace Edit Modals (Optional)
 
+**Status**: Not planned
+
 Edit modals could potentially use EntityCreateModal with pre-filled values, but may be better left as manual modals since:
 - They need to load existing data
 - Parent entity shouldn't change via edit (use Move instead)
 - Simpler to keep existing implementation
+- Current implementation works well
 
-**Recommendation**: Leave edit modals as-is for now.
+**Recommendation**: Leave edit modals as-is. Focus on move and create modals first.
 
 ---
 

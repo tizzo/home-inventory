@@ -9,6 +9,7 @@ use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::app::AppState;
+use crate::middleware::auth::AuthUser;
 use crate::models::{
     Container, ContainerResponse, CreateContainerRequest, PaginatedResponse, PaginationQuery,
     UpdateContainerRequest,
@@ -162,11 +163,9 @@ pub async fn get_container(
 /// Create a new container
 pub async fn create_container(
     State(state): State<Arc<AppState>>,
+    AuthUser(user_id): AuthUser,
     Json(payload): Json<CreateContainerRequest>,
 ) -> Result<Json<ContainerResponse>, StatusCode> {
-    // For now, use a hardcoded user ID (we'll implement auth later)
-    let user_id = Uuid::new_v4();
-
     // Validate location constraint: exactly one of shelf_id or parent_container_id must be provided
     let (shelf_id, parent_container_id) = match (payload.shelf_id, payload.parent_container_id) {
         (Some(sid), None) => (Some(sid), None),
@@ -245,6 +244,7 @@ pub async fn create_container(
 /// Update a container
 pub async fn update_container(
     State(state): State<Arc<AppState>>,
+    AuthUser(user_id): AuthUser,
     Path(id): Path<Uuid>,
     Json(payload): Json<UpdateContainerRequest>,
 ) -> Result<Json<ContainerResponse>, StatusCode> {
@@ -376,7 +376,6 @@ pub async fn update_container(
 
     // Log audit
     if !changes.is_empty() {
-        let user_id = Uuid::new_v4(); // TODO: get from auth
         state
             .audit
             .log_update(
@@ -396,41 +395,44 @@ pub async fn update_container(
 /// Delete a container
 pub async fn delete_container(
     State(state): State<Arc<AppState>>,
+    AuthUser(user_id): AuthUser,
     Path(id): Path<Uuid>,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
-    // Check for nested containers and items
-    let nested_containers: i64 =
+    // Check if container has any nested containers
+    let nested_count: i64 =
         sqlx::query_scalar("SELECT COUNT(*) FROM containers WHERE parent_container_id = $1")
             .bind(id)
             .fetch_one(&state.db)
             .await
             .map_err(|e| {
-                tracing::error!("Failed to check nested containers: {:?}", e);
+                tracing::error!("Failed to check for nested containers: {:?}", e);
                 StatusCode::INTERNAL_SERVER_ERROR
             })?;
 
-    let nested_items: i64 =
-        sqlx::query_scalar("SELECT COUNT(*) FROM items WHERE container_id = $1")
-            .bind(id)
-            .fetch_one(&state.db)
-            .await
-            .map_err(|e| {
-                tracing::error!("Failed to check nested items: {:?}", e);
-                StatusCode::INTERNAL_SERVER_ERROR
-            })?;
+    if nested_count > 0 {
+        return Err(StatusCode::CONFLICT);
+    }
 
-    if nested_containers > 0 || nested_items > 0 {
-        return Err(StatusCode::BAD_REQUEST);
+    // Check if container has any items
+    let item_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM items WHERE container_id = $1")
+        .bind(id)
+        .fetch_one(&state.db)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to check for items: {:?}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    if item_count > 0 {
+        return Err(StatusCode::CONFLICT);
     }
 
     // Log audit before deletion
-    let user_id = Uuid::new_v4(); // TODO: get from auth
     state
         .audit
         .log_delete("container", id, Some(user_id), None)
         .await
         .ok();
-
     let result = sqlx::query("DELETE FROM containers WHERE id = $1")
         .bind(id)
         .execute(&state.db)

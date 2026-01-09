@@ -9,6 +9,7 @@ use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::app::AppState;
+use crate::middleware::auth::AuthUser;
 use crate::services::r#move as move_service;
 
 #[derive(Debug, Deserialize)]
@@ -41,9 +42,10 @@ pub struct MoveResponse {
 /// Move a shelving unit to a different room
 pub async fn move_shelving_unit(
     State(state): State<Arc<AppState>>,
+    AuthUser(user_id): AuthUser,
     Path(unit_id): Path<Uuid>,
     Json(payload): Json<MoveShelvingUnitRequest>,
-) -> Result<Json<MoveResponse>, StatusCode> {
+) -> Result<Json<serde_json::Value>, StatusCode> {
     // Get current location for audit
     let current: Option<(Uuid,)> =
         sqlx::query_as("SELECT room_id FROM shelving_units WHERE id = $1")
@@ -58,7 +60,6 @@ pub async fn move_shelving_unit(
     move_service::move_shelving_unit(&state.db, unit_id, payload.target_room_id).await?;
 
     // Log audit
-    let user_id = Uuid::new_v4(); // TODO: get from auth
     if let Some((from_room_id,)) = current {
         state
             .audit
@@ -74,14 +75,15 @@ pub async fn move_shelving_unit(
             .ok();
     }
 
-    Ok(Json(MoveResponse {
-        message: "Shelving unit moved successfully".to_string(),
-    }))
+    Ok(Json(serde_json::json!({
+        "message": "Shelving unit moved successfully"
+    })))
 }
 
 /// Move a shelf to a different shelving unit
 pub async fn move_shelf(
     State(state): State<Arc<AppState>>,
+    AuthUser(user_id): AuthUser,
     Path(shelf_id): Path<Uuid>,
     Json(payload): Json<MoveShelfRequest>,
 ) -> Result<Json<MoveResponse>, StatusCode> {
@@ -99,7 +101,6 @@ pub async fn move_shelf(
     move_service::move_shelf(&state.db, shelf_id, payload.target_unit_id).await?;
 
     // Log audit
-    let user_id = Uuid::new_v4(); // TODO: get from auth
     if let Some((from_unit_id,)) = current {
         state
             .audit
@@ -123,6 +124,7 @@ pub async fn move_shelf(
 /// Move a container to a different location
 pub async fn move_container(
     State(state): State<Arc<AppState>>,
+    AuthUser(user_id): AuthUser,
     Path(container_id): Path<Uuid>,
     Json(payload): Json<MoveContainerRequest>,
 ) -> Result<Json<MoveResponse>, StatusCode> {
@@ -146,7 +148,6 @@ pub async fn move_container(
     .await?;
 
     // Log audit
-    let user_id = Uuid::new_v4(); // TODO: get from auth
     if let Some((from_shelf, from_parent)) = current {
         state
             .audit
@@ -176,6 +177,7 @@ pub async fn move_container(
 /// Move an item to a different location
 pub async fn move_item(
     State(state): State<Arc<AppState>>,
+    AuthUser(user_id): AuthUser,
     Path(item_id): Path<Uuid>,
     Json(payload): Json<MoveItemRequest>,
 ) -> Result<Json<MoveResponse>, StatusCode> {
@@ -199,7 +201,6 @@ pub async fn move_item(
     .await?;
 
     // Log audit
-    let user_id = Uuid::new_v4(); // TODO: get from auth
     if let Some((from_shelf, from_container)) = current {
         state
             .audit

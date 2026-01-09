@@ -10,6 +10,7 @@ use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::app::AppState;
+use crate::middleware::auth::AuthUser;
 use crate::models::{CreatePhotoRequest, Photo, PhotoResponse, PresignedUploadUrl};
 
 #[derive(Deserialize)]
@@ -110,13 +111,12 @@ pub async fn get_photos(
     Ok(Json(responses))
 }
 
-/// Create photo record after upload
+/// Create a photo record after successful upload to S3
 pub async fn create_photo(
     State(state): State<Arc<AppState>>,
+    AuthUser(user_id): AuthUser,
     Json(payload): Json<CreatePhotoRequest>,
 ) -> Result<Json<PhotoResponse>, StatusCode> {
-    // For now, use a hardcoded user ID (we'll implement auth later)
-    let user_id = Uuid::new_v4();
     let entity_id = Uuid::parse_str(&payload.entity_id).map_err(|_| {
         tracing::error!("Invalid entity_id: {}", payload.entity_id);
         StatusCode::BAD_REQUEST

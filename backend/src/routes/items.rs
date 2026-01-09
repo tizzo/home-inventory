@@ -9,6 +9,7 @@ use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::app::AppState;
+use crate::middleware::auth::AuthUser;
 use crate::models::{
     BulkCreateItemsRequest, BulkCreateItemsResponse, CreateItemRequest, Item, ItemResponse,
     PaginatedResponse, PaginationQuery, UpdateItemRequest,
@@ -152,11 +153,9 @@ pub async fn get_item(
 /// Bulk create new items
 pub async fn bulk_create_items(
     State(state): State<Arc<AppState>>,
+    AuthUser(user_id): AuthUser,
     Json(payload): Json<BulkCreateItemsRequest>,
 ) -> Result<Json<BulkCreateItemsResponse>, StatusCode> {
-    // For now, use a hardcoded user ID (we'll implement auth later)
-    let user_id = Uuid::new_v4();
-
     if payload.items.is_empty() {
         return Err(StatusCode::BAD_REQUEST);
     }
@@ -274,11 +273,9 @@ pub async fn get_item_by_barcode(
 /// Create a new item
 pub async fn create_item(
     State(state): State<Arc<AppState>>,
+    AuthUser(user_id): AuthUser,
     Json(payload): Json<CreateItemRequest>,
 ) -> Result<Json<ItemResponse>, StatusCode> {
-    // For now, use a hardcoded user ID (we'll implement auth later)
-    let user_id = Uuid::new_v4();
-
     // Validate location constraint: exactly one of shelf_id or container_id must be provided
     let (shelf_id, container_id) = match (payload.shelf_id, payload.container_id) {
         (Some(sid), None) => (Some(sid), None),
@@ -359,6 +356,7 @@ pub async fn create_item(
 /// Update an item
 pub async fn update_item(
     State(state): State<Arc<AppState>>,
+    AuthUser(user_id): AuthUser,
     Path(id): Path<Uuid>,
     Json(payload): Json<UpdateItemRequest>,
 ) -> Result<Json<ItemResponse>, StatusCode> {
@@ -509,7 +507,6 @@ pub async fn update_item(
 
     // Log audit
     if !changes.is_empty() {
-        let user_id = Uuid::new_v4(); // TODO: get from auth
         state
             .audit
             .log_update(
@@ -529,10 +526,10 @@ pub async fn update_item(
 /// Delete an item
 pub async fn delete_item(
     State(state): State<Arc<AppState>>,
+    AuthUser(user_id): AuthUser,
     Path(id): Path<Uuid>,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
     // Log audit before deletion
-    let user_id = Uuid::new_v4(); // TODO: get from auth
     state
         .audit
         .log_delete("item", id, Some(user_id), None)

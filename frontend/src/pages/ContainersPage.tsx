@@ -199,7 +199,7 @@ export default function ContainersPage() {
   };
 
   // Container card component with photos
-  function ContainerCard({
+  const ContainerCard = ({
     container,
     onEdit,
     onDelete,
@@ -215,7 +215,7 @@ export default function ContainersPage() {
     updateContainerPending: boolean;
     deleteContainerPending: boolean;
     moveContainerPending: boolean;
-  ) {
+  }) => {
     const { data: photos } = usePhotos('container', container.id);
     const { data: itemsData } = useItemsByContainer(container.id, { limit: 5, offset: 0 });
     const { data: childContainers } = useContainersByParent(container.id, { limit: 5, offset: 0 });

@@ -25,6 +25,7 @@ pub struct AuditLogResponse {
     pub entity_id: String,
     pub action: String,
     pub user_id: Option<String>,
+    pub user_name: Option<String>,
     pub changes: Option<serde_json::Value>,
     pub metadata: Option<serde_json::Value>,
     pub created_at: String,
@@ -38,6 +39,7 @@ impl From<AuditLog> for AuditLogResponse {
             entity_id: log.entity_id.to_string(),
             action: log.action,
             user_id: log.user_id.map(|u| u.to_string()),
+            user_name: None, // Will be populated in routes
             changes: log.changes,
             metadata: log.metadata,
             created_at: log.created_at.to_rfc3339(),

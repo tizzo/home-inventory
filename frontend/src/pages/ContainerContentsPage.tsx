@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import {
   useContainer,
@@ -10,13 +10,11 @@ import {
   useMoveContainer,
   useMoveItem,
 } from '../hooks';
-import { Modal, EntityCreateModal, MoveModal } from '../components';
+import { EntityCreateModal, MoveModal } from '../components';
 import type { EntityType } from '../components/EntitySelector';
 import type {
   ItemResponse,
   ContainerResponse,
-  CreateItemRequest,
-  UpdateItemRequest,
 } from '../types/generated';
 
 export default function ContainerContentsPage() {
@@ -79,7 +77,6 @@ export default function ContainerContentsPage() {
       name: data.name,
       description: data.description || '',
       barcode: data.barcode || '',
-      sku: data.sku || '',
     });
     setShowCreateItemModal(false);
   };
@@ -246,10 +243,9 @@ export default function ContainerContentsPage() {
                 {item.description && (
                   <p className="description">{item.description}</p>
                 )}
-                {(item.barcode || item.sku) && (
+                {item.barcode && (
                   <div className="item-meta">
-                    {item.barcode && <small>Barcode: {item.barcode}</small>}
-                    {item.sku && <small>SKU: {item.sku}</small>}
+                    <small>Barcode: {item.barcode}</small>
                   </div>
                 )}
               </div>
@@ -310,7 +306,7 @@ export default function ContainerContentsPage() {
             rows: 3,
           },
         ]}
-        onSubmit={async (data) => {
+        onSubmit={async () => {
           // Handle via containers page logic
           navigate(`/containers/${containerId}/children`);
         }}

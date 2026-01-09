@@ -248,38 +248,38 @@ pub async fn commit_item_import_draft(
 
     // Check if there are container updates to apply
     if let Some(updates_value) = &draft.proposed_container_updates {
-        let container_updates: ContainerUpdateProposal = serde_json::from_value(updates_value.clone())
-            .map_err(|e| {
+        let container_updates: ContainerUpdateProposal =
+            serde_json::from_value(updates_value.clone()).map_err(|e| {
                 tracing::error!("Failed to parse container updates: {e:?}");
                 StatusCode::INTERNAL_SERVER_ERROR
             })?;
 
         // Update container description if provided
         if let Some(new_description) = container_updates.description {
-            sqlx::query(
-                "UPDATE containers SET description = $1, updated_at = NOW() WHERE id = $2"
-            )
-            .bind(&new_description)
-            .bind(draft.container_id)
-            .execute(&mut *tx)
-            .await
-            .map_err(|e| {
-                tracing::error!("Failed to update container description: {e:?}");
-                StatusCode::INTERNAL_SERVER_ERROR
-            })?;
+            sqlx::query("UPDATE containers SET description = $1, updated_at = NOW() WHERE id = $2")
+                .bind(&new_description)
+                .bind(draft.container_id)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| {
+                    tracing::error!("Failed to update container description: {e:?}");
+                    StatusCode::INTERNAL_SERVER_ERROR
+                })?;
         }
 
         // Handle tags if provided
         if let Some(tags) = container_updates.tags {
             // First, remove existing tags
-            sqlx::query("DELETE FROM entity_tags WHERE entity_type = 'container' AND entity_id = $1")
-                .bind(draft.container_id)
-                .execute(&mut *tx)
-                .await
-                .map_err(|e| {
-                    tracing::error!("Failed to delete existing tags: {e:?}");
-                    StatusCode::INTERNAL_SERVER_ERROR
-                })?;
+            sqlx::query(
+                "DELETE FROM entity_tags WHERE entity_type = 'container' AND entity_id = $1",
+            )
+            .bind(draft.container_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| {
+                tracing::error!("Failed to delete existing tags: {e:?}");
+                StatusCode::INTERNAL_SERVER_ERROR
+            })?;
 
             // Insert new tags
             for tag_name in tags {
@@ -298,7 +298,7 @@ pub async fn commit_item_import_draft(
 
                 // Link tag to container
                 sqlx::query(
-                    "INSERT INTO entity_tags (entity_type, entity_id, tag_id) VALUES ($1, $2, $3)"
+                    "INSERT INTO entity_tags (entity_type, entity_id, tag_id) VALUES ($1, $2, $3)",
                 )
                 .bind("container")
                 .bind(draft.container_id)

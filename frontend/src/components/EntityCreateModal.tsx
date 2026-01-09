@@ -17,6 +17,7 @@ interface ParentTypeOption {
   label: string;
   displayName: string;
   preSelectedId?: string; // Pre-selected parent for this type (from route params)
+  disabled?: boolean; // Whether this option should be disabled
 }
 
 interface EntityCreateModalProps {

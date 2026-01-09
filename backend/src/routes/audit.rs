@@ -9,7 +9,40 @@ use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::app::AppState;
-use crate::models::audit::{AuditLog, AuditLogResponse};
+use crate::models::audit::AuditLogResponse;
+use chrono::{DateTime, Utc};
+use serde_json::Value as JsonValue;
+use sqlx::FromRow;
+
+// Extended audit log with user name from join
+#[derive(Debug, FromRow)]
+struct AuditLogWithUser {
+    pub id: Uuid,
+    pub entity_type: String,
+    pub entity_id: Uuid,
+    pub action: String,
+    pub user_id: Option<Uuid>,
+    pub changes: Option<JsonValue>,
+    pub metadata: Option<JsonValue>,
+    pub created_at: DateTime<Utc>,
+    pub user_name: Option<String>,
+}
+
+impl From<AuditLogWithUser> for AuditLogResponse {
+    fn from(log: AuditLogWithUser) -> Self {
+        Self {
+            id: log.id.to_string(),
+            entity_type: log.entity_type,
+            entity_id: log.entity_id.to_string(),
+            action: log.action,
+            user_id: log.user_id.map(|u| u.to_string()),
+            user_name: log.user_name,
+            changes: log.changes,
+            metadata: log.metadata,
+            created_at: log.created_at.to_rfc3339(),
+        }
+    }
+}
 
 #[derive(Debug, Deserialize)]
 pub struct AuditLogsQuery {
@@ -56,29 +89,22 @@ pub async fn get_audit_logs(
         bind_count + 1
     ));
 
-    // Build query dynamically - for now use a simpler approach
-    let logs = if params.entity_type.is_some()
-        || params.entity_id.is_some()
-        || params.user_id.is_some()
-        || params.action.is_some()
-    {
-        // Use a simpler query for now
-        sqlx::query_as::<_, AuditLog>(
-            "SELECT * FROM audit_logs ORDER BY created_at DESC LIMIT $1 OFFSET $2",
-        )
-        .bind(limit)
-        .bind(offset)
-        .fetch_all(&state.db)
-        .await
-    } else {
-        sqlx::query_as::<_, AuditLog>(
-            "SELECT * FROM audit_logs ORDER BY created_at DESC LIMIT $1 OFFSET $2",
-        )
-        .bind(limit)
-        .bind(offset)
-        .fetch_all(&state.db)
-        .await
-    }
+    // Query with user name join
+    let logs = sqlx::query_as::<_, AuditLogWithUser>(
+        r#"
+        SELECT 
+            al.*,
+            u.name as user_name
+        FROM audit_logs al
+        LEFT JOIN users u ON al.user_id = u.id
+        ORDER BY al.created_at DESC
+        LIMIT $1 OFFSET $2
+        "#,
+    )
+    .bind(limit)
+    .bind(offset)
+    .fetch_all(&state.db)
+    .await
     .map_err(|e| {
         tracing::error!("Failed to fetch audit logs: {:?}", e);
         StatusCode::INTERNAL_SERVER_ERROR
@@ -93,17 +119,25 @@ pub async fn get_audit_logs_by_entity(
     State(state): State<Arc<AppState>>,
     Path((entity_type, entity_id)): Path<(String, Uuid)>,
 ) -> Result<Json<Vec<AuditLogResponse>>, StatusCode> {
-    let logs = sqlx::query_as::<_, AuditLog>(
-        "SELECT * FROM audit_logs WHERE entity_type = $1 AND entity_id = $2 ORDER BY created_at DESC"
+    let logs = sqlx::query_as::<_, AuditLogWithUser>(
+        r#"
+        SELECT 
+            al.*,
+            u.name as user_name
+        FROM audit_logs al
+        LEFT JOIN users u ON al.user_id = u.id
+        WHERE al.entity_type = $1 AND al.entity_id = $2
+        ORDER BY al.created_at DESC
+        "#,
     )
-        .bind(&entity_type)
-        .bind(entity_id)
-        .fetch_all(&state.db)
-        .await
-        .map_err(|e| {
-            tracing::error!("Failed to fetch audit logs: {:?}", e);
-            StatusCode::INTERNAL_SERVER_ERROR
-        })?;
+    .bind(&entity_type)
+    .bind(entity_id)
+    .fetch_all(&state.db)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to fetch audit logs: {:?}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
 
     let responses: Vec<AuditLogResponse> = logs.into_iter().map(AuditLogResponse::from).collect();
     Ok(Json(responses))

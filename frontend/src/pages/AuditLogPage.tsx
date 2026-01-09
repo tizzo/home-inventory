@@ -136,7 +136,7 @@ export default function AuditLogPage() {
               <th>Timestamp</th>
               <th>Entity</th>
               <th>Action</th>
-              <th>User ID</th>
+              <th>User</th>
               <th>Details</th>
             </tr>
           </thead>
@@ -186,13 +186,13 @@ export default function AuditLogPage() {
                       </span>
                     </td>
                     <td>
-                      {log.user_id ? (
-                        <code style={{ fontSize: '0.875rem' }}>
+                      {log.user_name || (log.user_id ? (
+                        <code style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
                           {log.user_id.substring(0, 8)}...
                         </code>
                       ) : (
                         '-'
-                      )}
+                      ))}
                     </td>
                     <td>
                       {details ? (

@@ -9,6 +9,7 @@ use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::app::AppState;
+use crate::middleware::auth::AuthUser;
 use crate::models::{
     CreateShelfRequest, PaginatedResponse, PaginationQuery, Shelf, ShelfResponse,
     UpdateShelfRequest,
@@ -112,11 +113,9 @@ pub async fn get_shelf(
 /// Create a new shelf
 pub async fn create_shelf(
     State(state): State<Arc<AppState>>,
+    AuthUser(user_id): AuthUser,
     Json(payload): Json<CreateShelfRequest>,
 ) -> Result<Json<ShelfResponse>, StatusCode> {
-    // For now, use a hardcoded user ID (we'll implement auth later)
-    let user_id = Uuid::new_v4();
-
     // Verify shelving unit exists
     let unit_exists = sqlx::query("SELECT id FROM shelving_units WHERE id = $1")
         .bind(payload.shelving_unit_id)
@@ -182,6 +181,7 @@ pub async fn create_shelf(
 /// Update a shelf
 pub async fn update_shelf(
     State(state): State<Arc<AppState>>,
+    AuthUser(user_id): AuthUser,
     Path(id): Path<Uuid>,
     Json(payload): Json<UpdateShelfRequest>,
 ) -> Result<Json<ShelfResponse>, StatusCode> {
@@ -286,7 +286,6 @@ pub async fn update_shelf(
 
     // Log audit
     if !changes.is_empty() {
-        let user_id = Uuid::new_v4(); // TODO: get from auth
         state
             .audit
             .log_update(
@@ -306,10 +305,10 @@ pub async fn update_shelf(
 /// Delete a shelf
 pub async fn delete_shelf(
     State(state): State<Arc<AppState>>,
+    AuthUser(user_id): AuthUser,
     Path(id): Path<Uuid>,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
     // Log audit before deletion
-    let user_id = Uuid::new_v4(); // TODO: get from auth
     state
         .audit
         .log_delete("shelf", id, Some(user_id), None)

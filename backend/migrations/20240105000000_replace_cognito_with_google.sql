@@ -11,5 +11,5 @@ ALTER TABLE users DROP CONSTRAINT IF EXISTS users_cognito_sub_key;
 -- Add the new unique constraint
 ALTER TABLE users ADD CONSTRAINT users_google_id_key UNIQUE (google_id);
 
--- Rename index if it exists (explicitly created in schema.sql line 18 as idx_users_cognito_sub)
+-- Rename index if it exists (created in migration 20240101000001_create_users.sql as idx_users_cognito_sub)
 ALTER INDEX IF EXISTS idx_users_cognito_sub RENAME TO idx_users_google_id;

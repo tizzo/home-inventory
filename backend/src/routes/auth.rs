@@ -156,7 +156,11 @@ async fn logout_handler(session: Session) -> impl IntoResponse {
 
 async fn upsert_user(pool: &sqlx::PgPool, google_user: &GoogleUser) -> anyhow::Result<uuid::Uuid> {
     let new_user_id = uuid::Uuid::new_v4();
-    let row = sqlx::query!(
+    #[derive(sqlx::FromRow)]
+    struct UserId {
+        id: uuid::Uuid,
+    }
+    let row = sqlx::query_as::<_, UserId>(
         r#"
         INSERT INTO users (id, email, name, google_id)
         VALUES ($1, $2, $3, $4)
@@ -164,11 +168,11 @@ async fn upsert_user(pool: &sqlx::PgPool, google_user: &GoogleUser) -> anyhow::R
         DO UPDATE SET name = $3, email = $2, updated_at = NOW()
         RETURNING id
         "#,
-        new_user_id,
-        google_user.email,
-        google_user.name,
-        google_user.id
     )
+    .bind(new_user_id)
+    .bind(&google_user.email)
+    .bind(&google_user.name)
+    .bind(&google_user.id)
     .fetch_one(pool)
     .await?;
 

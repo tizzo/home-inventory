@@ -217,3 +217,261 @@ fn parse_items_from_response(
 fn base64_encode(bytes: &[u8]) -> String {
     STANDARD.encode(bytes)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_base64_encode() {
+        let data = b"hello world";
+        let encoded = base64_encode(data);
+
+        assert_eq!(encoded, "aGVsbG8gd29ybGQ=");
+    }
+
+    #[test]
+    fn test_base64_encode_empty() {
+        let data = b"";
+        let encoded = base64_encode(data);
+
+        assert_eq!(encoded, "");
+    }
+
+    #[test]
+    fn test_base64_encode_binary() {
+        let data = vec![0x00, 0x01, 0x02, 0xFF];
+        let encoded = base64_encode(&data);
+
+        // Verify it's valid base64
+        assert!(!encoded.is_empty());
+        // Base64 should only contain A-Z, a-z, 0-9, +, /, and = for padding
+        assert!(encoded
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '+' || c == '/' || c == '='));
+    }
+
+    #[test]
+    fn test_parse_items_from_response_basic() {
+        let json = r#"{
+            "items": [
+                {"name": "Hammer", "description": "A tool"},
+                {"name": "Screwdriver", "description": null}
+            ],
+            "container_description": "Toolbox",
+            "container_tags": ["tools", "hardware"]
+        }"#;
+
+        let result = parse_items_from_response(json);
+        assert!(result.is_ok());
+
+        let (items, container_updates) = result.unwrap();
+        assert_eq!(items.len(), 2);
+        assert_eq!(items[0].name, "Hammer");
+        assert_eq!(items[0].description, Some("A tool".to_string()));
+        assert_eq!(items[1].name, "Screwdriver");
+        assert_eq!(items[1].description, None);
+
+        assert!(container_updates.is_some());
+        let updates = container_updates.unwrap();
+        assert_eq!(updates.description, Some("Toolbox".to_string()));
+        assert_eq!(
+            updates.tags,
+            Some(vec!["tools".to_string(), "hardware".to_string()])
+        );
+    }
+
+    #[test]
+    fn test_parse_items_from_response_with_code_block() {
+        let json = r#"```json
+        {
+            "items": [{"name": "Item 1"}],
+            "container_description": "Test container"
+        }
+        ```"#;
+
+        let result = parse_items_from_response(json);
+        assert!(result.is_ok());
+
+        let (items, container_updates) = result.unwrap();
+        assert_eq!(items.len(), 1);
+        assert!(container_updates.is_some());
+    }
+
+    #[test]
+    fn test_parse_items_from_response_with_code_block_no_json() {
+        let json = r#"```
+        {
+            "items": [{"name": "Item 1"}],
+            "container_description": "Test container"
+        }
+        ```"#;
+
+        let result = parse_items_from_response(json);
+        assert!(result.is_ok());
+
+        let (items, _) = result.unwrap();
+        assert_eq!(items.len(), 1);
+    }
+
+    #[test]
+    fn test_parse_items_from_response_empty_items() {
+        let json = r#"{
+            "items": [],
+            "container_description": null,
+            "container_tags": null
+        }"#;
+
+        let result = parse_items_from_response(json);
+        assert!(result.is_ok());
+
+        let (items, container_updates) = result.unwrap();
+        assert_eq!(items.len(), 0);
+        assert!(container_updates.is_none());
+    }
+
+    #[test]
+    fn test_parse_items_from_response_no_container_updates() {
+        let json = r#"{
+            "items": [{"name": "Item 1"}],
+            "container_description": null,
+            "container_tags": null
+        }"#;
+
+        let result = parse_items_from_response(json);
+        assert!(result.is_ok());
+
+        let (items, container_updates) = result.unwrap();
+        assert_eq!(items.len(), 1);
+        assert!(container_updates.is_none());
+    }
+
+    #[test]
+    fn test_parse_items_from_response_only_description() {
+        let json = r#"{
+            "items": [{"name": "Item 1"}],
+            "container_description": "A container",
+            "container_tags": null
+        }"#;
+
+        let result = parse_items_from_response(json);
+        assert!(result.is_ok());
+
+        let (_items, container_updates) = result.unwrap();
+        assert!(container_updates.is_some());
+        let updates = container_updates.unwrap();
+        assert_eq!(updates.description, Some("A container".to_string()));
+        assert_eq!(updates.tags, None);
+    }
+
+    #[test]
+    fn test_parse_items_from_response_only_tags() {
+        let json = r#"{
+            "items": [{"name": "Item 1"}],
+            "container_description": null,
+            "container_tags": ["tag1", "tag2"]
+        }"#;
+
+        let result = parse_items_from_response(json);
+        assert!(result.is_ok());
+
+        let (_items, container_updates) = result.unwrap();
+        assert!(container_updates.is_some());
+        let updates = container_updates.unwrap();
+        assert_eq!(updates.description, None);
+        assert_eq!(
+            updates.tags,
+            Some(vec!["tag1".to_string(), "tag2".to_string()])
+        );
+    }
+
+    #[test]
+    fn test_parse_items_from_response_empty_tags() {
+        let json = r#"{
+            "items": [{"name": "Item 1"}],
+            "container_description": null,
+            "container_tags": []
+        }"#;
+
+        let result = parse_items_from_response(json);
+        assert!(result.is_ok());
+
+        let (_items, container_updates) = result.unwrap();
+        assert!(container_updates.is_none()); // Empty tags should result in None
+    }
+
+    #[test]
+    fn test_parse_items_from_response_invalid_json() {
+        let json = r#"{
+            "items": [
+                {"name": "Item 1"
+        }"#;
+
+        let result = parse_items_from_response(json);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_parse_items_from_response_missing_items() {
+        let json = r#"{
+            "container_description": "Test"
+        }"#;
+
+        let result = parse_items_from_response(json);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_parse_items_from_response_whitespace_handling() {
+        let json = r#"   {
+            "items": [{"name": "Item 1"}]
+        }   "#;
+
+        let result = parse_items_from_response(json);
+        assert!(result.is_ok());
+
+        let (items, _) = result.unwrap();
+        assert_eq!(items.len(), 1);
+    }
+
+    #[test]
+    fn test_parse_items_from_response_multiple_items() {
+        let json = r#"{
+            "items": [
+                {"name": "Item 1", "description": "First item"},
+                {"name": "Item 2", "description": "Second item"},
+                {"name": "Item 3", "description": null}
+            ],
+            "container_description": "Multi-item container",
+            "container_tags": ["category1", "category2", "category3"]
+        }"#;
+
+        let result = parse_items_from_response(json);
+        assert!(result.is_ok());
+
+        let (items, container_updates) = result.unwrap();
+        assert_eq!(items.len(), 3);
+        assert_eq!(items[0].name, "Item 1");
+        assert_eq!(items[1].name, "Item 2");
+        assert_eq!(items[2].name, "Item 3");
+
+        assert!(container_updates.is_some());
+        let updates = container_updates.unwrap();
+        assert_eq!(updates.tags.as_ref().unwrap().len(), 3);
+    }
+
+    #[test]
+    fn test_item_import_draft_item_creation() {
+        let items = vec![ItemImportDraftItem {
+            name: "Test Item".to_string(),
+            description: Some("Description".to_string()),
+            barcode: None,
+            barcode_type: None,
+        }];
+
+        assert_eq!(items[0].name, "Test Item");
+        assert_eq!(items[0].description, Some("Description".to_string()));
+        assert_eq!(items[0].barcode, None);
+        assert_eq!(items[0].barcode_type, None);
+    }
+}

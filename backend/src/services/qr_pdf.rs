@@ -224,3 +224,219 @@ pub fn generate_label_pdf(labels: &[(String, i32)], // (qr_data, number)
 
     Ok(buffer)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_avery18660_constants() {
+        // Verify Avery 18660 template constants are correct
+        assert_eq!(Avery18660::LABEL_WIDTH_INCHES, 2.625);
+        assert_eq!(Avery18660::LABEL_HEIGHT_INCHES, 1.0);
+        assert_eq!(Avery18660::LABELS_PER_ROW, 3);
+        assert_eq!(Avery18660::LABELS_PER_COLUMN, 10);
+        assert_eq!(Avery18660::LABELS_PER_SHEET, 30);
+        assert_eq!(Avery18660::SHEET_WIDTH_INCHES, 8.5);
+        assert_eq!(Avery18660::SHEET_HEIGHT_INCHES, 11.0);
+
+        // Verify calculations
+        assert_eq!(
+            Avery18660::LABELS_PER_SHEET,
+            Avery18660::LABELS_PER_ROW * Avery18660::LABELS_PER_COLUMN
+        );
+    }
+
+    #[test]
+    fn test_generate_qr_code_image_success() {
+        let data = "https://example.com/item/123";
+        let size = 200;
+
+        let result = generate_qr_code_image(data, size);
+
+        assert!(result.is_ok());
+        let image_data = result.unwrap();
+        assert!(!image_data.is_empty());
+
+        // Verify it's a valid PNG by checking PNG signature
+        assert_eq!(
+            &image_data[0..8],
+            &[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]
+        );
+    }
+
+    #[test]
+    fn test_generate_qr_code_image_different_sizes() {
+        let data = "test-data";
+
+        let small = generate_qr_code_image(data, 100).unwrap();
+        let medium = generate_qr_code_image(data, 200).unwrap();
+        let large = generate_qr_code_image(data, 400).unwrap();
+
+        // Larger sizes should generally produce larger files (though compression can vary)
+        // At minimum, they should all be valid PNGs
+        assert!(!small.is_empty());
+        assert!(!medium.is_empty());
+        assert!(!large.is_empty());
+
+        // All should be valid PNGs
+        assert_eq!(
+            &small[0..8],
+            &[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]
+        );
+        assert_eq!(
+            &medium[0..8],
+            &[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]
+        );
+        assert_eq!(
+            &large[0..8],
+            &[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]
+        );
+    }
+
+    #[test]
+    fn test_generate_qr_code_image_empty_data() {
+        // QR codes can be generated with empty data, though it's unusual
+        let result = generate_qr_code_image("", 100);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_generate_qr_code_image_long_data() {
+        // Test with longer data to ensure it works with various data sizes
+        let long_data = "a".repeat(1000);
+        let result = generate_qr_code_image(&long_data, 200);
+
+        assert!(result.is_ok());
+        let image_data = result.unwrap();
+        assert!(!image_data.is_empty());
+        assert_eq!(
+            &image_data[0..8],
+            &[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]
+        );
+    }
+
+    #[test]
+    fn test_generate_label_pdf_empty_labels() {
+        let labels: Vec<(String, i32)> = vec![];
+        let result = generate_label_pdf(&labels);
+
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("No labels provided"));
+    }
+
+    #[test]
+    fn test_generate_label_pdf_single_label() {
+        let labels = vec![("https://example.com/item/1".to_string(), 1)];
+        let result = generate_label_pdf(&labels);
+
+        assert!(result.is_ok());
+        let pdf_data = result.unwrap();
+        assert!(!pdf_data.is_empty());
+
+        // Verify it's a PDF by checking PDF signature
+        assert_eq!(&pdf_data[0..4], b"%PDF");
+    }
+
+    #[test]
+    fn test_generate_label_pdf_multiple_labels() {
+        let labels = vec![
+            ("https://example.com/item/1".to_string(), 1),
+            ("https://example.com/item/2".to_string(), 2),
+            ("https://example.com/item/3".to_string(), 3),
+        ];
+        let result = generate_label_pdf(&labels);
+
+        assert!(result.is_ok());
+        let pdf_data = result.unwrap();
+        assert!(!pdf_data.is_empty());
+        assert_eq!(&pdf_data[0..4], b"%PDF");
+    }
+
+    #[test]
+    fn test_generate_label_pdf_exactly_one_sheet() {
+        // Test with exactly 30 labels (one sheet)
+        let labels: Vec<(String, i32)> = (1..=30)
+            .map(|i| (format!("https://example.com/item/{}", i), i))
+            .collect();
+
+        let result = generate_label_pdf(&labels);
+        assert!(result.is_ok());
+        let pdf_data = result.unwrap();
+        assert!(!pdf_data.is_empty());
+        assert_eq!(&pdf_data[0..4], b"%PDF");
+    }
+
+    #[test]
+    fn test_generate_label_pdf_multiple_sheets() {
+        // Test with 31 labels (should create 2 sheets)
+        let labels: Vec<(String, i32)> = (1..=31)
+            .map(|i| (format!("https://example.com/item/{}", i), i))
+            .collect();
+
+        let result = generate_label_pdf(&labels);
+        assert!(result.is_ok());
+        let pdf_data = result.unwrap();
+        assert!(!pdf_data.is_empty());
+        assert_eq!(&pdf_data[0..4], b"%PDF");
+    }
+
+    #[test]
+    fn test_generate_label_pdf_many_labels() {
+        // Test with 100 labels (should create multiple sheets)
+        let labels: Vec<(String, i32)> = (1..=100)
+            .map(|i| (format!("https://example.com/item/{}", i), i))
+            .collect();
+
+        let result = generate_label_pdf(&labels);
+        assert!(result.is_ok());
+        let pdf_data = result.unwrap();
+        assert!(!pdf_data.is_empty());
+        assert_eq!(&pdf_data[0..4], b"%PDF");
+    }
+
+    #[test]
+    fn test_generate_label_pdf_special_characters() {
+        // Test with special characters in QR data
+        let labels = vec![
+            (
+                "https://example.com/item/1?param=value&other=test".to_string(),
+                1,
+            ),
+            ("item with spaces and symbols !@#$%".to_string(), 2),
+        ];
+        let result = generate_label_pdf(&labels);
+
+        assert!(result.is_ok());
+        let pdf_data = result.unwrap();
+        assert!(!pdf_data.is_empty());
+        assert_eq!(&pdf_data[0..4], b"%PDF");
+    }
+
+    #[test]
+    fn test_label_positioning_calculations() {
+        // Verify label positioning calculations are correct
+        let label_width_pt = Avery18660::LABEL_WIDTH_INCHES * 72.0;
+        let _label_height_pt = Avery18660::LABEL_HEIGHT_INCHES * 72.0;
+        let horizontal_spacing = Avery18660::HORIZONTAL_SPACING_INCHES * 72.0;
+        let left_margin_pt = Avery18660::LEFT_MARGIN_INCHES * 72.0;
+
+        // First label (row 0, col 0)
+        let x0 = left_margin_pt + (0 as f32) * (label_width_pt + horizontal_spacing);
+        assert_eq!(x0, left_margin_pt);
+
+        // Second label in row (row 0, col 1)
+        let x1 = left_margin_pt + (1 as f32) * (label_width_pt + horizontal_spacing);
+        assert_eq!(x1, left_margin_pt + label_width_pt + horizontal_spacing);
+
+        // Third label in row (row 0, col 2)
+        let x2 = left_margin_pt + (2 as f32) * (label_width_pt + horizontal_spacing);
+        assert_eq!(
+            x2,
+            left_margin_pt + 2.0 * (label_width_pt + horizontal_spacing)
+        );
+    }
+}

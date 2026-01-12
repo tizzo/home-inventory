@@ -6,6 +6,7 @@ use typeshare::typeshare;
 pub struct PaginationQuery {
     pub limit: Option<i32>,
     pub offset: Option<i32>,
+    pub search: Option<String>,
 }
 
 #[typeshare]

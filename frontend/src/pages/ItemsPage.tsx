@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams, Link } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams, Link } from 'react-router-dom';
 import { useToast } from '../context/ToastContext';
 import {
   useItems,
@@ -24,15 +24,24 @@ import type {
 
 export default function ItemsPage() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { shelfId, containerId, itemId } = useParams<{
     shelfId?: string;
     containerId?: string;
     itemId?: string;
   }>();
 
+  // Get search query from URL
+  const searchQuery = searchParams.get('search') || '';
+  const offsetFromUrl = parseInt(searchParams.get('offset') || '0', 10);
+
   // Determine context and fetch appropriate data
   const context = shelfId ? 'shelf' : containerId ? 'container' : 'all';
-  const [pagination, setPagination] = useState({ limit: 50, offset: 0 });
+  const [pagination, setPagination] = useState({ 
+    limit: 50, 
+    offset: offsetFromUrl,
+    search: searchQuery || undefined 
+  });
   const { data: allItemsResponse, isLoading: isLoadingAll } = useItems(pagination);
   const { data: shelfItemsResponse, isLoading: isLoadingShelf } = useItemsByShelf(
     shelfId || '',
@@ -88,6 +97,17 @@ export default function ItemsPage() {
   // Get the item being edited from URL
   const editingItem = items?.find((i) => i.id === itemId);
 
+  // Sync pagination with URL search params
+  useEffect(() => {
+    const urlSearch = searchParams.get('search') || '';
+    const urlOffset = parseInt(searchParams.get('offset') || '0', 10);
+    setPagination({
+      limit: 50,
+      offset: urlOffset,
+      search: urlSearch || undefined,
+    });
+  }, [searchParams]);
+
   // Handle URL-based edit modal
   useEffect(() => {
     if (itemId && editingItem) {
@@ -99,6 +119,26 @@ export default function ItemsPage() {
       });
     }
   }, [itemId, editingItem]);
+
+  // Handle search input change
+  const handleSearchChange = (value: string) => {
+    const newSearchParams = new URLSearchParams(searchParams);
+    if (value.trim()) {
+      newSearchParams.set('search', value.trim());
+    } else {
+      newSearchParams.delete('search');
+    }
+    // Reset offset when search changes
+    newSearchParams.delete('offset');
+    setSearchParams(newSearchParams, { replace: true });
+  };
+
+  // Handle pagination change
+  const handlePageChange = (newOffset: number) => {
+    const newSearchParams = new URLSearchParams(searchParams);
+    newSearchParams.set('offset', newOffset.toString());
+    setSearchParams(newSearchParams, { replace: true });
+  };
 
   const handleCreate = async (data: Record<string, any>) => {
     await createItem.mutateAsync({
@@ -331,6 +371,23 @@ export default function ItemsPage() {
         </button>
       </div>
 
+      {/* Search Bar */}
+      <div className="search-bar" style={{ marginBottom: '1rem' }}>
+        <input
+          type="text"
+          placeholder="Search items by name, description, or barcode..."
+          value={searchQuery}
+          onChange={(e) => handleSearchChange(e.target.value)}
+          style={{
+            width: '100%',
+            padding: '0.75rem',
+            fontSize: '1rem',
+            border: '1px solid #ddd',
+            borderRadius: '4px',
+          }}
+        />
+      </div>
+
       {/* Create Modal */}
       <EntityCreateModal
         isOpen={showCreateModal}
@@ -527,7 +584,7 @@ export default function ItemsPage() {
           total={itemsResponse.total}
           limit={itemsResponse.limit}
           offset={itemsResponse.offset}
-          onPageChange={(newOffset) => setPagination({ ...pagination, offset: newOffset })}
+          onPageChange={handlePageChange}
         />
       )}
     </div>

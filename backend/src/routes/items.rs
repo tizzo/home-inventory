@@ -23,28 +23,59 @@ pub async fn list_items(
     let limit = params.limit.unwrap_or(50).clamp(1, 1000);
     let offset = params.offset.unwrap_or(0).max(0);
 
-    // Get total count
-    let total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM items")
+    // Build search condition if provided
+    let search_pattern = params.search.as_ref().map(|s| format!("%{}%", s.trim()));
+    
+    // Get total count with search filter
+    let total: i64 = if let Some(ref pattern) = search_pattern {
+        sqlx::query_scalar(
+            "SELECT COUNT(*) FROM items WHERE name ILIKE $1 OR description ILIKE $1 OR barcode ILIKE $1"
+        )
+        .bind(pattern)
         .fetch_one(&state.db)
         .await
         .map_err(|e| {
-            tracing::error!("Failed to count items: {:?}", e);
+            tracing::error!("Failed to count items with search: {:?}", e);
             StatusCode::INTERNAL_SERVER_ERROR
-        })?;
+        })?
+    } else {
+        sqlx::query_scalar("SELECT COUNT(*) FROM items")
+            .fetch_one(&state.db)
+            .await
+            .map_err(|e| {
+                tracing::error!("Failed to count items: {:?}", e);
+                StatusCode::INTERNAL_SERVER_ERROR
+            })?
+    };
     let total = total.clamp(0, i32::MAX as i64) as i32;
 
-    // Get paginated items
-    let items = sqlx::query_as::<_, Item>(
-        "SELECT * FROM items ORDER BY created_at DESC LIMIT $1 OFFSET $2",
-    )
-    .bind(limit)
-    .bind(offset)
-    .fetch_all(&state.db)
-    .await
-    .map_err(|e| {
-        tracing::error!("Failed to fetch items: {:?}", e);
-        StatusCode::INTERNAL_SERVER_ERROR
-    })?;
+    // Get paginated items with search filter
+    let items = if let Some(ref pattern) = search_pattern {
+        sqlx::query_as::<_, Item>(
+            "SELECT * FROM items WHERE name ILIKE $1 OR description ILIKE $1 OR barcode ILIKE $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3"
+        )
+        .bind(pattern)
+        .bind(limit)
+        .bind(offset)
+        .fetch_all(&state.db)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to fetch items with search: {:?}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?
+    } else {
+        sqlx::query_as::<_, Item>(
+            "SELECT * FROM items ORDER BY created_at DESC LIMIT $1 OFFSET $2",
+        )
+        .bind(limit)
+        .bind(offset)
+        .fetch_all(&state.db)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to fetch items: {:?}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?
+    };
 
     let responses: Vec<ItemResponse> = items.into_iter().map(ItemResponse::from).collect();
     Ok(Json(PaginatedResponse::new(
@@ -61,30 +92,63 @@ pub async fn list_items_by_shelf(
     let limit = params.limit.unwrap_or(50).clamp(1, 1000);
     let offset = params.offset.unwrap_or(0).max(0);
 
-    // Get total count
-    let total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM items WHERE shelf_id = $1")
+    // Build search condition if provided
+    let search_pattern = params.search.as_ref().map(|s| format!("%{}%", s.trim()));
+
+    // Get total count with search filter
+    let total: i64 = if let Some(ref pattern) = search_pattern {
+        sqlx::query_scalar(
+            "SELECT COUNT(*) FROM items WHERE shelf_id = $1 AND (name ILIKE $2 OR description ILIKE $2 OR barcode ILIKE $2)"
+        )
         .bind(shelf_id)
+        .bind(pattern)
         .fetch_one(&state.db)
         .await
         .map_err(|e| {
-            tracing::error!("Failed to count items: {:?}", e);
+            tracing::error!("Failed to count items with search: {:?}", e);
             StatusCode::INTERNAL_SERVER_ERROR
-        })?;
+        })?
+    } else {
+        sqlx::query_scalar("SELECT COUNT(*) FROM items WHERE shelf_id = $1")
+            .bind(shelf_id)
+            .fetch_one(&state.db)
+            .await
+            .map_err(|e| {
+                tracing::error!("Failed to count items: {:?}", e);
+                StatusCode::INTERNAL_SERVER_ERROR
+            })?
+    };
     let total = total.clamp(0, i32::MAX as i64) as i32;
 
-    // Get paginated items
-    let items = sqlx::query_as::<_, Item>(
-        "SELECT * FROM items WHERE shelf_id = $1 ORDER BY created_at LIMIT $2 OFFSET $3",
-    )
-    .bind(shelf_id)
-    .bind(limit)
-    .bind(offset)
-    .fetch_all(&state.db)
-    .await
-    .map_err(|e| {
-        tracing::error!("Failed to fetch items: {:?}", e);
-        StatusCode::INTERNAL_SERVER_ERROR
-    })?;
+    // Get paginated items with search filter
+    let items = if let Some(ref pattern) = search_pattern {
+        sqlx::query_as::<_, Item>(
+            "SELECT * FROM items WHERE shelf_id = $1 AND (name ILIKE $2 OR description ILIKE $2 OR barcode ILIKE $2) ORDER BY created_at LIMIT $3 OFFSET $4"
+        )
+        .bind(shelf_id)
+        .bind(pattern)
+        .bind(limit)
+        .bind(offset)
+        .fetch_all(&state.db)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to fetch items with search: {:?}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?
+    } else {
+        sqlx::query_as::<_, Item>(
+            "SELECT * FROM items WHERE shelf_id = $1 ORDER BY created_at LIMIT $2 OFFSET $3",
+        )
+        .bind(shelf_id)
+        .bind(limit)
+        .bind(offset)
+        .fetch_all(&state.db)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to fetch items: {:?}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?
+    };
 
     let responses: Vec<ItemResponse> = items.into_iter().map(ItemResponse::from).collect();
     Ok(Json(PaginatedResponse::new(
@@ -101,30 +165,63 @@ pub async fn list_items_by_container(
     let limit = params.limit.unwrap_or(50).clamp(1, 1000);
     let offset = params.offset.unwrap_or(0).max(0);
 
-    // Get total count
-    let total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM items WHERE container_id = $1")
+    // Build search condition if provided
+    let search_pattern = params.search.as_ref().map(|s| format!("%{}%", s.trim()));
+
+    // Get total count with search filter
+    let total: i64 = if let Some(ref pattern) = search_pattern {
+        sqlx::query_scalar(
+            "SELECT COUNT(*) FROM items WHERE container_id = $1 AND (name ILIKE $2 OR description ILIKE $2 OR barcode ILIKE $2)"
+        )
         .bind(container_id)
+        .bind(pattern)
         .fetch_one(&state.db)
         .await
         .map_err(|e| {
-            tracing::error!("Failed to count items: {:?}", e);
+            tracing::error!("Failed to count items with search: {:?}", e);
             StatusCode::INTERNAL_SERVER_ERROR
-        })?;
+        })?
+    } else {
+        sqlx::query_scalar("SELECT COUNT(*) FROM items WHERE container_id = $1")
+            .bind(container_id)
+            .fetch_one(&state.db)
+            .await
+            .map_err(|e| {
+                tracing::error!("Failed to count items: {:?}", e);
+                StatusCode::INTERNAL_SERVER_ERROR
+            })?
+    };
     let total = total.clamp(0, i32::MAX as i64) as i32;
 
-    // Get paginated items
-    let items = sqlx::query_as::<_, Item>(
-        "SELECT * FROM items WHERE container_id = $1 ORDER BY created_at LIMIT $2 OFFSET $3",
-    )
-    .bind(container_id)
-    .bind(limit)
-    .bind(offset)
-    .fetch_all(&state.db)
-    .await
-    .map_err(|e| {
-        tracing::error!("Failed to fetch items: {:?}", e);
-        StatusCode::INTERNAL_SERVER_ERROR
-    })?;
+    // Get paginated items with search filter
+    let items = if let Some(ref pattern) = search_pattern {
+        sqlx::query_as::<_, Item>(
+            "SELECT * FROM items WHERE container_id = $1 AND (name ILIKE $2 OR description ILIKE $2 OR barcode ILIKE $2) ORDER BY created_at LIMIT $3 OFFSET $4"
+        )
+        .bind(container_id)
+        .bind(pattern)
+        .bind(limit)
+        .bind(offset)
+        .fetch_all(&state.db)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to fetch items with search: {:?}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?
+    } else {
+        sqlx::query_as::<_, Item>(
+            "SELECT * FROM items WHERE container_id = $1 ORDER BY created_at LIMIT $2 OFFSET $3",
+        )
+        .bind(container_id)
+        .bind(limit)
+        .bind(offset)
+        .fetch_all(&state.db)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to fetch items: {:?}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?
+    };
 
     let responses: Vec<ItemResponse> = items.into_iter().map(ItemResponse::from).collect();
     Ok(Json(PaginatedResponse::new(

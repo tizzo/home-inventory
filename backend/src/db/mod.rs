@@ -12,7 +12,7 @@ pub async fn init_pool(database_url: &str) -> Result<PgPool, sqlx::Error> {
 }
 
 /// Run database migrations
-/// Note: Some migrations have conditional logic for PostgreSQL vs DSQL
+/// All migrations are DSQL-compatible (Aurora DSQL is the primary deployment target)
 pub async fn run_migrations(pool: &PgPool) -> Result<(), sqlx::migrate::MigrateError> {
     sqlx::migrate!("./migrations").run(pool).await
 }

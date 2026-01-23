@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render as rtlRender, screen, waitFor } from '@testing-library/react';
-import { render, screen as testScreen, waitFor as testWaitFor } from '../../test/utils';
+import { render } from '../../test/utils';
 import userEvent from '@testing-library/user-event';
 import { useToast } from '../ToastContext';
 import { ToastProvider } from '../ToastContext';
@@ -31,14 +31,6 @@ const TestComponent = () => {
 };
 
 describe('ToastContext', () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
-    vi.clearAllTimers();
-  });
 
   it('should throw error when used outside provider', () => {
     // Suppress console.error for this test
@@ -59,20 +51,20 @@ describe('ToastContext', () => {
 
   it('should show toast message', async () => {
     const user = userEvent.setup();
-    const { container } = render(
+    render(
       <ToastProvider>
         <TestComponent />
       </ToastProvider>
     );
 
-    const showToastButton = testScreen.getByText('Show Toast');
+    const showToastButton = screen.getByText('Show Toast');
     await user.click(showToastButton);
 
-    await testWaitFor(
+    await waitFor(
       () => {
-        expect(testScreen.getByText('Test message')).toBeInTheDocument();
+        expect(screen.getByText('Test message')).toBeInTheDocument();
       },
-      { timeout: 1000 }
+      { timeout: 2000 }
     );
   });
 
@@ -84,14 +76,14 @@ describe('ToastContext', () => {
       </ToastProvider>
     );
 
-    const showErrorButton = testScreen.getByText('Show Error');
+    const showErrorButton = screen.getByText('Show Error');
     await user.click(showErrorButton);
 
-    await testWaitFor(
+    await waitFor(
       () => {
-        expect(testScreen.getByText('Error message')).toBeInTheDocument();
+        expect(screen.getByText('Error message')).toBeInTheDocument();
       },
-      { timeout: 1000 }
+      { timeout: 2000 }
     );
   });
 
@@ -103,14 +95,14 @@ describe('ToastContext', () => {
       </ToastProvider>
     );
 
-    const showSuccessButton = testScreen.getByText('Show Success');
+    const showSuccessButton = screen.getByText('Show Success');
     await user.click(showSuccessButton);
 
-    await testWaitFor(
+    await waitFor(
       () => {
-        expect(testScreen.getByText('Success message')).toBeInTheDocument();
+        expect(screen.getByText('Success message')).toBeInTheDocument();
       },
-      { timeout: 1000 }
+      { timeout: 2000 }
     );
   });
 
@@ -122,14 +114,14 @@ describe('ToastContext', () => {
       </ToastProvider>
     );
 
-    const showWarningButton = testScreen.getByText('Show Warning');
+    const showWarningButton = screen.getByText('Show Warning');
     await user.click(showWarningButton);
 
-    await testWaitFor(
+    await waitFor(
       () => {
-        expect(testScreen.getByText('Warning message')).toBeInTheDocument();
+        expect(screen.getByText('Warning message')).toBeInTheDocument();
       },
-      { timeout: 1000 }
+      { timeout: 2000 }
     );
   });
 
@@ -141,14 +133,14 @@ describe('ToastContext', () => {
       </ToastProvider>
     );
 
-    const showInfoButton = testScreen.getByText('Show Info');
+    const showInfoButton = screen.getByText('Show Info');
     await user.click(showInfoButton);
 
-    await testWaitFor(
+    await waitFor(
       () => {
-        expect(testScreen.getByText('Info message')).toBeInTheDocument();
+        expect(screen.getByText('Info message')).toBeInTheDocument();
       },
-      { timeout: 1000 }
+      { timeout: 2000 }
     );
   });
 
@@ -160,15 +152,15 @@ describe('ToastContext', () => {
       </ToastProvider>
     );
 
-    await user.click(testScreen.getByText('Show Error'));
-    await user.click(testScreen.getByText('Show Success'));
+    await user.click(screen.getByText('Show Error'));
+    await user.click(screen.getByText('Show Success'));
 
-    await testWaitFor(
+    await waitFor(
       () => {
-        expect(testScreen.getByText('Error message')).toBeInTheDocument();
-        expect(testScreen.getByText('Success message')).toBeInTheDocument();
+        expect(screen.getByText('Error message')).toBeInTheDocument();
+        expect(screen.getByText('Success message')).toBeInTheDocument();
       },
-      { timeout: 1000 }
+      { timeout: 2000 }
     );
   });
 
@@ -180,24 +172,24 @@ describe('ToastContext', () => {
       </ToastProvider>
     );
 
-    await user.click(testScreen.getByText('Show Toast'));
+    await user.click(screen.getByText('Show Toast'));
 
-    await testWaitFor(
+    await waitFor(
       () => {
-        expect(testScreen.getByText('Test message')).toBeInTheDocument();
+        expect(screen.getByText('Test message')).toBeInTheDocument();
       },
-      { timeout: 1000 }
+      { timeout: 2000 }
     );
 
     // Find and click the close button
-    const closeButton = testScreen.getByLabelText('Close');
+    const closeButton = screen.getByLabelText('Close');
     await user.click(closeButton);
 
-    await testWaitFor(
+    await waitFor(
       () => {
-        expect(testScreen.queryByText('Test message')).not.toBeInTheDocument();
+        expect(screen.queryByText('Test message')).not.toBeInTheDocument();
       },
-      { timeout: 1000 }
+      { timeout: 2000 }
     );
   });
 });

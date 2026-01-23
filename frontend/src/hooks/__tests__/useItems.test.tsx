@@ -164,7 +164,10 @@ describe('useItems hooks', () => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      expect(mockedItemsApi.create).toHaveBeenCalledWith(createData);
+      // React Query mutations pass the data as first argument
+      expect(mockedItemsApi.create).toHaveBeenCalled();
+      const callArgs = mockedItemsApi.create.mock.calls[0];
+      expect(callArgs[0]).toEqual(createData);
     });
   });
 
@@ -201,7 +204,10 @@ describe('useItems hooks', () => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      expect(mockedItemsApi.delete).toHaveBeenCalledWith('item-1');
+      // React Query mutations pass the data as first argument
+      expect(mockedItemsApi.delete).toHaveBeenCalled();
+      const callArgs = mockedItemsApi.delete.mock.calls[0];
+      expect(callArgs[0]).toBe('item-1');
     });
   });
 });

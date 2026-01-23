@@ -152,6 +152,26 @@ export interface TagResponse {
 	created_at: Date;
 }
 
+export interface CreateTagRequest {
+	name: string;
+}
+
+export interface UpdateTagRequest {
+	name?: string;
+}
+
+export interface AssignTagsRequest {
+	entity_type: string;
+	entity_id: string;
+	tag_ids: string[];
+}
+
+export interface BulkAssignTagsRequest {
+	entity_type: string;
+	entity_ids: string[];
+	tag_ids: string[];
+}
+
 export interface Item {
 	id: string;
 	shelf_id?: string;

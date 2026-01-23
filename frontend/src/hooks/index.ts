@@ -5,6 +5,7 @@ export * from './useContainers';
 export * from './useItems';
 export * from './usePhotos';
 export * from './useLabels';
+export * from './useTags';
 export * from './useAudit';
 export * from './useMove';
 export * from './useItemImportDrafts';

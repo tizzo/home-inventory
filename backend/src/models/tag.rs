@@ -32,6 +32,34 @@ pub struct TagResponse {
     pub created_at: DateTime<Utc>,
 }
 
+#[typeshare]
+#[derive(Debug, Deserialize)]
+pub struct CreateTagRequest {
+    pub name: String,
+}
+
+#[typeshare]
+#[derive(Debug, Deserialize)]
+pub struct UpdateTagRequest {
+    pub name: Option<String>,
+}
+
+#[typeshare]
+#[derive(Debug, Deserialize)]
+pub struct AssignTagsRequest {
+    pub entity_type: String,
+    pub entity_id: Uuid,
+    pub tag_ids: Vec<Uuid>,
+}
+
+#[typeshare]
+#[derive(Debug, Deserialize)]
+pub struct BulkAssignTagsRequest {
+    pub entity_type: String,
+    pub entity_ids: Vec<Uuid>,
+    pub tag_ids: Vec<Uuid>,
+}
+
 impl From<Tag> for TagResponse {
     fn from(tag: Tag) -> Self {
         Self {

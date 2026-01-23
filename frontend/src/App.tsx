@@ -10,6 +10,7 @@ import {
   ContainerContentsPage,
   ItemsPage,
   LabelsPage,
+  TagsPage,
   AuditLogPage,
   QRScanPage,
   ItemImportDraftPage,
@@ -99,6 +100,14 @@ function NavBar() {
                   className={location.pathname.startsWith('/labels') ? 'active' : ''}
                 >
                   Labels
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/tags"
+                  className={location.pathname.startsWith('/tags') ? 'active' : ''}
+                >
+                  Tags
                 </Link>
               </li>
               <li>
@@ -198,6 +207,8 @@ function App() {
                     element={<ItemsPage />}
                   />
                   <Route path="/labels" element={<LabelsPage />} />
+                  <Route path="/tags" element={<TagsPage />} />
+                  <Route path="/tags/:tagId/edit" element={<TagsPage />} />
                   <Route path="/audit" element={<AuditLogPage />} />
                   <Route path="/scan" element={<QRScanPage />} />
                   <Route path="/drafts/:draftId" element={<ItemImportDraftPage />} />

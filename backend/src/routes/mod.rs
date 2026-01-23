@@ -10,6 +10,7 @@ pub mod photos;
 pub mod rooms;
 pub mod shelves;
 pub mod shelving_units;
+pub mod tags;
 
 // Re-export for convenience
 pub use audit::*;
@@ -24,3 +25,4 @@ pub use r#move::*;
 pub use rooms::*;
 pub use shelves::*;
 pub use shelving_units::*;
+pub use tags::*;

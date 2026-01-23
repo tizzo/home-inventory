@@ -14,6 +14,7 @@ import {
   useShelvingUnit,
   useRoom,
   usePhotos,
+  useEntityTags,
 } from '../hooks';
 import { Modal, PhotoUpload, PhotoGallery, Pagination, MoveModal, EntityCreateModal } from '../components';
 import type { EntityType } from '../components/EntitySelector';
@@ -263,6 +264,7 @@ export default function ItemsPage() {
     moveItemPending: boolean;
   }) {
     const { data: photos } = usePhotos('item', item.id);
+    const { data: tags } = useEntityTags('item', item.id);
     const firstPhoto = photos && photos.length > 0 ? photos[0] : null;
 
     return (
@@ -314,6 +316,15 @@ export default function ItemsPage() {
         )}
         {item.description && (
           <p className="room-description">{item.description}</p>
+        )}
+        {tags && tags.length > 0 && (
+          <div className="tags-list">
+            {tags.map((tag) => (
+              <span key={tag.id} className="tag">
+                {tag.name}
+              </span>
+            ))}
+          </div>
         )}
         <div className="room-meta">
           <small>

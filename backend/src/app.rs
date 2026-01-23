@@ -162,6 +162,7 @@ pub async fn create_app(db: PgPool) -> anyhow::Result<Router> {
         .merge(crate::routes::item_import_draft_routes())
         .merge(crate::routes::photo_routes())
         .merge(crate::routes::label_routes())
+        .merge(crate::routes::tag_routes())
         .merge(crate::routes::move_routes())
         .merge(crate::routes::audit_routes())
         .route_layer(axum::middleware::from_fn(

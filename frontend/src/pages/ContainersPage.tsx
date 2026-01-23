@@ -15,6 +15,7 @@ import {
   useRoom,
   usePhotos,
   useItemsByContainer,
+  useEntityTags,
 } from '../hooks';
 import { Modal, PhotoUpload, PhotoGallery, Pagination, MoveModal, EntityCreateModal, ImportItemsFromPhoto } from '../components';
 import type { EntityType } from '../components/EntitySelector';
@@ -217,6 +218,7 @@ export default function ContainersPage() {
     moveContainerPending: boolean;
   }) => {
     const { data: photos } = usePhotos('container', container.id);
+    const { data: tags } = useEntityTags('container', container.id);
     const { data: itemsData } = useItemsByContainer(container.id, { limit: 5, offset: 0 });
     const { data: childContainers } = useContainersByParent(container.id, { limit: 5, offset: 0 });
     const firstPhoto = photos && photos.length > 0 ? photos[0] : null;
@@ -266,6 +268,15 @@ export default function ContainersPage() {
         )}
         {container.description && (
           <p className="room-description">{container.description}</p>
+        )}
+        {tags && tags.length > 0 && (
+          <div className="tags-list">
+            {tags.map((tag) => (
+              <span key={tag.id} className="tag">
+                {tag.name}
+              </span>
+            ))}
+          </div>
         )}
         <div className="room-meta">
           <small>

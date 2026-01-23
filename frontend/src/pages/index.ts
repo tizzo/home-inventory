@@ -7,5 +7,6 @@ export { default as ContainerContentsPage } from './ContainerContentsPage';
 export { default as ItemsPage } from './ItemsPage';
 export { default as AuditLogPage } from './AuditLogPage';
 export { default as LabelsPage } from './LabelsPage';
+export { default as TagsPage } from './TagsPage';
 export { default as QRScanPage } from './QRScanPage';
 export { default as ItemImportDraftPage } from './ItemImportDraftPage';

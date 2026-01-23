@@ -102,6 +102,7 @@ function NavBar() {
                   Labels
                 </Link>
               </li>
+<<<<<<< HEAD
               <li>
                 <Link
                   to="/tags"
@@ -118,6 +119,8 @@ function NavBar() {
                   Audit Logs
                 </Link>
               </li>
+=======
+>>>>>>> 5f405bd (feat: improve frontend UI - hide scan button when logged out, style Google login, move audit to dropdown)
             </>
           )}
 

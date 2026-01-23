@@ -810,22 +810,34 @@ body {
 }
 
 .btn-login-google {
-  display: inline-block;
-  background-color: var(--card-bg);
-  /* Use card background for consistency */
-  color: var(--text-primary);
-  padding: 0.5rem 1rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  background-color: white;
+  color: #3c4043;
+  padding: 0.625rem 1.25rem;
   border-radius: 4px;
-  /* Slightly rounded */
   text-decoration: none;
   font-weight: 500;
-  border: 1px solid var(--border-color);
-  transition: background-color 0.2s;
+  font-size: 0.9375rem;
+  border: 1px solid #dadce0;
+  transition: all 0.2s;
   cursor: pointer;
+  box-shadow: 0 1px 2px 0 rgba(60, 64, 67, 0.1);
 }
 
 .btn-login-google:hover {
-  background-color: var(--bg-secondary);
+  background-color: #f8f9fa;
+  box-shadow: 0 1px 3px 0 rgba(60, 64, 67, 0.2);
+}
+
+.btn-login-google:active {
+  background-color: #f1f3f4;
+  box-shadow: 0 1px 1px 0 rgba(60, 64, 67, 0.1);
+}
+
+.google-logo {
+  flex-shrink: 0;
 }
 
 /* User Menu */
@@ -926,6 +938,7 @@ body {
   cursor: pointer;
   transition: background-color 0.2s;
   font-size: 0.95rem;
+  text-decoration: none;
 }
 
 .dropdown-item:hover {

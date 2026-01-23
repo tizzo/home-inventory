@@ -17,6 +17,7 @@ import {
   useItemsByContainer,
   useEntityTags,
 } from '../hooks';
+import { useAuth } from '../hooks/useAuth';
 import { Modal, PhotoUpload, PhotoGallery, Pagination, MoveModal, EntityCreateModal, ImportItemsFromPhoto } from '../components';
 import type { EntityType } from '../components/EntitySelector';
 import type {
@@ -75,6 +76,7 @@ export default function ContainersPage() {
   const deleteContainer = useDeleteContainer();
   const moveContainer = useMoveContainer();
   const { showSuccess } = useToast();
+  const { user } = useAuth();
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [moveModalContainer, setMoveModalContainer] = useState<ContainerResponse | null>(null);
@@ -314,7 +316,7 @@ export default function ContainersPage() {
           >
             View Contents
           </Link>
-          <ImportItemsFromPhoto containerId={container.id} />
+          {user && <ImportItemsFromPhoto containerId={container.id} />}
         </div>
       </div>
     );

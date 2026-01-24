@@ -15,8 +15,10 @@ import {
   useRoom,
   usePhotos,
   useEntityTags,
+  useAssignTags,
+  useCreateTag,
 } from '../hooks';
-import { Modal, PhotoUpload, PhotoGallery, Pagination, MoveModal, EntityCreateModal } from '../components';
+import { Modal, PhotoUpload, PhotoGallery, Pagination, MoveModal, EntityCreateModal, TagSelector } from '../components';
 import type { EntityType } from '../components/EntitySelector';
 import type {
   UpdateItemRequest,
@@ -84,6 +86,8 @@ export default function ItemsPage() {
   const updateItem = useUpdateItem();
   const deleteItem = useDeleteItem();
   const moveItem = useMoveItem();
+  const assignTags = useAssignTags();
+  const createTag = useCreateTag();
   const { showError, showSuccess } = useToast();
 
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -94,9 +98,13 @@ export default function ItemsPage() {
     barcode: '',
     barcode_type: '',
   });
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
 
   // Get the item being edited from URL
   const editingItem = items?.find((i) => i.id === itemId);
+
+  // Load current tags when editing
+  const { data: currentTags } = useEntityTags('item', editingItem?.id || '');
 
   // Sync pagination with URL search params
   useEffect(() => {
@@ -120,6 +128,16 @@ export default function ItemsPage() {
       });
     }
   }, [itemId, editingItem]);
+
+  // Initialize tags when opening edit modal
+  useEffect(() => {
+    if (itemId && editingItem && currentTags) {
+      setSelectedTagIds(currentTags.map((tag) => tag.id));
+    } else if (!itemId) {
+      // Clear tags when closing modal
+      setSelectedTagIds([]);
+    }
+  }, [itemId, editingItem, currentTags]);
 
   // Handle search input change
   const handleSearchChange = (value: string) => {
@@ -155,9 +173,10 @@ export default function ItemsPage() {
 
   const handleEdit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!itemId) return;
+    if (!itemId || !editingItem) return;
 
     try {
+      // Update the item first
       await updateItem.mutateAsync({
         id: itemId,
         data: {
@@ -166,7 +185,16 @@ export default function ItemsPage() {
           barcode_type: editFormData.barcode_type || undefined,
         },
       });
+
+      // Then assign tags
+      await assignTags.mutateAsync({
+        entity_type: 'item',
+        entity_id: editingItem.id,
+        tag_ids: selectedTagIds,
+      });
+
       setEditFormData({ name: '', description: '', barcode: '', barcode_type: '' });
+      setSelectedTagIds([]);
       showSuccess('Item updated successfully');
       if (shelfId) {
         navigate(`/shelves/${shelfId}/items`);
@@ -220,6 +248,7 @@ export default function ItemsPage() {
       navigate('/items');
     }
     setEditFormData({ name: '', description: '', barcode: '', barcode_type: '' });
+    setSelectedTagIds([]);
   };
 
   const openCreateModal = () => {
@@ -516,6 +545,22 @@ export default function ItemsPage() {
               placeholder="e.g., UPC, EAN, QR"
             />
           </div>
+
+          {editingItem && (
+            <div className="form-group">
+              <TagSelector
+                label="Tags"
+                value={selectedTagIds}
+                onChange={setSelectedTagIds}
+                placeholder="Select tags..."
+                allowCreate={true}
+                onCreateTag={async (name: string) => {
+                  const newTag = await createTag.mutateAsync({ name });
+                  return newTag;
+                }}
+              />
+            </div>
+          )}
 
           {editingItem && (
             <div className="form-group">

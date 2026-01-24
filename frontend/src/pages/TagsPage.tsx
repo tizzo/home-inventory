@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useTags, useCreateTag, useUpdateTag, useDeleteTag } from '../hooks';
 import { Modal, Pagination } from '../components';
 import { useToast } from '../context/ToastContext';
-import type { CreateTagRequest, UpdateTagRequest, TagResponse } from '../types/generated';
+import type { CreateTagRequest, UpdateTagRequest } from '../types/generated';
 
 export default function TagsPage() {
   const navigate = useNavigate();

@@ -31,17 +31,27 @@ MinIO (S3-compatible storage) setup for local photo storage.
 Frontend-specific setup and configuration.
 
 ### [backend/GOOGLE_AUTH_SETUP.md](./backend/GOOGLE_AUTH_SETUP.md)
-Google OAuth configuration and setup.
+Google OAuth configuration - how to obtain credentials from Google Console.
 
 ## 📋 Implementation Notes
 
 ### [REFACTORING_NEXT_STEPS.md](./REFACTORING_NEXT_STEPS.md)
 Component refactoring opportunities - replacing manual modals with reusable components.
 
+## 🏗️ Architecture Documentation
+
+### [docs/AUTHENTICATION.md](./docs/AUTHENTICATION.md)
+**Complete authentication architecture guide** - OAuth flow, code locations, common issues, and fixes.
+**Read this** when working on login/auth functionality.
+
 ## 🤖 AI Assistant Instructions
 
+### [CLAUDE.md](./CLAUDE.md)
+**Quick start guide for Claude Code** - where to find documentation for common tasks.
+**Start here** to quickly navigate to relevant docs.
+
 ### [AGENTS.md](./AGENTS.md)
-**Project-wide rules** for AI assistants (Cascade/Windsurf).  
+**Project-wide rules** for AI assistants (Cascade/Windsurf).
 Contains architecture decisions, conventions, and quality gates.
 
 ### [backend/AGENTS.md](./backend/AGENTS.md)
@@ -64,12 +74,14 @@ The following files have been removed as they're now outdated or redundant:
 - ~~`LABEL_PDF_FLOW.md`~~ - Implementation complete, details in code
 - ~~`PHOTO_UPLOAD_SETUP.md`~~ - Implementation complete, covered in QUICK_START.md
 - ~~`START_MINIO.md`~~ - Redundant with MINIO_SETUP.md
-- ~~`CLAUDE.md`~~ - Redundant with AGENTS.md
 - ~~`WINDSURF_RULES.md`~~ - Redundant with AGENTS.md
 - ~~`WINDSURF_SETUP.md`~~ - Not needed, AGENTS.md files are auto-detected
 - ~~`WINDSURF_WORKFLOWS.md`~~ - Not needed, workflows covered in DEVELOPMENT.md
 
 ## 🎯 Where to Start
+
+**AI Assistant (Claude Code)?**
+1. Read [CLAUDE.md](./CLAUDE.md) - Quick navigation guide to find relevant docs for any task
 
 **New to the project?**
 1. Read [README.md](./README.md) for overview
@@ -82,6 +94,10 @@ The following files have been removed as they're now outdated or redundant:
 2. Check [DEVELOPMENT.md](./DEVELOPMENT.md) for workflows
 3. Review [TODO.md](./TODO.md) for available tasks
 4. See [REFACTORING_NEXT_STEPS.md](./REFACTORING_NEXT_STEPS.md) for refactoring opportunities
+
+**Working on authentication?**
+1. Read [docs/AUTHENTICATION.md](./docs/AUTHENTICATION.md) for complete architecture
+2. Check [backend/GOOGLE_AUTH_SETUP.md](./backend/GOOGLE_AUTH_SETUP.md) for OAuth setup
 
 **Setting up infrastructure?**
 1. Follow [QUICK_START.md](./QUICK_START.md) for complete setup
@@ -108,4 +124,4 @@ This index should be updated whenever:
 - Major changes are made to existing docs
 - Project structure changes significantly
 
-**Last Updated**: December 2024
+**Last Updated**: January 2025

@@ -102,7 +102,6 @@ function NavBar() {
                   Labels
                 </Link>
               </li>
-<<<<<<< HEAD
               <li>
                 <Link
                   to="/tags"
@@ -111,16 +110,6 @@ function NavBar() {
                   Tags
                 </Link>
               </li>
-              <li>
-                <Link
-                  to="/audit"
-                  className={location.pathname.startsWith('/audit') ? 'active' : ''}
-                >
-                  Audit Logs
-                </Link>
-              </li>
-=======
->>>>>>> 5f405bd (feat: improve frontend UI - hide scan button when logged out, style Google login, move audit to dropdown)
             </>
           )}
 

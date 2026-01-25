@@ -22,33 +22,35 @@ This document helps Claude Code quickly find relevant documentation and understa
 - Environment variables
 
 ### Understanding Current State
-📖 **Read First**: [CURRENT_STATUS.md](./CURRENT_STATUS.md)
-- What's implemented
+📖 **Read First**: [docs/PROJECT_STATUS.md](./docs/PROJECT_STATUS.md)
+- What's implemented (95%+ feature complete!)
 - What's in progress
 - What's next
 
 ### Adding New Features
 📖 **Read First**:
 - [AGENTS.md](./AGENTS.md) - Project-wide rules and conventions
-- [DEVELOPMENT.md](./DEVELOPMENT.md) - Development workflows
+- [docs/DEVELOPMENT.md](./docs/DEVELOPMENT.md) - Development workflows
 - [TODO.md](./TODO.md) - Planned features and priorities
+- [docs/REFACTORING.md](./docs/REFACTORING.md) - Component refactoring opportunities
 
 ### Backend Work
 📖 **Read First**: [backend/AGENTS.md](./backend/AGENTS.md)
 - Backend-specific conventions
-- Database migration rules
+- Database migration rules (**CRITICAL**: Never edit existing migrations!)
 - Quality gates (clippy, tests, etc.)
 
 ### Frontend Work
 📖 **Read First**: [frontend/AGENTS.md](./frontend/AGENTS.md)
 - Frontend-specific conventions
 - Component patterns
-- Type generation from backend
+- Type generation: `npm run generate-types`
 
 ### Infrastructure Setup
+- **Quick Start**: [QUICK_START.md](./QUICK_START.md) - Get running in minutes
 - **Google OAuth**: [backend/GOOGLE_AUTH_SETUP.md](./backend/GOOGLE_AUTH_SETUP.md)
-- **MinIO Storage**: [MINIO_SETUP.md](./MINIO_SETUP.md)
-- **Frontend Config**: [FRONTEND_SETUP.md](./FRONTEND_SETUP.md)
+- **MinIO Storage**: [docs/MINIO_SETUP.md](./docs/MINIO_SETUP.md)
+- **Frontend**: [docs/FRONTEND_SETUP.md](./docs/FRONTEND_SETUP.md) (historical reference)
 
 ## Architecture Quick Reference
 
@@ -87,21 +89,25 @@ frontend/
 docs/                  # Architecture documentation
 ```
 
-## Important Rules
+## Critical Rules (Read Before Making Changes!)
 
-### Database Migrations
-⚠️ **NEVER edit existing migrations!** Always create new ones.
+### 🚨 Database Migrations
+**NEVER edit existing migrations!** Always create new ones.
 - SQLx checksums migrations; editing causes `VersionMismatch` errors
+- Fix forward: create new migration, don't modify old ones
 - See [AGENTS.md](./AGENTS.md) for full details
 
-### Type Sharing
-- Backend models use `typeshare` to generate TypeScript types
-- After modifying backend models: `cd frontend && npm run generate-types`
+### 🔄 Type Sharing
+Backend Rust → Frontend TypeScript types via `typeshare`:
+```bash
+cd frontend && npm run generate-types
+```
+Run this after modifying any backend models!
 
-### Deep Linking
-- Every discrete UI state must have a deep-linkable URL
-- Use React Router for navigation
-- Modal states, filters, tabs should be in URL when possible
+### 🔗 Deep Linking
+Every UI state must have a deep-linkable URL:
+- Pages, modals, filters, search results - all in URL
+- Users must be able to bookmark and share any state
 
 ## Quality Gates Checklist
 

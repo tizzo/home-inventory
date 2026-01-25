@@ -304,8 +304,8 @@ See [README.md](./README.md) for full deployment instructions.
 
 After getting everything running:
 
-1. **Read the docs**: Check [CURRENT_STATUS.md](./CURRENT_STATUS.md) to see what's implemented
+1. **Read the docs**: Check [docs/PROJECT_STATUS.md](./docs/PROJECT_STATUS.md) to see what's implemented
 2. **Try features**: Create some rooms, add items, upload photos
 3. **Explore AI**: Try the photo analysis feature (needs Anthropic API key)
 4. **Check TODOs**: See [TODO.md](./TODO.md) for planned features
-5. **Contribute**: Review [REFACTORING_NEXT_STEPS.md](./REFACTORING_NEXT_STEPS.md) for opportunities
+5. **Contribute**: Review [docs/REFACTORING.md](./docs/REFACTORING.md) for opportunities

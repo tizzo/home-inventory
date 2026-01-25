@@ -37,10 +37,10 @@
 ---
 
 ### Component Refactoring
-**Status**: Partially complete  
+**Status**: Partially complete
 **Effort**: 1 day
 
-From `REFACTORING_NEXT_STEPS.md`:
+From [docs/REFACTORING.md](./docs/REFACTORING.md):
 
 - [ ] Replace move modals in ItemsPage with `MoveModal` component
 - [ ] Replace move modals in ContainersPage with `MoveModal` component  

@@ -7,8 +7,8 @@ This document provides an overview of all documentation files in this repository
 ### [README.md](./README.md)
 Main project overview, architecture, setup instructions, and API reference.
 
-### [CURRENT_STATUS.md](./CURRENT_STATUS.md)
-**Current implementation status** - what's done, what's in progress, and what's next.  
+### [docs/PROJECT_STATUS.md](./docs/PROJECT_STATUS.md)
+**Current implementation status** - what's done, what's in progress, and what's next.
 **Read this first** to understand the project's current state.
 
 ### [TODO.md](./TODO.md)
@@ -19,30 +19,28 @@ Comprehensive list of all planned features, improvements, and tasks organized by
 ### [QUICK_START.md](./QUICK_START.md)
 Fast-track guide to get the system running locally in minutes.
 
-### [DEVELOPMENT.md](./DEVELOPMENT.md)
+### [docs/DEVELOPMENT.md](./docs/DEVELOPMENT.md)
 Detailed development workflow, conventions, and best practices.
-
-## 🔧 Setup Guides
-
-### [MINIO_SETUP.md](./MINIO_SETUP.md)
-MinIO (S3-compatible storage) setup for local photo storage.
-
-### [FRONTEND_SETUP.md](./FRONTEND_SETUP.md)
-Frontend-specific setup and configuration.
-
-### [backend/GOOGLE_AUTH_SETUP.md](./backend/GOOGLE_AUTH_SETUP.md)
-Google OAuth configuration - how to obtain credentials from Google Console.
-
-## 📋 Implementation Notes
-
-### [REFACTORING_NEXT_STEPS.md](./REFACTORING_NEXT_STEPS.md)
-Component refactoring opportunities - replacing manual modals with reusable components.
 
 ## 🏗️ Architecture Documentation
 
 ### [docs/AUTHENTICATION.md](./docs/AUTHENTICATION.md)
 **Complete authentication architecture guide** - OAuth flow, code locations, common issues, and fixes.
 **Read this** when working on login/auth functionality.
+
+### [docs/REFACTORING.md](./docs/REFACTORING.md)
+Component refactoring guide - replacing manual modals with reusable components, code patterns.
+
+## 🔧 Setup Guides
+
+### [docs/MINIO_SETUP.md](./docs/MINIO_SETUP.md)
+MinIO (S3-compatible storage) setup for local photo storage.
+
+### [docs/FRONTEND_SETUP.md](./docs/FRONTEND_SETUP.md)
+Frontend-specific setup and configuration (mostly historical reference).
+
+### [backend/GOOGLE_AUTH_SETUP.md](./backend/GOOGLE_AUTH_SETUP.md)
+Google OAuth configuration - how to obtain credentials from Google Console.
 
 ## 🤖 AI Assistant Instructions
 
@@ -65,18 +63,18 @@ Frontend-specific rules for AI assistants.
 
 The following files have been removed as they're now outdated or redundant:
 
-- ~~`NEXT_STEPS.md`~~ - Replaced by `CURRENT_STATUS.md` and `TODO.md`
-- ~~`PHASE_2_WORKLIST.md`~~ - Phase 2 is complete
+- ~~`NEXT_STEPS.md`~~ - Replaced by `docs/PROJECT_STATUS.md` and `TODO.md`
+- ~~`PHASE_2_WORKLIST.md`~~ - Empty, phase 2 complete
 - ~~`ROOMS_CRUD.md`~~ - Implementation complete
 - ~~`TESTING.md`~~ - Basic testing info, needs comprehensive update
 - ~~`MODAL_IMPLEMENTATION.md`~~ - Implementation complete
 - ~~`PHOTO_UPLOAD_TROUBLESHOOTING.md`~~ - Issues resolved
 - ~~`LABEL_PDF_FLOW.md`~~ - Implementation complete, details in code
 - ~~`PHOTO_UPLOAD_SETUP.md`~~ - Implementation complete, covered in QUICK_START.md
-- ~~`START_MINIO.md`~~ - Redundant with MINIO_SETUP.md
-- ~~`WINDSURF_RULES.md`~~ - Redundant with AGENTS.md
-- ~~`WINDSURF_SETUP.md`~~ - Not needed, AGENTS.md files are auto-detected
-- ~~`WINDSURF_WORKFLOWS.md`~~ - Not needed, workflows covered in DEVELOPMENT.md
+- ~~`START_MINIO.md`~~ - Redundant with docs/MINIO_SETUP.md
+- ~~`WINDSURF_RULES.md`~~ - Empty, redundant with AGENTS.md
+- ~~`WINDSURF_SETUP.md`~~ - Empty, not needed
+- ~~`WINDSURF_WORKFLOWS.md`~~ - Empty, workflows covered in docs/DEVELOPMENT.md
 
 ## 🎯 Where to Start
 
@@ -85,15 +83,15 @@ The following files have been removed as they're now outdated or redundant:
 
 **New to the project?**
 1. Read [README.md](./README.md) for overview
-2. Check [CURRENT_STATUS.md](./CURRENT_STATUS.md) for what's implemented
+2. Check [docs/PROJECT_STATUS.md](./docs/PROJECT_STATUS.md) for what's implemented
 3. Follow [QUICK_START.md](./QUICK_START.md) to run locally
 4. Review [TODO.md](./TODO.md) to see what's next
 
 **Contributing?**
 1. Read [AGENTS.md](./AGENTS.md) for project rules
-2. Check [DEVELOPMENT.md](./DEVELOPMENT.md) for workflows
+2. Check [docs/DEVELOPMENT.md](./docs/DEVELOPMENT.md) for workflows
 3. Review [TODO.md](./TODO.md) for available tasks
-4. See [REFACTORING_NEXT_STEPS.md](./REFACTORING_NEXT_STEPS.md) for refactoring opportunities
+4. See [docs/REFACTORING.md](./docs/REFACTORING.md) for refactoring opportunities
 
 **Working on authentication?**
 1. Read [docs/AUTHENTICATION.md](./docs/AUTHENTICATION.md) for complete architecture
@@ -101,9 +99,9 @@ The following files have been removed as they're now outdated or redundant:
 
 **Setting up infrastructure?**
 1. Follow [QUICK_START.md](./QUICK_START.md) for complete setup
-2. [MINIO_SETUP.md](./MINIO_SETUP.md) for photo storage details
+2. [docs/MINIO_SETUP.md](./docs/MINIO_SETUP.md) for photo storage details
 3. [backend/GOOGLE_AUTH_SETUP.md](./backend/GOOGLE_AUTH_SETUP.md) for authentication
-4. [FRONTEND_SETUP.md](./FRONTEND_SETUP.md) for frontend config
+4. [docs/FRONTEND_SETUP.md](./docs/FRONTEND_SETUP.md) for frontend config (historical reference)
 
 ## 📝 Documentation Standards
 

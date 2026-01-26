@@ -2,6 +2,51 @@
 
 This document helps Claude Code quickly find relevant documentation and understand the codebase structure.
 
+## 🎯 Project at a Glance
+
+**Home Inventory System** - Full-stack inventory management with AI-powered photo analysis.
+
+**Status**: 🟢 **95%+ feature complete** - Production ready for basic use
+
+**Scale**:
+- ~50 API endpoints
+- 10 main pages, 15+ reusable components
+- 12 database tables
+- ~15,000 lines of code (backend + frontend)
+- Test coverage: Minimal (needs work)
+
+**Key Features**:
+- ✅ Complete CRUD for all entity types
+- ✅ Google OAuth authentication
+- ✅ Photo upload/storage (MinIO/S3)
+- ✅ QR code labels and scanning
+- ✅ AI-powered item recognition (Claude Vision)
+- ✅ Audit logging with user tracking
+- ✅ Move operations between locations
+- ⏳ Tag management (backend ready, UI needed)
+- ⏳ Search/filtering (basic only)
+
+## 🏥 Quick Health Check
+
+Before starting work, verify the system is running:
+
+```bash
+# Check infrastructure
+docker compose ps                    # PostgreSQL + MinIO should be "Up"
+
+# Check backend
+curl http://localhost:3000/health   # Should return 200 OK
+
+# Check frontend
+curl -I http://localhost:5173       # Should return 200
+
+# Check database connection
+psql postgresql://postgres:devpass@localhost:5432/inventory -c "SELECT 1"
+
+# Check MinIO
+curl http://localhost:9000/minio/health/live  # Should return "OK"
+```
+
 ## Documentation Index
 
 **Start here**: [DOCUMENTATION.md](./DOCUMENTATION.md) - Complete index of all documentation files.
@@ -108,6 +153,60 @@ Run this after modifying any backend models!
 Every UI state must have a deep-linkable URL:
 - Pages, modals, filters, search results - all in URL
 - Users must be able to bookmark and share any state
+
+## ⚠️ Known Issues & Gotchas
+
+### Common Problems
+
+**Port Conflicts**
+- PostgreSQL: 5432
+- MinIO API: 9000
+- MinIO Console: 9001
+- Backend: 3000
+- Frontend: 5173
+
+If ports are in use: `lsof -ti:PORT | xargs kill -9`
+
+**MinIO Bucket**
+- Bucket auto-creates on backend startup
+- If you see "bucket not found", restart backend
+- Check backend logs for "Successfully created S3 bucket" message
+
+**Session/Auth Issues**
+- Session cookies require `withCredentials: true` in API client
+- Check `frontend/src/api/client.ts:5` and `frontend/src/hooks/useAuth.ts`
+- Sessions stored in PostgreSQL (not in-memory)
+- CORS issues if `APP_BASE_URL` doesn't match frontend URL
+
+**Type Mismatches**
+- Frontend types can get stale after backend changes
+- Always run `npm run generate-types` after modifying Rust models
+- TypeScript errors often mean types need regeneration
+
+**Database Migrations**
+- If migration fails: Check backend logs for specific error
+- Never edit existing migration files (will cause VersionMismatch)
+- To reset local DB: `docker compose down -v postgres && docker compose up -d postgres`
+
+## 🚫 What NOT to Do (Anti-patterns)
+
+**Code Changes**:
+- ❌ Don't edit existing migrations - always create new ones
+- ❌ Don't break the domain hierarchy (Room → Unit → Shelf → Container → Item)
+- ❌ Don't skip `withCredentials: true` on API calls
+- ❌ Don't use `axios` directly - use the configured `apiClient`
+- ❌ Don't create markdown docs without adding to DOCUMENTATION.md
+
+**Git Workflow**:
+- ❌ Don't use `git add .` or `git add -A` - stage specific files by name
+- ❌ Don't commit without running quality gates (fmt, clippy, lint, build)
+- ❌ Don't push to main without PR (if team workflow is established)
+
+**Development**:
+- ❌ Don't skip type generation after backend changes
+- ❌ Don't hard-code API URLs - use environment variables
+- ❌ Don't add features without checking TODO.md first
+- ❌ Don't refactor without tests (when they exist)
 
 ## Quality Gates Checklist
 

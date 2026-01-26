@@ -1,8 +1,8 @@
 import { useParams, Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { itemsApi, photosApi } from '../api';
+import { useQuery } from '@tantml:parameter>
+import { itemsApi, photosApi, containersApi, shelvesApi } from '../api';
 import { useAuth } from '../hooks/useAuth';
-import type { ItemResponse, PublicItemResponse, PhotoResponse } from '../types/generated';
+import type { ItemResponse, PublicItemResponse, PhotoResponse, ContainerResponse, ShelfResponse } from '../types/generated';
 
 export default function ItemViewPage() {
   const { itemId } = useParams<{ itemId: string }>();
@@ -33,6 +33,19 @@ export default function ItemViewPage() {
     queryKey: ['file-download-url', fullItem?.receipt_s3_key],
     queryFn: () => itemsApi.getFileDownloadUrl(fullItem!.receipt_s3_key!),
     enabled: !!fullItem?.receipt_s3_key,
+  });
+
+  // Fetch parent context (container or shelf)
+  const { data: parentContainer } = useQuery<ContainerResponse>({
+    queryKey: ['containers', fullItem?.container_id],
+    queryFn: () => containersApi.getById(fullItem!.container_id!),
+    enabled: !!fullItem?.container_id,
+  });
+
+  const { data: parentShelf } = useQuery<ShelfResponse>({
+    queryKey: ['shelves', fullItem?.shelf_id],
+    queryFn: () => shelvesApi.getById(fullItem!.shelf_id!),
+    enabled: !!fullItem?.shelf_id && !fullItem?.container_id, // Only fetch if no container
   });
 
   // Fetch photos for the item (only if authenticated or silently fail for public view)
@@ -74,7 +87,30 @@ export default function ItemViewPage() {
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <div className="bg-white shadow-lg rounded-lg p-6">
           <div className="flex items-center justify-between mb-6">
-            <h1 className="text-3xl font-bold text-gray-900">{fullItem.name}</h1>
+            <div>
+              {(parentContainer || parentShelf) && (
+                <div className="text-sm text-gray-500 mb-2">
+                  <Link to="/items" className="hover:text-gray-700">Items</Link>
+                  {parentContainer && (
+                    <>
+                      <span className="mx-2">›</span>
+                      <Link to={`/containers/${parentContainer.id}/edit`} className="hover:text-gray-700">
+                        {parentContainer.name}
+                      </Link>
+                    </>
+                  )}
+                  {parentShelf && !parentContainer && (
+                    <>
+                      <span className="mx-2">›</span>
+                      <Link to={`/shelves/${parentShelf.id}/edit`} className="hover:text-gray-700">
+                        {parentShelf.name}
+                      </Link>
+                    </>
+                  )}
+                </div>
+              )}
+              <h1 className="text-3xl font-bold text-gray-900">{fullItem.name}</h1>
+            </div>
             <Link
               to={`/items/${itemId}/edit`}
               className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"

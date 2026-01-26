@@ -85,27 +85,9 @@ export default function ItemViewPage() {
   if (user && fullItem) {
     return (
       <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <div className="bg-white shadow-lg rounded-lg p-6 relative">
-          {/* Edit button - floating top right */}
-          <Link
-            to={`/items/${itemId}/edit`}
-            className="absolute top-6 right-6 inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors shadow-md hover:shadow-lg font-medium z-10"
-          >
-            <svg
-              width="16"
-              height="16"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              className="flex-shrink-0"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-            </svg>
-            Edit
-          </Link>
-
-          {/* Breadcrumb and title */}
-          <div className="mb-6 pr-20">
+        <div className="bg-white shadow-lg rounded-lg p-6">
+          {/* Header with breadcrumb, title, and edit button */}
+          <div className="mb-6">
             {(parentContainer || parentShelf) && (
               <div className="text-sm text-gray-500 mb-2">
                 <Link to="/items" className="hover:text-gray-700">Items</Link>
@@ -127,7 +109,25 @@ export default function ItemViewPage() {
                 )}
               </div>
             )}
-            <h1 className="text-3xl font-bold text-gray-900">{fullItem.name}</h1>
+            <div className="flex items-center justify-between gap-4">
+              <h1 className="text-3xl font-bold text-gray-900 flex-1">{fullItem.name}</h1>
+              <Link
+                to={`/items/${itemId}/edit`}
+                className="flex-shrink-0 inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors shadow-md hover:shadow-lg font-medium"
+              >
+                <svg
+                  width="16"
+                  height="16"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  className="flex-shrink-0"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                Edit
+              </Link>
+            </div>
           </div>
 
           {photos.length > 0 && (

@@ -127,7 +127,7 @@ export interface User {
 	id: string;
 	email: string;
 	name: string;
-	cognito_sub: string;
+	google_id: string;
 	public_display_name?: string;
 	created_at: Date;
 	updated_at: Date;
@@ -136,7 +136,7 @@ export interface User {
 export interface CreateUserRequest {
 	email: string;
 	name: string;
-	cognito_sub: string;
+	google_id: string;
 }
 
 export interface ContactSubmission {

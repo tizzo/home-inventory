@@ -11,7 +11,7 @@ pub struct User {
     pub id: Uuid,
     pub email: String,
     pub name: String,
-    pub cognito_sub: String,
+    pub google_id: String,
     pub public_display_name: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -23,5 +23,5 @@ pub struct User {
 pub struct CreateUserRequest {
     pub email: String,
     pub name: String,
-    pub cognito_sub: String,
+    pub google_id: String,
 }

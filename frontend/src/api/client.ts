@@ -21,7 +21,11 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    // Only redirect to login for protected endpoints (not public endpoints)
+    const isPublicEndpoint = error.config?.url?.includes('/public') ||
+                             (error.config?.url?.includes('/contact') && error.config?.method === 'post');
+
+    if (error.response?.status === 401 && !isPublicEndpoint) {
       // Redirect to login if unauthorized
       window.location.href = '/api/auth/login';
     }

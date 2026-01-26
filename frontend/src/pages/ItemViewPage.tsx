@@ -74,11 +74,12 @@ export default function ItemViewPage() {
             <div className="mb-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {photos.map((photo) => (
-                  <div key={photo.id} className="w-full max-w-md mx-auto">
+                  <div key={photo.id} className="flex justify-center items-center">
                     <img
                       src={photo.thumbnail_url || photo.url}
                       alt={fullItem.name}
-                      className="w-full h-auto max-h-96 object-contain rounded-lg border"
+                      style={{ maxWidth: '100%', maxHeight: '384px', width: 'auto', height: 'auto' }}
+                      className="rounded-lg border"
                     />
                   </div>
                 ))}

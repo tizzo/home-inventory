@@ -132,38 +132,39 @@ export default function ItemViewPage() {
                     href={fullItem.product_link}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    className="btn btn-primary"
                   >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                    </svg>
                     View Product Page
                   </a>
                 )}
-                {fullItem.product_manual_s3_key && manualUrl && (
+                {fullItem.product_manual_s3_key && (
                   <a
-                    href={manualUrl}
+                    href={manualUrl || '#'}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                    className="btn btn-secondary"
+                    onClick={(e) => {
+                      if (!manualUrl) {
+                        e.preventDefault();
+                      }
+                    }}
                   >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                    Product Manual
+                    {manualUrl ? 'View Manual' : 'Loading Manual...'}
                   </a>
                 )}
-                {fullItem.receipt_s3_key && receiptUrl && (
+                {fullItem.receipt_s3_key && (
                   <a
-                    href={receiptUrl}
+                    href={receiptUrl || '#'}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                    className="btn btn-secondary"
+                    onClick={(e) => {
+                      if (!receiptUrl) {
+                        e.preventDefault();
+                      }
+                    }}
                   >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                    Receipt
+                    {receiptUrl ? 'View Receipt' : 'Loading Receipt...'}
                   </a>
                 )}
               </div>

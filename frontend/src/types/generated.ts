@@ -44,6 +44,11 @@ export interface ItemResponse {
 	barcode?: string;
 	barcode_type?: string;
 	label_id?: string;
+	product_manual_s3_key?: string;
+	receipt_s3_key?: string;
+	product_link?: string;
+	belongs_to_user_id?: string;
+	acquired_date?: NaiveDate;
 	created_at: Date;
 	updated_at: Date;
 }
@@ -123,6 +128,7 @@ export interface User {
 	email: string;
 	name: string;
 	cognito_sub: string;
+	public_display_name?: string;
 	created_at: Date;
 	updated_at: Date;
 }
@@ -131,6 +137,37 @@ export interface CreateUserRequest {
 	email: string;
 	name: string;
 	cognito_sub: string;
+}
+
+export interface ContactSubmission {
+	id: string;
+	name: string;
+	email: string;
+	subject: string;
+	message: string;
+	item_id?: string;
+	ip_address?: string;
+	user_agent?: string;
+	created_at: Date;
+}
+
+export interface CreateContactSubmissionRequest {
+	name: string;
+	email: string;
+	subject: string;
+	message: string;
+	item_id?: string;
+	recaptcha_token: string;
+}
+
+export interface ContactSubmissionResponse {
+	id: string;
+	name: string;
+	email: string;
+	subject: string;
+	message: string;
+	item_id?: string;
+	created_at: Date;
 }
 
 export interface Tag {
@@ -181,6 +218,11 @@ export interface Item {
 	barcode?: string;
 	barcode_type?: string;
 	label_id?: string;
+	product_manual_s3_key?: string;
+	receipt_s3_key?: string;
+	product_link?: string;
+	belongs_to_user_id?: string;
+	acquired_date?: NaiveDate;
 	created_at: Date;
 	updated_at: Date;
 	created_by: string;
@@ -193,6 +235,11 @@ export interface CreateItemRequest {
 	description?: string;
 	barcode?: string;
 	barcode_type?: string;
+	product_manual_s3_key?: string;
+	receipt_s3_key?: string;
+	product_link?: string;
+	belongs_to_user_id?: string;
+	acquired_date?: NaiveDate;
 }
 
 export interface UpdateItemRequest {
@@ -202,6 +249,18 @@ export interface UpdateItemRequest {
 	container_id?: string;
 	barcode?: string;
 	barcode_type?: string;
+	product_manual_s3_key?: string;
+	receipt_s3_key?: string;
+	product_link?: string;
+	belongs_to_user_id?: string;
+	acquired_date?: NaiveDate;
+}
+
+export interface PublicItemResponse {
+	id: string;
+	name: string;
+	owner_display_name: string;
+	product_link?: string;
 }
 
 export interface BulkCreateItemsRequest {
@@ -244,6 +303,7 @@ export interface RoomResponse {
 export interface PaginationQuery {
 	limit?: number;
 	offset?: number;
+	search?: string;
 }
 
 export interface PaginatedResponse<T> {

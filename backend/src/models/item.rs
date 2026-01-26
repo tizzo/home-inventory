@@ -1,4 +1,4 @@
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use typeshare::typeshare;
@@ -15,6 +15,11 @@ pub struct Item {
     pub barcode: Option<String>,
     pub barcode_type: Option<String>,
     pub label_id: Option<Uuid>,
+    pub product_manual_s3_key: Option<String>,
+    pub receipt_s3_key: Option<String>,
+    pub product_link: Option<String>,
+    pub belongs_to_user_id: Option<Uuid>,
+    pub acquired_date: Option<NaiveDate>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub created_by: Uuid,
@@ -29,6 +34,11 @@ pub struct CreateItemRequest {
     pub description: Option<String>,
     pub barcode: Option<String>,
     pub barcode_type: Option<String>,
+    pub product_manual_s3_key: Option<String>,
+    pub receipt_s3_key: Option<String>,
+    pub product_link: Option<String>,
+    pub belongs_to_user_id: Option<Uuid>,
+    pub acquired_date: Option<NaiveDate>,
 }
 
 #[typeshare]
@@ -40,6 +50,11 @@ pub struct UpdateItemRequest {
     pub container_id: Option<Uuid>,
     pub barcode: Option<String>,
     pub barcode_type: Option<String>,
+    pub product_manual_s3_key: Option<String>,
+    pub receipt_s3_key: Option<String>,
+    pub product_link: Option<String>,
+    pub belongs_to_user_id: Option<Uuid>,
+    pub acquired_date: Option<NaiveDate>,
 }
 
 #[typeshare]
@@ -53,8 +68,22 @@ pub struct ItemResponse {
     pub barcode: Option<String>,
     pub barcode_type: Option<String>,
     pub label_id: Option<Uuid>,
+    pub product_manual_s3_key: Option<String>,
+    pub receipt_s3_key: Option<String>,
+    pub product_link: Option<String>,
+    pub belongs_to_user_id: Option<Uuid>,
+    pub acquired_date: Option<NaiveDate>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+}
+
+#[typeshare]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PublicItemResponse {
+    pub id: Uuid,
+    pub name: String,
+    pub owner_display_name: String,
+    pub product_link: Option<String>,
 }
 
 #[typeshare]
@@ -80,6 +109,11 @@ impl From<Item> for ItemResponse {
             barcode: item.barcode,
             barcode_type: item.barcode_type,
             label_id: item.label_id,
+            product_manual_s3_key: item.product_manual_s3_key,
+            receipt_s3_key: item.receipt_s3_key,
+            product_link: item.product_link,
+            belongs_to_user_id: item.belongs_to_user_id,
+            acquired_date: item.acquired_date,
             created_at: item.created_at,
             updated_at: item.updated_at,
         }

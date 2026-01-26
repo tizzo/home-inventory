@@ -12,6 +12,7 @@ pub struct User {
     pub email: String,
     pub name: String,
     pub cognito_sub: String,
+    pub public_display_name: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }

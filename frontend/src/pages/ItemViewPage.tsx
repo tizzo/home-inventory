@@ -89,7 +89,7 @@ export default function ItemViewPage() {
           {/* Edit button - floating top right */}
           <Link
             to={`/items/${itemId}/edit`}
-            className="absolute top-4 right-4 inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors shadow-md hover:shadow-lg font-medium z-10"
+            className="absolute top-6 right-6 inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors shadow-md hover:shadow-lg font-medium z-10"
           >
             <svg
               width="16"

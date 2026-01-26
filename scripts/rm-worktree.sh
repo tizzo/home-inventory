@@ -1,6 +1,5 @@
 #! /usr/bin/env bash
 
-cd $(dirname "$0")
 set -e
 
 if [ "$#" -ne 1 ]; then

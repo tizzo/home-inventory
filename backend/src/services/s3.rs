@@ -120,6 +120,26 @@ impl S3Service {
         Ok((upload_url, s3_key))
     }
 
+    /// Generate a presigned URL for uploading a file with a specific key
+    pub async fn generate_presigned_upload_url_for_key(
+        &self,
+        s3_key: &str,
+        content_type: &str,
+    ) -> anyhow::Result<String> {
+        let presigning_config = PresigningConfig::expires_in(Duration::from_secs(3600))?;
+
+        let presigned_request = self
+            .client
+            .put_object()
+            .bucket(&self.bucket)
+            .key(s3_key)
+            .content_type(content_type)
+            .presigned(presigning_config)
+            .await?;
+
+        Ok(presigned_request.uri().to_string())
+    }
+
     /// Generate a presigned URL for downloading/viewing a file
     pub async fn generate_presigned_download_url(&self, s3_key: &str) -> anyhow::Result<String> {
         let presigning_config = PresigningConfig::expires_in(Duration::from_secs(86400))?;

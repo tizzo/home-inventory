@@ -1,6 +1,6 @@
 pub mod audit;
 pub mod auth;
-
+pub mod contact;
 pub mod containers;
 pub mod item_import_drafts;
 pub mod items;
@@ -11,11 +11,12 @@ pub mod rooms;
 pub mod shelves;
 pub mod shelving_units;
 pub mod tags;
+pub mod users;
 
 // Re-export for convenience
 pub use audit::*;
 pub use auth::*;
-
+pub use contact::*;
 pub use containers::*;
 pub use item_import_drafts::*;
 pub use items::*;
@@ -26,3 +27,4 @@ pub use rooms::*;
 pub use shelves::*;
 pub use shelving_units::*;
 pub use tags::*;
+pub use users::*;

@@ -27,7 +27,7 @@ npm run lint               # ESLint (fix new issues only)
 1. **Small change** (1-5 files max)
 2. **Run quality gates** immediately
 3. **Fix any issues** that appear
-4. **Commit** with descriptive message
+4. **Commit** with descriptive message *never* attributed to claude or ai
 5. **Repeat** - Never accumulate uncommitted changes
 
 **Why this matters**: Catching issues immediately is 10x faster than debugging later. Small, verified commits make code review and rollback trivial.

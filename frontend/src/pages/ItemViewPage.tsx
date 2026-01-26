@@ -22,6 +22,19 @@ export default function ItemViewPage() {
     enabled: !!user && !!itemId,
   });
 
+  // Fetch presigned download URLs for documents
+  const { data: manualUrl } = useQuery({
+    queryKey: ['file-download-url', fullItem?.product_manual_s3_key],
+    queryFn: () => itemsApi.getFileDownloadUrl(fullItem!.product_manual_s3_key!),
+    enabled: !!fullItem?.product_manual_s3_key,
+  });
+
+  const { data: receiptUrl } = useQuery({
+    queryKey: ['file-download-url', fullItem?.receipt_s3_key],
+    queryFn: () => itemsApi.getFileDownloadUrl(fullItem!.receipt_s3_key!),
+    enabled: !!fullItem?.receipt_s3_key,
+  });
+
   // Fetch photos for the item (only if authenticated or silently fail for public view)
   const { data: photos = [] } = useQuery<PhotoResponse[]>({
     queryKey: ['photos', 'item', itemId],
@@ -108,39 +121,50 @@ export default function ItemViewPage() {
                 <p className="text-gray-700">{new Date(fullItem.acquired_date).toLocaleDateString()}</p>
               </div>
             )}
-
-            {fullItem.product_link && (
-              <div className="col-span-2">
-                <h3 className="text-sm font-semibold text-gray-500 uppercase mb-1">Product Link</h3>
-                <a
-                  href={fullItem.product_link}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600 hover:underline"
-                >
-                  {fullItem.product_link}
-                </a>
-              </div>
-            )}
           </div>
 
-          {(fullItem.product_manual_s3_key || fullItem.receipt_s3_key) && (
-            <div className="border-t pt-4">
-              <h2 className="text-sm font-semibold text-gray-500 uppercase mb-3">Documents</h2>
-              <div className="flex gap-4">
-                {fullItem.product_manual_s3_key && (
-                  <button
-                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
+          {(fullItem.product_link || fullItem.product_manual_s3_key || fullItem.receipt_s3_key) && (
+            <div className="border-t pt-6 mt-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Links & Documents</h2>
+              <div className="flex flex-wrap gap-3">
+                {fullItem.product_link && (
+                  <a
+                    href={fullItem.product_link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                   >
-                    View Manual
-                  </button>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                    View Product Page
+                  </a>
                 )}
-                {fullItem.receipt_s3_key && (
-                  <button
-                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
+                {fullItem.product_manual_s3_key && manualUrl && (
+                  <a
+                    href={manualUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                   >
-                    View Receipt
-                  </button>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Product Manual
+                  </a>
+                )}
+                {fullItem.receipt_s3_key && receiptUrl && (
+                  <a
+                    href={receiptUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Receipt
+                  </a>
                 )}
               </div>
             </div>

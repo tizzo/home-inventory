@@ -1,5 +1,5 @@
 import { useParams, Link } from 'react-router-dom';
-import { useQuery } from '@tantml:parameter>
+import { useQuery } from '@tanstack/react-query';
 import { itemsApi, photosApi, containersApi, shelvesApi } from '../api';
 import { useAuth } from '../hooks/useAuth';
 import type { ItemResponse, PublicItemResponse, PhotoResponse, ContainerResponse, ShelfResponse } from '../types/generated';
@@ -217,51 +217,70 @@ export default function ItemViewPage() {
   // Public view - limited information
   if (publicItem) {
     return (
-      <div className="container mx-auto px-4 py-8 max-w-2xl">
-        <div className="bg-white shadow-lg rounded-lg p-8 text-center">
-          {photos.length > 0 && (
-            <div className="max-w-md mx-auto mb-6">
-              <img
-                src={photos[0].thumbnail_url || photos[0].url}
-                alt={publicItem.name}
-                className="w-full h-auto max-h-96 object-contain rounded-lg border-4 border-blue-600"
-              />
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+        <div className="container mx-auto px-4 py-12 max-w-3xl">
+          <div className="bg-white shadow-2xl rounded-2xl overflow-hidden">
+            {photos.length > 0 && (
+              <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-8">
+                <div className="max-w-lg mx-auto bg-white rounded-xl shadow-lg p-4">
+                  <img
+                    src={photos[0].thumbnail_url || photos[0].url}
+                    alt={publicItem.name}
+                    className="w-full h-auto max-h-96 object-contain rounded-lg"
+                  />
+                </div>
+              </div>
+            )}
+
+            <div className="p-10 text-center">
+              <div className="mb-8">
+                <h1 className="text-4xl font-bold text-gray-900 mb-4">{publicItem.name}</h1>
+                <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-100 text-blue-800 rounded-full">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                  <span className="font-semibold">Belongs to {publicItem.owner_display_name}</span>
+                </div>
+              </div>
+
+              <div className="bg-gradient-to-r from-yellow-50 to-amber-50 border-2 border-yellow-300 rounded-xl p-6 mb-8 shadow-md">
+                <div className="text-4xl mb-3">🎁</div>
+                <p className="text-xl font-bold text-yellow-900 mb-2">Found this item?</p>
+                <p className="text-yellow-800 mb-4">
+                  The owner is offering a reward for its safe return.
+                </p>
+                <p className="text-sm text-yellow-700">
+                  Please contact them to arrange the return and receive your reward!
+                </p>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                <Link
+                  to={`/contact?item=${publicItem.id}`}
+                  className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 text-lg font-bold shadow-lg hover:shadow-xl transition-all"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                  Contact Owner
+                </Link>
+
+                {publicItem.product_link && (
+                  <a
+                    href={publicItem.product_link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-8 py-4 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 text-lg font-semibold transition-colors"
+                  >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Product Info
+                  </a>
+                )}
+              </div>
             </div>
-          )}
-
-          <div className="mb-6">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">{publicItem.name}</h1>
-            <p className="text-lg text-gray-600">
-              This item belongs to <span className="font-semibold">{publicItem.owner_display_name}</span>
-            </p>
           </div>
-
-          <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4 mb-6">
-            <p className="text-yellow-800 font-semibold mb-2">💰 Cash reward upon return</p>
-            <p className="text-sm text-yellow-700">
-              If you found this item, please contact the owner to arrange its return.
-            </p>
-          </div>
-
-          {publicItem.product_link && (
-            <div className="mb-6">
-              <a
-                href={publicItem.product_link}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-600 hover:underline"
-              >
-                View product information
-              </a>
-            </div>
-          )}
-
-          <Link
-            to={`/contact?item=${publicItem.id}`}
-            className="inline-block px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-lg font-semibold"
-          >
-            Contact Owner
-          </Link>
         </div>
       </div>
     );

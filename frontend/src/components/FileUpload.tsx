@@ -24,6 +24,7 @@ export default function FileUpload({
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [fileName, setFileName] = useState<string | null>(null);
+  const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -129,6 +130,56 @@ export default function FileUpload({
     }
   };
 
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      const file = files[0];
+
+      // Validate file type
+      const acceptedTypes = accept.split(',').map(t => t.trim());
+      const isValidType = acceptedTypes.some(type => {
+        if (type.endsWith('/*')) {
+          const prefix = type.slice(0, -2);
+          return file.type.startsWith(prefix);
+        }
+        return file.type === type;
+      });
+
+      if (!isValidType) {
+        alert(`Please select a valid file type: ${accept}`);
+        return;
+      }
+
+      // Validate file size
+      if (file.size > maxSizeMB * 1024 * 1024) {
+        alert(`File size must be less than ${maxSizeMB}MB`);
+        return;
+      }
+
+      await uploadFile(file);
+    }
+  };
+
+  const handleDropzoneClick = () => {
+    fileInputRef.current?.click();
+  };
+
   return (
     <div className="mb-4">
       <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -136,21 +187,54 @@ export default function FileUpload({
       </label>
 
       {!fileName && !currentFileUrl && (
-        <div className="flex items-center gap-2">
+        <div
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          onClick={handleDropzoneClick}
+          className={`
+            relative border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-all
+            ${isDragOver
+              ? 'border-blue-500 bg-blue-50'
+              : 'border-gray-300 bg-gray-50 hover:border-blue-400 hover:bg-blue-50'
+            }
+            ${uploading ? 'opacity-50 cursor-not-allowed' : ''}
+          `}
+        >
           <input
             ref={fileInputRef}
             type="file"
             accept={accept}
             onChange={handleFileSelect}
             disabled={uploading}
-            className="block w-full text-sm text-gray-500
-              file:mr-4 file:py-2 file:px-4
-              file:rounded-md file:border-0
-              file:text-sm file:font-semibold
-              file:bg-blue-50 file:text-blue-700
-              hover:file:bg-blue-100
-              disabled:opacity-50"
+            className="hidden"
           />
+          <div className="flex flex-col items-center gap-3">
+            <svg
+              className={`w-12 h-12 ${isDragOver ? 'text-blue-500' : 'text-gray-400'}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+              />
+            </svg>
+            <div>
+              <p className="text-sm font-semibold text-gray-700">
+                {isDragOver ? 'Drop file here' : 'Drag and drop file here'}
+              </p>
+              <p className="text-xs text-gray-500 mt-1">
+                or click to browse
+              </p>
+            </div>
+            <p className="text-xs text-gray-400">
+              Max size: {maxSizeMB}MB
+            </p>
+          </div>
         </div>
       )}
 

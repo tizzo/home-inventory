@@ -25,6 +25,7 @@ struct VerifyResponse {
 #[derive(Debug)]
 pub enum CaptchaError {
     RequestFailed(String),
+    #[allow(dead_code)] // Used in tests
     InvalidToken,
     LowScore(f64),
 }

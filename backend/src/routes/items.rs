@@ -48,7 +48,7 @@ pub async fn list_items(
 
     // Build search condition if provided
     let search_pattern = params.search.as_ref().map(|s| format!("%{}%", s.trim()));
-    
+
     // Get total count with search filter
     let total: i64 = if let Some(ref pattern) = search_pattern {
         sqlx::query_scalar(
@@ -87,17 +87,15 @@ pub async fn list_items(
             StatusCode::INTERNAL_SERVER_ERROR
         })?
     } else {
-        sqlx::query_as::<_, Item>(
-            "SELECT * FROM items ORDER BY created_at DESC LIMIT $1 OFFSET $2",
-        )
-        .bind(limit)
-        .bind(offset)
-        .fetch_all(&state.db)
-        .await
-        .map_err(|e| {
-            tracing::error!("Failed to fetch items: {:?}", e);
-            StatusCode::INTERNAL_SERVER_ERROR
-        })?
+        sqlx::query_as::<_, Item>("SELECT * FROM items ORDER BY created_at DESC LIMIT $1 OFFSET $2")
+            .bind(limit)
+            .bind(offset)
+            .fetch_all(&state.db)
+            .await
+            .map_err(|e| {
+                tracing::error!("Failed to fetch items: {:?}", e);
+                StatusCode::INTERNAL_SERVER_ERROR
+            })?
     };
 
     let responses: Vec<ItemResponse> = items.into_iter().map(ItemResponse::from).collect();
@@ -348,8 +346,8 @@ pub async fn bulk_create_items(
         .bind(&item_req.product_manual_s3_key)
         .bind(&item_req.receipt_s3_key)
         .bind(&item_req.product_link)
-        .bind(&item_req.belongs_to_user_id)
-        .bind(&item_req.acquired_date)
+        .bind(item_req.belongs_to_user_id)
+        .bind(item_req.acquired_date)
         .bind(user_id)
         .fetch_one(&mut *tx)
         .await
@@ -467,8 +465,8 @@ pub async fn create_item(
     .bind(&payload.product_manual_s3_key)
     .bind(&payload.receipt_s3_key)
     .bind(&payload.product_link)
-    .bind(&payload.belongs_to_user_id)
-    .bind(&payload.acquired_date)
+    .bind(payload.belongs_to_user_id)
+    .bind(payload.acquired_date)
     .bind(user_id)
     .fetch_one(&state.db)
     .await
@@ -556,14 +554,16 @@ pub async fn update_item(
 
     // Track changes for audit before consuming payload
     let mut changes = serde_json::Map::new();
-    if payload.name.is_some() && payload.name.as_ref() != Some(&existing.name) {
-        changes.insert(
-            "name".to_string(),
-            serde_json::json!({
-                "from": &existing.name,
-                "to": payload.name.as_ref().unwrap()
-            }),
-        );
+    if let Some(ref new_name) = payload.name {
+        if new_name != &existing.name {
+            changes.insert(
+                "name".to_string(),
+                serde_json::json!({
+                    "from": &existing.name,
+                    "to": new_name
+                }),
+            );
+        }
     }
     if payload.description.is_some()
         && payload.description.as_ref() != existing.description.as_ref()
@@ -594,7 +594,9 @@ pub async fn update_item(
             }),
         );
     }
-    if payload.product_manual_s3_key.is_some() && payload.product_manual_s3_key != existing.product_manual_s3_key {
+    if payload.product_manual_s3_key.is_some()
+        && payload.product_manual_s3_key != existing.product_manual_s3_key
+    {
         changes.insert(
             "product_manual_s3_key".to_string(),
             serde_json::json!({
@@ -621,7 +623,9 @@ pub async fn update_item(
             }),
         );
     }
-    if payload.belongs_to_user_id.is_some() && payload.belongs_to_user_id != existing.belongs_to_user_id {
+    if payload.belongs_to_user_id.is_some()
+        && payload.belongs_to_user_id != existing.belongs_to_user_id
+    {
         changes.insert(
             "belongs_to_user_id".to_string(),
             serde_json::json!({
@@ -645,7 +649,9 @@ pub async fn update_item(
     let description = payload.description.or(existing.description.clone());
     let barcode = payload.barcode.or(existing.barcode.clone());
     let barcode_type = payload.barcode_type.or(existing.barcode_type.clone());
-    let product_manual_s3_key = payload.product_manual_s3_key.or(existing.product_manual_s3_key.clone());
+    let product_manual_s3_key = payload
+        .product_manual_s3_key
+        .or(existing.product_manual_s3_key.clone());
     let receipt_s3_key = payload.receipt_s3_key.or(existing.receipt_s3_key.clone());
     let product_link = payload.product_link.or(existing.product_link.clone());
     let belongs_to_user_id = payload.belongs_to_user_id.or(existing.belongs_to_user_id);
@@ -686,8 +692,8 @@ pub async fn update_item(
     .bind(&product_manual_s3_key)
     .bind(&receipt_s3_key)
     .bind(&product_link)
-    .bind(&belongs_to_user_id)
-    .bind(&acquired_date)
+    .bind(belongs_to_user_id)
+    .bind(acquired_date)
     .bind(id)
     .fetch_one(&state.db)
     .await
@@ -777,9 +783,7 @@ pub async fn get_file_upload_url(
     // Generate S3 key
     let file_extension = match payload.content_type.as_str() {
         "application/pdf" => "pdf",
-        ct if ct.starts_with("image/") => {
-            ct.strip_prefix("image/").unwrap_or("jpg")
-        }
+        ct if ct.starts_with("image/") => ct.strip_prefix("image/").unwrap_or("jpg"),
         _ => {
             tracing::warn!("Unsupported content type: {}", payload.content_type);
             return Err(StatusCode::BAD_REQUEST);
@@ -803,10 +807,7 @@ pub async fn get_file_upload_url(
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
 
-    Ok(Json(FileUploadResponse {
-        upload_url,
-        s3_key,
-    }))
+    Ok(Json(FileUploadResponse { upload_url, s3_key }))
 }
 
 /// Create item routes
@@ -839,6 +840,7 @@ pub async fn get_item_public(
     Path(id): Path<Uuid>,
 ) -> Result<Json<PublicItemResponse>, StatusCode> {
     // Join items with users to get owner display name
+    #[allow(clippy::type_complexity)]
     let result: Option<(Uuid, String, Option<String>, Option<String>, String)> = sqlx::query_as(
         r#"
         SELECT i.id, i.name, i.product_link, u.public_display_name, u.name as user_name

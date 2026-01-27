@@ -2,7 +2,6 @@ use axum::{
     extract::State,
     http::{header, Method, StatusCode},
     response::Json,
-    routing::get,
     Router,
 };
 use oauth2::{basic::BasicClient, AuthUrl, ClientId, ClientSecret, RedirectUrl, TokenUrl};
@@ -168,11 +167,19 @@ pub async fn create_app(db: PgPool) -> anyhow::Result<Router> {
     // Public routes (no authentication required)
     use axum::routing::{get, post};
     let public_routes = Router::new()
-        .route("/api/contact", post(crate::routes::contact::create_contact_submission))
-        .route("/api/items/:id/public", get(crate::routes::items::get_item_public));
+        .route(
+            "/api/contact",
+            post(crate::routes::contact::create_contact_submission),
+        )
+        .route(
+            "/api/items/:id/public",
+            get(crate::routes::items::get_item_public),
+        );
 
-    let protected_contact_routes = Router::new()
-        .route("/api/contact", get(crate::routes::contact::list_contact_submissions));
+    let protected_contact_routes = Router::new().route(
+        "/api/contact",
+        get(crate::routes::contact::list_contact_submissions),
+    );
 
     let protected_routes = Router::new()
         .merge(crate::routes::room_routes())

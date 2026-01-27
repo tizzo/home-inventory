@@ -218,14 +218,16 @@ pub async fn update_shelf(
 
     // Track changes for audit before consuming payload
     let mut changes = serde_json::Map::new();
-    if payload.name.is_some() && payload.name.as_ref() != Some(&existing.name) {
-        changes.insert(
-            "name".to_string(),
-            serde_json::json!({
-                "from": &existing.name,
-                "to": payload.name.as_ref().unwrap()
-            }),
-        );
+    if let Some(ref new_name) = payload.name {
+        if new_name != &existing.name {
+            changes.insert(
+                "name".to_string(),
+                serde_json::json!({
+                    "from": &existing.name,
+                    "to": new_name
+                }),
+            );
+        }
     }
     if payload.description.is_some()
         && payload.description.as_ref() != existing.description.as_ref()

@@ -16,7 +16,6 @@ pub mod users;
 // Re-export for convenience
 pub use audit::*;
 pub use auth::*;
-pub use contact::*;
 pub use containers::*;
 pub use item_import_drafts::*;
 pub use items::*;

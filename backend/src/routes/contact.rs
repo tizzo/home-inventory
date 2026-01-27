@@ -45,14 +45,15 @@ pub async fn create_contact_submission(
 
     // If item_id is provided, verify it exists
     if let Some(item_id) = payload.item_id {
-        let item_exists: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM items WHERE id = $1)")
-            .bind(item_id)
-            .fetch_one(&state.db)
-            .await
-            .map_err(|e| {
-                tracing::error!("Failed to check item existence: {:?}", e);
-                StatusCode::INTERNAL_SERVER_ERROR
-            })?;
+        let item_exists: bool =
+            sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM items WHERE id = $1)")
+                .bind(item_id)
+                .fetch_one(&state.db)
+                .await
+                .map_err(|e| {
+                    tracing::error!("Failed to check item existence: {:?}", e);
+                    StatusCode::INTERNAL_SERVER_ERROR
+                })?;
 
         if !item_exists {
             tracing::warn!("Item not found: {}", item_id);
@@ -136,6 +137,7 @@ pub async fn list_contact_submissions(
 
 /// Create contact routes
 /// Note: POST /api/contact is public (no auth), GET /api/contact is protected
+#[allow(dead_code)]
 pub fn contact_routes() -> Router<Arc<AppState>> {
     use axum::routing::{get, post};
 

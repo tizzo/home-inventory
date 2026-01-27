@@ -64,13 +64,13 @@ export default function ItemViewPage() {
 
           {photos.length > 0 && (
             <div className="mb-6">
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                 {photos.map((photo) => (
-                  <div key={photo.id} className="aspect-square overflow-hidden rounded-lg border">
+                  <div key={photo.id} className="relative w-full" style={{ paddingBottom: '100%' }}>
                     <img
                       src={photo.thumbnail_url || photo.url}
                       alt={fullItem.name}
-                      className="w-full h-full object-cover"
+                      className="absolute inset-0 w-full h-full object-contain rounded-lg border"
                     />
                   </div>
                 ))}
@@ -148,11 +148,11 @@ export default function ItemViewPage() {
         <div className="bg-white shadow-lg rounded-lg p-8 text-center">
           <div className="mb-6">
             {photos.length > 0 ? (
-              <div className="w-48 h-48 mx-auto mb-4 overflow-hidden rounded-lg border-4 border-blue-600">
+              <div className="max-w-md mx-auto mb-4">
                 <img
                   src={photos[0].thumbnail_url || photos[0].url}
                   alt={publicItem.name}
-                  className="w-full h-full object-cover"
+                  className="w-full h-auto object-contain rounded-lg border-4 border-blue-600"
                 />
               </div>
             ) : (

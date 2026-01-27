@@ -362,11 +362,8 @@ export default function ItemsPage() {
             <img
               src={firstPhoto.thumbnail_url || firstPhoto.url}
               alt={item.name}
-              onClick={(e) => {
-                e.stopPropagation();
-                window.open(firstPhoto.url, '_blank');
-              }}
               loading="lazy"
+              style={{ cursor: 'pointer' }}
             />
             {photos && photos.length > 1 && (
               <div className="photo-count-badge">+{photos.length - 1}</div>

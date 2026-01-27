@@ -9,11 +9,15 @@ import {
   ContainersPage,
   ContainerContentsPage,
   ItemsPage,
+  ItemViewPage,
   LabelsPage,
+  BatchDetailPage,
+  LabelDetailPage,
   TagsPage,
   AuditLogPage,
   QRScanPage,
   ItemImportDraftPage,
+  ContactPage,
 } from './pages';
 import { LoginButton } from './components/LoginButton';
 import { ProtectedRoute } from './components/ProtectedRoute';
@@ -144,6 +148,10 @@ function App() {
               <Routes>
                 <Route path="/" element={<HomePage />} />
 
+                {/* Public Routes */}
+                <Route path="/items/:itemId/view" element={<ItemViewPage />} />
+                <Route path="/contact" element={<ContactPage />} />
+
                 {/* Protected Routes */}
                 <Route element={<ProtectedRoute />}>
                   <Route path="/rooms" element={<RoomsPage />} />
@@ -199,6 +207,8 @@ function App() {
                     element={<ItemsPage />}
                   />
                   <Route path="/labels" element={<LabelsPage />} />
+                  <Route path="/labels/batches/:batchId" element={<BatchDetailPage />} />
+                  <Route path="/l/:labelId" element={<LabelDetailPage />} />
                   <Route path="/tags" element={<TagsPage />} />
                   <Route path="/tags/:tagId/edit" element={<TagsPage />} />
                   <Route path="/audit" element={<AuditLogPage />} />

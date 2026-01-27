@@ -85,41 +85,42 @@ export default function ItemViewPage() {
   if (user && fullItem) {
     return (
       <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <div className="bg-white shadow-lg rounded-lg p-6">
-          <div className="flex items-center justify-between mb-6 gap-4">
-            <div className="flex-1 min-w-0">
-              {(parentContainer || parentShelf) && (
-                <div className="text-sm text-gray-500 mb-2">
-                  <Link to="/items" className="hover:text-gray-700">Items</Link>
-                  {parentContainer && (
-                    <>
-                      <span className="mx-2">›</span>
-                      <Link to={`/containers/${parentContainer.id}/edit`} className="hover:text-gray-700">
-                        {parentContainer.name}
-                      </Link>
-                    </>
-                  )}
-                  {parentShelf && !parentContainer && (
-                    <>
-                      <span className="mx-2">›</span>
-                      <Link to={`/shelves/${parentShelf.id}/edit`} className="hover:text-gray-700">
-                        {parentShelf.name}
-                      </Link>
-                    </>
-                  )}
-                </div>
-              )}
-              <h1 className="text-3xl font-bold text-gray-900">{fullItem.name}</h1>
-            </div>
-            <Link
-              to={`/items/${itemId}/edit`}
-              className="flex-shrink-0 inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all shadow-md hover:shadow-lg font-semibold"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-              </svg>
-              Edit Item
-            </Link>
+        <div className="bg-white shadow-lg rounded-lg p-6 relative">
+          {/* Edit button - floating top right */}
+          <Link
+            to={`/items/${itemId}/edit`}
+            className="absolute top-4 right-4 inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors shadow-md hover:shadow-lg font-medium z-10"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+            Edit
+          </Link>
+
+          {/* Breadcrumb and title */}
+          <div className="mb-6 pr-20">
+            {(parentContainer || parentShelf) && (
+              <div className="text-sm text-gray-500 mb-2">
+                <Link to="/items" className="hover:text-gray-700">Items</Link>
+                {parentContainer && (
+                  <>
+                    <span className="mx-2">›</span>
+                    <Link to={`/containers/${parentContainer.id}/edit`} className="hover:text-gray-700">
+                      {parentContainer.name}
+                    </Link>
+                  </>
+                )}
+                {parentShelf && !parentContainer && (
+                  <>
+                    <span className="mx-2">›</span>
+                    <Link to={`/shelves/${parentShelf.id}/edit`} className="hover:text-gray-700">
+                      {parentShelf.name}
+                    </Link>
+                  </>
+                )}
+              </div>
+            )}
+            <h1 className="text-3xl font-bold text-gray-900">{fullItem.name}</h1>
           </div>
 
           {photos.length > 0 && (

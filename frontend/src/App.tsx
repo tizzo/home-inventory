@@ -209,6 +209,7 @@ function App() {
                   <Route path="/labels" element={<LabelsPage />} />
                   <Route path="/labels/batches/:batchId" element={<BatchDetailPage />} />
                   <Route path="/l/:labelId" element={<LabelDetailPage />} />
+                  <Route path="/labels/:labelId" element={<LabelDetailPage />} />
                   <Route path="/tags" element={<TagsPage />} />
                   <Route path="/tags/:tagId/edit" element={<TagsPage />} />
                   <Route path="/audit" element={<AuditLogPage />} />

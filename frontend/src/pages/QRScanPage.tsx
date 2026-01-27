@@ -55,8 +55,8 @@ export default function QRScanPage() {
             break;
         }
       } else {
-        // Label not assigned, show label details or assignment page
-        navigate(`/labels?label=${label.id}`);
+        // Label not assigned, navigate to assignment page
+        navigate(`/labels/${label.id}`);
       }
     },
     [navigate]

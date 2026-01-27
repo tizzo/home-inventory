@@ -90,59 +90,88 @@ export default function ContactPage() {
 
   if (submitted) {
     return (
-      <div className="container mx-auto px-4 py-8 max-w-2xl">
-        <div className="bg-white shadow-lg rounded-lg p-8 text-center">
-          <div className="mb-6">
-            <svg
-              className="w-20 h-20 mx-auto text-green-600 mb-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Message Sent!</h1>
-            <p className="text-lg text-gray-600">
-              Thank you for your message. The owner will be in touch shortly.
-            </p>
-          </div>
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center py-12">
+        <div className="container mx-auto px-4 max-w-2xl">
+          <div className="bg-white shadow-2xl rounded-2xl p-12 text-center">
+            <div className="mb-8">
+              <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <svg
+                  className="w-12 h-12 text-green-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={3}
+                    d="M5 13l4 4L19 7"
+                  />
+                </svg>
+              </div>
+              <h1 className="text-4xl font-bold text-gray-900 mb-4">Message Sent!</h1>
+              <p className="text-xl text-gray-600 mb-2">
+                Thank you for reaching out.
+              </p>
+              <p className="text-gray-500">
+                The owner will be in touch with you shortly.
+              </p>
+            </div>
 
-          <button
-            onClick={() => navigate('/')}
-            className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-semibold"
-          >
-            Return Home
-          </button>
+            <button
+              onClick={() => navigate('/')}
+              className="px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 font-bold text-lg shadow-lg hover:shadow-xl transition-all"
+            >
+              Return Home
+            </button>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-2xl">
-      <div className="bg-white shadow-lg rounded-lg p-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-6">Contact Us</h1>
-
-        {publicItem && (
-          <div className="bg-blue-50 border border-blue-200 rounded-md p-4 mb-6">
-            <p className="text-sm text-blue-800">
-              <span className="font-semibold">Regarding:</span> {publicItem.name}
-            </p>
-            <p className="text-sm text-blue-800">
-              <span className="font-semibold">Owner:</span> {publicItem.owner_display_name}
-            </p>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12">
+      <div className="container mx-auto px-4 max-w-3xl">
+        <div className="bg-white shadow-2xl rounded-2xl overflow-hidden">
+          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-8 py-6 text-white">
+            <h1 className="text-3xl font-bold">Contact Owner</h1>
+            <p className="text-blue-100 mt-2">Send a message about this item</p>
           </div>
-        )}
 
-        <form onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
-              Name <span className="text-red-500">*</span>
+          {publicItem && (
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b-4 border-blue-300 px-8 py-6">
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0">
+                  <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center text-white text-2xl font-bold">
+                    📦
+                  </div>
+                </div>
+                <div className="flex-1">
+                  <div className="text-sm text-gray-500 mb-1">Regarding this item:</div>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">{publicItem.name}</h2>
+                  <div className="inline-flex items-center gap-2 px-3 py-1 bg-white rounded-full border border-blue-200">
+                    <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                    <span className="text-sm font-semibold text-gray-700">Owner: {publicItem.owner_display_name}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="p-8">{!publicItem && (
+              <div className="mb-6">
+                <h1 className="text-3xl font-bold text-gray-900 mb-2">Contact Us</h1>
+                <p className="text-gray-600">Fill out the form below to send us a message.</p>
+              </div>
+            )}
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div>
+            <label htmlFor="name" className="block text-sm font-semibold text-gray-700 mb-2">
+              Your Name <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
@@ -150,13 +179,14 @@ export default function ContactPage() {
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="John Doe"
+              className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
             />
           </div>
 
-          <div className="mb-4">
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-              Email <span className="text-red-500">*</span>
+          <div>
+            <label htmlFor="email" className="block text-sm font-semibold text-gray-700 mb-2">
+              Your Email <span className="text-red-500">*</span>
             </label>
             <input
               type="email"
@@ -164,27 +194,31 @@ export default function ContactPage() {
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="john@example.com"
+              className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
             />
           </div>
 
-          <div className="mb-4">
-            <label htmlFor="subject" className="block text-sm font-medium text-gray-700 mb-2">
-              Subject <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              id="subject"
-              value={formData.subject}
-              onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
+          {!publicItem && (
+            <div>
+              <label htmlFor="subject" className="block text-sm font-semibold text-gray-700 mb-2">
+                Subject <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                id="subject"
+                value={formData.subject}
+                onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+                required
+                placeholder="What is this about?"
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              />
+            </div>
+          )}
 
-          <div className="mb-6">
-            <label htmlFor="message" className="block text-sm font-medium text-gray-700 mb-2">
-              Message <span className="text-red-500">*</span>
+          <div>
+            <label htmlFor="message" className="block text-sm font-semibold text-gray-700 mb-2">
+              Your Message <span className="text-red-500">*</span>
             </label>
             <textarea
               id="message"
@@ -192,11 +226,12 @@ export default function ContactPage() {
               onChange={(e) => setFormData({ ...formData, message: e.target.value })}
               required
               rows={6}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder={publicItem ? "Hi! I found your item and would like to return it..." : "Type your message here..."}
+              className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
             />
           </div>
 
-          <div className="text-sm text-gray-600 mb-4">
+          <div className="text-xs text-gray-500 text-center">
             This site is protected by reCAPTCHA and the Google{' '}
             <a href="https://policies.google.com/privacy" className="text-blue-600 hover:underline">
               Privacy Policy
@@ -211,11 +246,21 @@ export default function ContactPage() {
           <button
             type="submit"
             disabled={submitMutation.isPending}
-            className="w-full px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 font-bold text-lg shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {submitMutation.isPending ? 'Sending...' : 'Send Message'}
+            {submitMutation.isPending ? (
+              <span className="flex items-center justify-center gap-2">
+                <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+                Sending...
+              </span>
+            ) : 'Send Message'}
           </button>
         </form>
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -1,8 +1,8 @@
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { itemsApi } from '../api';
+import { itemsApi, photosApi } from '../api';
 import { useAuth } from '../hooks/useAuth';
-import type { ItemResponse, PublicItemResponse } from '../types/generated';
+import type { ItemResponse, PublicItemResponse, PhotoResponse } from '../types/generated';
 
 export default function ItemViewPage() {
   const { itemId } = useParams<{ itemId: string }>();
@@ -20,6 +20,13 @@ export default function ItemViewPage() {
     queryKey: ['items', itemId],
     queryFn: () => itemsApi.getById(itemId!),
     enabled: !!user && !!itemId,
+  });
+
+  // Fetch photos for the item
+  const { data: photos = [] } = useQuery<PhotoResponse[]>({
+    queryKey: ['photos', 'item', itemId],
+    queryFn: () => photosApi.getByEntity('item', itemId!),
+    enabled: !!itemId,
   });
 
   const isLoading = user ? fullLoading : publicLoading;
@@ -54,6 +61,22 @@ export default function ItemViewPage() {
               Edit
             </Link>
           </div>
+
+          {photos.length > 0 && (
+            <div className="mb-6">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                {photos.map((photo) => (
+                  <div key={photo.id} className="aspect-square overflow-hidden rounded-lg border">
+                    <img
+                      src={photo.thumbnail_url || photo.url}
+                      alt={fullItem.name}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {fullItem.description && (
             <div className="mb-4">
@@ -124,19 +147,29 @@ export default function ItemViewPage() {
       <div className="container mx-auto px-4 py-8 max-w-2xl">
         <div className="bg-white shadow-lg rounded-lg p-8 text-center">
           <div className="mb-6">
-            <svg
-              className="w-20 h-20 mx-auto text-blue-600 mb-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-              />
-            </svg>
+            {photos.length > 0 ? (
+              <div className="w-48 h-48 mx-auto mb-4 overflow-hidden rounded-lg border-4 border-blue-600">
+                <img
+                  src={photos[0].thumbnail_url || photos[0].url}
+                  alt={publicItem.name}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            ) : (
+              <svg
+                className="w-20 h-20 mx-auto text-blue-600 mb-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                />
+              </svg>
+            )}
             <h1 className="text-3xl font-bold text-gray-900 mb-2">{publicItem.name}</h1>
             <p className="text-lg text-gray-600">
               This item belongs to <span className="font-semibold">{publicItem.owner_display_name}</span>

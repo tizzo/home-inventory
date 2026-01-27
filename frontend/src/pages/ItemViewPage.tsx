@@ -86,8 +86,8 @@ export default function ItemViewPage() {
     return (
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <div className="bg-white shadow-lg rounded-lg p-6">
-          <div className="flex items-center justify-between mb-6">
-            <div>
+          <div className="flex items-center justify-between mb-6 gap-4">
+            <div className="flex-1 min-w-0">
               {(parentContainer || parentShelf) && (
                 <div className="text-sm text-gray-500 mb-2">
                   <Link to="/items" className="hover:text-gray-700">Items</Link>
@@ -113,7 +113,7 @@ export default function ItemViewPage() {
             </div>
             <Link
               to={`/items/${itemId}/edit`}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all shadow-md hover:shadow-lg font-semibold"
+              className="flex-shrink-0 inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all shadow-md hover:shadow-lg font-semibold"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />

@@ -22,11 +22,19 @@ export default function ItemViewPage() {
     enabled: !!user && !!itemId,
   });
 
-  // Fetch photos for the item
+  // Fetch photos for the item (only if authenticated or silently fail for public view)
   const { data: photos = [] } = useQuery<PhotoResponse[]>({
     queryKey: ['photos', 'item', itemId],
-    queryFn: () => photosApi.getByEntity('item', itemId!),
+    queryFn: async () => {
+      try {
+        return await photosApi.getByEntity('item', itemId!);
+      } catch (error) {
+        // Silently return empty array if unauthorized (public view)
+        return [];
+      }
+    },
     enabled: !!itemId,
+    retry: false,
   });
 
   const isLoading = user ? fullLoading : publicLoading;

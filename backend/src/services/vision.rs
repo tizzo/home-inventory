@@ -3,11 +3,16 @@ use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::env;
 
-use crate::models::{ContainerUpdateProposal, ItemImportDraftItem};
+use crate::models::{ItemImportDraftItem, LocationUpdateProposal};
 
 pub struct VisionService {
     client: Client,
     api_key: String,
+}
+
+pub enum LocationType {
+    Container,
+    Shelf,
 }
 
 #[derive(Debug, Serialize)]
@@ -53,8 +58,10 @@ struct ResponseContent {
 #[derive(Debug, Deserialize)]
 struct ParsedResponse {
     items: Vec<ParsedItem>,
-    container_description: Option<String>,
-    container_tags: Option<Vec<String>>,
+    #[serde(default, alias = "container_description", alias = "shelf_description")]
+    location_description: Option<String>,
+    #[serde(default, alias = "container_tags", alias = "shelf_tags")]
+    location_tags: Option<Vec<String>>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -75,28 +82,40 @@ impl VisionService {
 
     pub async fn analyze_image_for_items(
         &self,
-        image_data: &[u8],
-        media_type: &str,
-    ) -> anyhow::Result<(Vec<ItemImportDraftItem>, Option<ContainerUpdateProposal>)> {
-        let base64_image = base64_encode(image_data);
+        images: Vec<(&[u8], &str)>,
+        hint: Option<&str>,
+        location_type: LocationType,
+    ) -> anyhow::Result<(Vec<ItemImportDraftItem>, Option<LocationUpdateProposal>)> {
+        if images.is_empty() {
+            return Err(anyhow::anyhow!(
+                "At least one image is required for analysis"
+            ));
+        }
+
+        let mut content_blocks: Vec<Content> = Vec::new();
+
+        // Add all images as content blocks
+        for (image_data, media_type) in images {
+            let base64_image = base64_encode(image_data);
+            content_blocks.push(Content::Image {
+                source: ImageSource {
+                    source_type: "base64".to_string(),
+                    media_type: media_type.to_string(),
+                    data: base64_image,
+                },
+            });
+        }
+
+        // Add text prompt (with hint incorporated)
+        let prompt = build_prompt(hint, location_type);
+        content_blocks.push(Content::Text { text: prompt });
 
         let request = AnthropicRequest {
             model: "claude-sonnet-4-20250514".to_string(),
             max_tokens: 4096,
             messages: vec![Message {
                 role: "user".to_string(),
-                content: vec![
-                    Content::Image {
-                        source: ImageSource {
-                            source_type: "base64".to_string(),
-                            media_type: media_type.to_string(),
-                            data: base64_image,
-                        },
-                    },
-                    Content::Text {
-                        text: PROMPT.to_string(),
-                    },
-                ],
+                content: content_blocks,
             }],
         };
 
@@ -141,35 +160,59 @@ impl VisionService {
     }
 }
 
-const PROMPT: &str = r#"Analyze this image and identify all distinct items/objects visible in the container. Also suggest a description for the container and relevant tags.
+fn build_prompt(hint: Option<&str>, location_type: LocationType) -> String {
+    let location_name = match location_type {
+        LocationType::Container => "container",
+        LocationType::Shelf => "shelf",
+    };
+
+    let hint_text = match hint {
+        Some(h) => format!(
+            "\n\nUser context: {}\n\nConsider this context when identifying items and suggesting descriptions/tags.",
+            h
+        ),
+        None => String::new(),
+    };
+
+    format!(
+        r#"Analyze these images and identify all distinct items/objects visible {preposition}the {location}. Also suggest a description for the {location} and relevant tags.{hint}
 
 For each item, provide:
 1. A clear, concise name
 2. A brief description (optional, only if helpful)
 
-For the container, suggest:
+For the {location}, suggest:
 1. A description based on what you see
 2. Relevant tags that categorize the contents
 
 Return your response as a JSON object with this exact structure:
-{
+{{
   "items": [
-    {"name": "Item name", "description": "Brief description or null"},
+    {{"name": "Item name", "description": "Brief description or null"}},
     ...
   ],
-  "container_description": "Description of what the container holds",
-  "container_tags": ["tag1", "tag2", ...]
-}
+  "{location}_description": "Description of what the {location} holds",
+  "{location}_tags": ["tag1", "tag2", ...]
+}}
 
-Focus on physical objects that would be stored in a home inventory system (household items, tools, electronics, supplies, etc.). 
+Focus on physical objects that would be stored in a home inventory system (household items, tools, electronics, supplies, etc.).
 
 For tags, use simple, searchable terms like: "tools", "electronics", "office-supplies", "kitchen", "bathroom", "hardware", "crafts", etc.
 
-Return ONLY the JSON object, no other text."#;
+Return ONLY the JSON object, no other text."#,
+        preposition = if matches!(location_type, LocationType::Shelf) {
+            "on "
+        } else {
+            "in "
+        },
+        location = location_name,
+        hint = hint_text
+    )
+}
 
 fn parse_items_from_response(
     text: &str,
-) -> anyhow::Result<(Vec<ItemImportDraftItem>, Option<ContainerUpdateProposal>)> {
+) -> anyhow::Result<(Vec<ItemImportDraftItem>, Option<LocationUpdateProposal>)> {
     let text = text.trim();
     let json_str = if text.starts_with("```json") {
         text.trim_start_matches("```json")
@@ -200,18 +243,18 @@ fn parse_items_from_response(
         })
         .collect();
 
-    let container_updates = if parsed.container_description.is_some()
-        || (parsed.container_tags.is_some() && !parsed.container_tags.as_ref().unwrap().is_empty())
+    let location_updates = if parsed.location_description.is_some()
+        || (parsed.location_tags.is_some() && !parsed.location_tags.as_ref().unwrap().is_empty())
     {
-        Some(ContainerUpdateProposal {
-            description: parsed.container_description,
-            tags: parsed.container_tags,
+        Some(LocationUpdateProposal {
+            description: parsed.location_description,
+            tags: parsed.location_tags,
         })
     } else {
         None
     };
 
-    Ok((items, container_updates))
+    Ok((items, location_updates))
 }
 
 fn base64_encode(bytes: &[u8]) -> String {
@@ -265,15 +308,15 @@ mod tests {
         let result = parse_items_from_response(json);
         assert!(result.is_ok());
 
-        let (items, container_updates) = result.unwrap();
+        let (items, location_updates) = result.unwrap();
         assert_eq!(items.len(), 2);
         assert_eq!(items[0].name, "Hammer");
         assert_eq!(items[0].description, Some("A tool".to_string()));
         assert_eq!(items[1].name, "Screwdriver");
         assert_eq!(items[1].description, None);
 
-        assert!(container_updates.is_some());
-        let updates = container_updates.unwrap();
+        assert!(location_updates.is_some());
+        let updates = location_updates.unwrap();
         assert_eq!(updates.description, Some("Toolbox".to_string()));
         assert_eq!(
             updates.tags,
@@ -293,9 +336,9 @@ mod tests {
         let result = parse_items_from_response(json);
         assert!(result.is_ok());
 
-        let (items, container_updates) = result.unwrap();
+        let (items, location_updates) = result.unwrap();
         assert_eq!(items.len(), 1);
-        assert!(container_updates.is_some());
+        assert!(location_updates.is_some());
     }
 
     #[test]
@@ -325,13 +368,13 @@ mod tests {
         let result = parse_items_from_response(json);
         assert!(result.is_ok());
 
-        let (items, container_updates) = result.unwrap();
+        let (items, location_updates) = result.unwrap();
         assert_eq!(items.len(), 0);
-        assert!(container_updates.is_none());
+        assert!(location_updates.is_none());
     }
 
     #[test]
-    fn test_parse_items_from_response_no_container_updates() {
+    fn test_parse_items_from_response_no_location_updates() {
         let json = r#"{
             "items": [{"name": "Item 1"}],
             "container_description": null,
@@ -341,9 +384,9 @@ mod tests {
         let result = parse_items_from_response(json);
         assert!(result.is_ok());
 
-        let (items, container_updates) = result.unwrap();
+        let (items, location_updates) = result.unwrap();
         assert_eq!(items.len(), 1);
-        assert!(container_updates.is_none());
+        assert!(location_updates.is_none());
     }
 
     #[test]
@@ -357,9 +400,9 @@ mod tests {
         let result = parse_items_from_response(json);
         assert!(result.is_ok());
 
-        let (_items, container_updates) = result.unwrap();
-        assert!(container_updates.is_some());
-        let updates = container_updates.unwrap();
+        let (_items, location_updates) = result.unwrap();
+        assert!(location_updates.is_some());
+        let updates = location_updates.unwrap();
         assert_eq!(updates.description, Some("A container".to_string()));
         assert_eq!(updates.tags, None);
     }
@@ -375,9 +418,9 @@ mod tests {
         let result = parse_items_from_response(json);
         assert!(result.is_ok());
 
-        let (_items, container_updates) = result.unwrap();
-        assert!(container_updates.is_some());
-        let updates = container_updates.unwrap();
+        let (_items, location_updates) = result.unwrap();
+        assert!(location_updates.is_some());
+        let updates = location_updates.unwrap();
         assert_eq!(updates.description, None);
         assert_eq!(
             updates.tags,
@@ -396,8 +439,8 @@ mod tests {
         let result = parse_items_from_response(json);
         assert!(result.is_ok());
 
-        let (_items, container_updates) = result.unwrap();
-        assert!(container_updates.is_none()); // Empty tags should result in None
+        let (_items, location_updates) = result.unwrap();
+        assert!(location_updates.is_none()); // Empty tags should result in None
     }
 
     #[test]
@@ -449,14 +492,14 @@ mod tests {
         let result = parse_items_from_response(json);
         assert!(result.is_ok());
 
-        let (items, container_updates) = result.unwrap();
+        let (items, location_updates) = result.unwrap();
         assert_eq!(items.len(), 3);
         assert_eq!(items[0].name, "Item 1");
         assert_eq!(items[1].name, "Item 2");
         assert_eq!(items[2].name, "Item 3");
 
-        assert!(container_updates.is_some());
-        let updates = container_updates.unwrap();
+        assert!(location_updates.is_some());
+        let updates = location_updates.unwrap();
         assert_eq!(updates.tags.as_ref().unwrap().len(), 3);
     }
 

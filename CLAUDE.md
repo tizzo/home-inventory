@@ -203,6 +203,44 @@ pulumi stack output frontendBucketName
 - Direct `pulumi` calls will fail with region/credential errors
 - Located at: `infrastructure/pulumi-wrapper.sh`
 
+### ☁️ AWS Aurora DSQL & Migrations
+**CRITICAL**: Aurora DSQL has strict transaction limitations that affect migrations.
+
+**Key Limitations:**
+- ❌ No support for multiple DDL statements in transactions
+- ❌ PostgreSQL creates implicit transactions when multiple statements are sent together
+- ❌ SQLx's `migrate!()` macro wraps migrations in transactions (incompatible with DSQL)
+- ❌ `-- sqlx:no-transaction` directive doesn't prevent implicit PostgreSQL transactions
+
+**Migration Strategy for DSQL:**
+1. **Use manual psql scripts** instead of embedded SQLx migrations
+2. Scripts apply migrations statement-by-statement (no implicit transactions)
+3. Located at: `infrastructure/scripts/apply-migrations-to-dsql*.sh`
+4. Must be run separately for each DSQL cluster (us-east-1, us-east-2)
+
+**Migration File Requirements:**
+- Add `-- sqlx:no-transaction` to the top of all migration files
+- Use `CREATE INDEX ASYNC` instead of `CREATE INDEX` (DSQL requirement)
+- Use `TEXT` instead of `JSON` or `JSONB` (DSQL doesn't support JSON types)
+- Avoid `ALTER TABLE ADD COLUMN ... DEFAULT` (use nullable columns)
+- Avoid `ALTER TABLE DROP/ADD CONSTRAINT` (manage constraints at table creation)
+
+**Tower Sessions Exception:**
+- tower-sessions library's `migrate()` also fails on DSQL
+- Manually create `tower_sessions` schema and table via psql
+- See: `backend/migrations/20240101000013_create_tower_sessions.sql`
+
+**Multi-Region DSQL:**
+- Current setup: **Two independent clusters** (us-east-1, us-east-2)
+- Migrations must be applied to both clusters separately
+- Each cluster maintains its own data (no replication)
+- To create true multi-region replication: Must destroy and recreate as linked cluster set with witness region
+
+**References:**
+- [SQLx Issue #3693: Multiple statements per migration](https://github.com/launchbadge/sqlx/issues/3693)
+- [tower-sessions PostgresStore migration](https://github.com/maxcountryman/tower-sessions-stores/blob/main/sqlx-store/src/postgres_store.rs)
+- [AWS DSQL Multi-Region Docs](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/configuring-multi-region-clusters.html)
+
 ## ⚠️ Known Issues & Gotchas
 
 ### Common Problems

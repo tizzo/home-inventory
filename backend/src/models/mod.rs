@@ -1,4 +1,5 @@
 pub mod audit;
+pub mod contact;
 pub mod container;
 pub mod item;
 pub mod item_import_draft;
@@ -15,6 +16,8 @@ pub mod user;
 // Suppress unused warnings for now as these will be used when we add routes
 #[allow(unused_imports)]
 pub use audit::*;
+#[allow(unused_imports)]
+pub use contact::*;
 #[allow(unused_imports)]
 pub use container::*;
 #[allow(unused_imports)]

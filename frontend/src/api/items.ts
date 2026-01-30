@@ -1,11 +1,17 @@
 import apiClient from './client';
 import type {
   ItemResponse,
+  PublicItemResponse,
   CreateItemRequest,
   UpdateItemRequest,
   PaginatedResponse,
   PaginationQuery,
 } from '../types/generated';
+
+interface PresignedUploadUrl {
+  upload_url: string;
+  s3_key: string;
+}
 
 export const itemsApi = {
   // Get all items
@@ -64,5 +70,32 @@ export const itemsApi = {
   // Delete an item
   delete: async (id: string): Promise<void> => {
     await apiClient.delete(`/api/items/${id}`);
+  },
+
+  // Get public item view (no authentication required)
+  getPublic: async (id: string): Promise<PublicItemResponse> => {
+    const response = await apiClient.get<PublicItemResponse>(`/api/items/${id}/public`);
+    return response.data;
+  },
+
+  // Get presigned URL for file upload (manual or receipt)
+  getFileUploadUrl: async (
+    fileType: 'manual' | 'receipt',
+    contentType: string
+  ): Promise<PresignedUploadUrl> => {
+    const response = await apiClient.post<PresignedUploadUrl>(
+      `/api/items/file-upload-url`,
+      { file_type: fileType, content_type: contentType }
+    );
+    return response.data;
+  },
+
+  // Get presigned URL for file download
+  getFileDownloadUrl: async (s3Key: string): Promise<string> => {
+    const response = await apiClient.post<{ download_url: string }>(
+      `/api/items/file-download-url`,
+      { s3_key: s3Key }
+    );
+    return response.data.download_url;
   },
 };

@@ -404,17 +404,20 @@ export default function LabelDetailPage() {
                 <EntitySelector
                   entityType="shelf"
                   value={formData.shelf_id}
-                  onChange={(id) => setFormData({ ...formData, shelf_id: id })}
+                  onChange={(id) => setFormData({ ...formData, shelf_id: id, container_id: undefined })}
                   label="Shelf (optional)"
                   placeholder="Search for a shelf..."
                 />
                 <EntitySelector
                   entityType="container"
                   value={formData.container_id}
-                  onChange={(id) => setFormData({ ...formData, container_id: id })}
+                  onChange={(id) => setFormData({ ...formData, container_id: id, shelf_id: undefined })}
                   label="Container (optional)"
                   placeholder="Search for a container..."
                 />
+                <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginTop: '-0.5rem', marginBottom: '1rem' }}>
+                  Note: Provide either shelf OR container, not both
+                </p>
                 <div className="form-group">
                   <label htmlFor="barcode">Barcode (optional)</label>
                   <input

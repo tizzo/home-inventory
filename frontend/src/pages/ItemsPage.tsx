@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams, useSearchParams, Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { useToast } from '../context/ToastContext';
 import {
   useItems,
@@ -18,7 +19,8 @@ import {
   useAssignTags,
   useCreateTag,
 } from '../hooks';
-import { Modal, PhotoUpload, PhotoGallery, Pagination, MoveModal, EntityCreateModal, TagSelector } from '../components';
+import { Modal, PhotoUpload, PhotoGallery, Pagination, MoveModal, EntityCreateModal, TagSelector, FileUpload, UserSelector } from '../components';
+import { usersApi, itemsApi } from '../api';
 import type { EntityType } from '../components/EntitySelector';
 import type {
   UpdateItemRequest,
@@ -97,6 +99,11 @@ export default function ItemsPage() {
     description: '',
     barcode: '',
     barcode_type: '',
+    product_manual_s3_key: undefined,
+    receipt_s3_key: undefined,
+    product_link: undefined,
+    belongs_to_user_id: undefined,
+    acquired_date: undefined,
   });
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
 
@@ -105,6 +112,19 @@ export default function ItemsPage() {
 
   // Load current tags when editing
   const { data: currentTags } = useEntityTags('item', editingItem?.id || '');
+
+  // Fetch download URLs for files if they exist
+  const { data: manualUrl } = useQuery({
+    queryKey: ['file-download-url', editingItem?.product_manual_s3_key],
+    queryFn: () => itemsApi.getFileDownloadUrl(editingItem!.product_manual_s3_key!),
+    enabled: !!editingItem?.product_manual_s3_key,
+  });
+
+  const { data: receiptUrl } = useQuery({
+    queryKey: ['file-download-url', editingItem?.receipt_s3_key],
+    queryFn: () => itemsApi.getFileDownloadUrl(editingItem!.receipt_s3_key!),
+    enabled: !!editingItem?.receipt_s3_key,
+  });
 
   // Sync pagination with URL search params
   useEffect(() => {
@@ -125,6 +145,11 @@ export default function ItemsPage() {
         description: editingItem.description || '',
         barcode: editingItem.barcode || '',
         barcode_type: editingItem.barcode_type || '',
+        product_manual_s3_key: editingItem.product_manual_s3_key,
+        receipt_s3_key: editingItem.receipt_s3_key,
+        product_link: editingItem.product_link,
+        belongs_to_user_id: editingItem.belongs_to_user_id,
+        acquired_date: editingItem.acquired_date,
       });
     }
   }, [itemId, editingItem]);
@@ -296,11 +321,19 @@ export default function ItemsPage() {
     const { data: tags } = useEntityTags('item', item.id);
     const firstPhoto = photos && photos.length > 0 ? photos[0] : null;
 
+    const handleCardClick = () => {
+      navigate(`/items/${item.id}/view`);
+    };
+
     return (
-      <div className="room-card">
+      <div
+        className="room-card"
+        onClick={handleCardClick}
+        style={{ cursor: 'pointer' }}
+      >
         <div className="card-header">
           <h3>{item.name}</h3>
-          <div className="card-actions">
+          <div className="card-actions" onClick={(e) => e.stopPropagation()}>
             <button
               className="btn btn-secondary btn-sm"
               onClick={onEdit}
@@ -329,8 +362,8 @@ export default function ItemsPage() {
             <img
               src={firstPhoto.thumbnail_url || firstPhoto.url}
               alt={item.name}
-              onClick={() => window.open(firstPhoto.url, '_blank')}
               loading="lazy"
+              style={{ cursor: 'pointer' }}
             />
             {photos && photos.length > 1 && (
               <div className="photo-count-badge">+{photos.length - 1}</div>
@@ -545,6 +578,98 @@ export default function ItemsPage() {
               placeholder="e.g., UPC, EAN, QR"
             />
           </div>
+
+          <div className="form-group">
+            <label htmlFor="edit-product-link">Product Link</label>
+            <input
+              id="edit-product-link"
+              type="url"
+              value={editFormData.product_link || ''}
+              onChange={(e) =>
+                setEditFormData({
+                  ...editFormData,
+                  product_link: e.target.value || undefined,
+                })
+              }
+              placeholder="https://..."
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="edit-acquired-date">Acquired Date</label>
+            <input
+              id="edit-acquired-date"
+              type="date"
+              value={editFormData.acquired_date || ''}
+              onChange={(e) =>
+                setEditFormData({
+                  ...editFormData,
+                  acquired_date: e.target.value || undefined,
+                })
+              }
+            />
+          </div>
+
+          <div className="form-group">
+            <UserSelector
+              label="Belongs To"
+              value={editFormData.belongs_to_user_id}
+              onChange={(userId) =>
+                setEditFormData({
+                  ...editFormData,
+                  belongs_to_user_id: userId,
+                })
+              }
+              placeholder="Select owner..."
+              fetchUsers={(search) => usersApi.getAll(search)}
+            />
+          </div>
+
+          {editingItem && (
+            <>
+              <FileUpload
+                accept="application/pdf"
+                label="Product Manual (PDF)"
+                currentFileUrl={manualUrl}
+                onUploadComplete={(s3Key) =>
+                  setEditFormData({
+                    ...editFormData,
+                    product_manual_s3_key: s3Key,
+                  })
+                }
+                onClear={() =>
+                  setEditFormData({
+                    ...editFormData,
+                    product_manual_s3_key: undefined,
+                  })
+                }
+                getUploadUrl={(contentType) =>
+                  itemsApi.getFileUploadUrl('manual', contentType)
+                }
+              />
+
+              <FileUpload
+                accept="application/pdf,image/*"
+                label="Receipt (PDF or Image)"
+                currentFileUrl={receiptUrl}
+                onUploadComplete={(s3Key) =>
+                  setEditFormData({
+                    ...editFormData,
+                    receipt_s3_key: s3Key,
+                  })
+                }
+                onClear={() =>
+                  setEditFormData({
+                    ...editFormData,
+                    receipt_s3_key: undefined,
+                  })
+                }
+                getUploadUrl={(contentType) =>
+                  itemsApi.getFileUploadUrl('receipt', contentType)
+                }
+              />
+            </>
+          )}
 
           {editingItem && (
             <div className="form-group">

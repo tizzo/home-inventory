@@ -10,4 +10,6 @@ export { default as EntityField } from './EntityField';
 export { default as MoveModal } from './MoveModal';
 export { default as EntityCreateModal } from './EntityCreateModal';
 export { default as ImportItemsFromPhoto } from './ImportItemsFromPhoto';
-export { default as TagSelector } from './TagSelector';
+export { default as TagSelector } from './TagSelector';export { default as FileUpload } from './FileUpload';
+export { default as UserSelector } from './UserSelector';
+export { default as ReCaptchaWidget, useReCaptcha } from './ReCaptchaWidget';

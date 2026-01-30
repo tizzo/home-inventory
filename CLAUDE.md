@@ -2,6 +2,38 @@
 
 This document helps Claude Code quickly find relevant documentation and understand the codebase structure.
 
+---
+
+## ⚠️ CRITICAL: Quality Gates - Run Before EVERY Commit
+
+**NO EXCEPTIONS** - These must pass before any `git commit`. Run after EVERY code change, no matter how small.
+
+### Backend (run from backend/ directory):
+```bash
+cargo fmt                    # Format code
+cargo clippy -- -D warnings  # Lint with zero warnings
+cargo build                  # Verify compilation
+cargo test                   # Run tests (if any exist)
+```
+
+### Frontend (run from frontend/ directory):
+```bash
+npm run type-check          # TypeScript type checking
+npm run build              # Verify build succeeds
+npm run lint               # ESLint (fix new issues only)
+```
+
+### Workflow:
+1. **Small change** (1-5 files max)
+2. **Run quality gates** immediately
+3. **Fix any issues** that appear
+4. **Commit** with descriptive message *never* attributed to claude or ai
+5. **Repeat** - Never accumulate uncommitted changes
+
+**Why this matters**: Catching issues immediately is 10x faster than debugging later. Small, verified commits make code review and rollback trivial.
+
+---
+
 ## 🎯 Project at a Glance
 
 **Home Inventory System** - Full-stack inventory management with AI-powered photo analysis.

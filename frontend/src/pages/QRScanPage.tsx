@@ -46,8 +46,8 @@ export default function QRScanPage() {
             navigate(`/containers/${entityId}/edit`);
             break;
           case 'item':
-            // Navigate to item edit page
-            navigate(`/items/${entityId}/edit`);
+            // Navigate to item view page
+            navigate(`/items/${entityId}/view`);
             break;
           default:
             // Unknown entity type, show label details
@@ -55,8 +55,8 @@ export default function QRScanPage() {
             break;
         }
       } else {
-        // Label not assigned, show label details or assignment page
-        navigate(`/labels?label=${label.id}`);
+        // Label not assigned, navigate to assignment page
+        navigate(`/l/${label.id}`);
       }
     },
     [navigate]

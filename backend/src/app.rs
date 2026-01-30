@@ -2,7 +2,6 @@ use axum::{
     extract::State,
     http::{header, Method, StatusCode},
     response::Json,
-    routing::get,
     Router,
 };
 use oauth2::{basic::BasicClient, AuthUrl, ClientId, ClientSecret, RedirectUrl, TokenUrl};
@@ -16,7 +15,7 @@ use tower_sessions_sqlx_store::PostgresStore;
 
 use crate::services::audit::AuditService;
 use crate::services::s3::S3Service;
-use crate::services::VisionService;
+use crate::services::{CaptchaService, VisionService};
 
 #[derive(Clone)]
 pub struct AppState {
@@ -26,6 +25,7 @@ pub struct AppState {
     pub audit: Arc<crate::services::audit::AuditService>,
     pub oauth_client: BasicClient,
     pub vision: Option<Arc<VisionService>>,
+    pub captcha: Arc<CaptchaService>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -95,6 +95,16 @@ pub async fn create_app(db: PgPool) -> anyhow::Result<Router> {
         }
     };
 
+    // Initialize captcha service
+    tracing::info!("Initializing reCAPTCHA service...");
+    let recaptcha_secret = env::var("RECAPTCHA_SECRET_KEY")
+        .expect("Missing RECAPTCHA_SECRET_KEY environment variable");
+    let recaptcha_threshold = env::var("RECAPTCHA_THRESHOLD")
+        .unwrap_or_else(|_| "0.5".to_string())
+        .parse::<f64>()
+        .expect("RECAPTCHA_THRESHOLD must be a valid f64");
+    let captcha_service = CaptchaService::new(recaptcha_secret, recaptcha_threshold);
+
     tracing::info!("Initializing OAuth client...");
     let google_client_id = ClientId::new(
         env::var("GOOGLE_CLIENT_ID").expect("Missing GOOGLE_CLIENT_ID environment variable"),
@@ -129,6 +139,7 @@ pub async fn create_app(db: PgPool) -> anyhow::Result<Router> {
         audit: audit_service,
         oauth_client,
         vision: vision_service,
+        captcha: captcha_service,
     });
 
     // Configure CORS for local development
@@ -153,6 +164,23 @@ pub async fn create_app(db: PgPool) -> anyhow::Result<Router> {
         .with_same_site(SameSite::Lax) // Allow cookies on redirects from external sites
         .with_expiry(Expiry::OnInactivity(time::Duration::days(1)));
 
+    // Public routes (no authentication required)
+    use axum::routing::{get, post};
+    let public_routes = Router::new()
+        .route(
+            "/api/contact",
+            post(crate::routes::contact::create_contact_submission),
+        )
+        .route(
+            "/api/items/:id/public",
+            get(crate::routes::items::get_item_public),
+        );
+
+    let protected_contact_routes = Router::new().route(
+        "/api/contact",
+        get(crate::routes::contact::list_contact_submissions),
+    );
+
     let protected_routes = Router::new()
         .merge(crate::routes::room_routes())
         .merge(crate::routes::shelving_unit_routes())
@@ -165,6 +193,8 @@ pub async fn create_app(db: PgPool) -> anyhow::Result<Router> {
         .merge(crate::routes::tag_routes())
         .merge(crate::routes::move_routes())
         .merge(crate::routes::audit_routes())
+        .merge(crate::routes::user_routes())
+        .merge(protected_contact_routes)
         .route_layer(axum::middleware::from_fn(
             crate::middleware::auth::auth_guard,
         ));
@@ -172,6 +202,7 @@ pub async fn create_app(db: PgPool) -> anyhow::Result<Router> {
     Ok(Router::new()
         .route("/health", get(health_check))
         .merge(crate::routes::auth_routes())
+        .merge(public_routes)
         .merge(protected_routes)
         .layer(session_layer)
         .with_state(state)

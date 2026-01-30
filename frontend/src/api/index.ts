@@ -13,3 +13,5 @@ export type { AuditLogsQuery } from './audit';
 export { moveApi } from './move';
 export type { MoveShelfRequest, MoveContainerRequest, MoveItemRequest } from './move';
 export { itemImportDraftsApi } from './itemImportDrafts';
+export { contactApi } from './contact';
+export { usersApi } from './users';

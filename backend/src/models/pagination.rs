@@ -38,6 +38,7 @@ mod tests {
         let query = PaginationQuery {
             limit: None,
             offset: None,
+            search: None,
         };
 
         assert_eq!(query.limit, None);
@@ -49,6 +50,7 @@ mod tests {
         let query = PaginationQuery {
             limit: Some(10),
             offset: Some(20),
+            search: None,
         };
 
         assert_eq!(query.limit, Some(10));

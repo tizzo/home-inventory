@@ -11,8 +11,8 @@ use uuid::Uuid;
 use crate::app::AppState;
 use crate::middleware::auth::AuthUser;
 use crate::models::{
-    CreateTagRequest, PaginatedResponse, PaginationQuery, Tag, TagResponse, UpdateTagRequest,
-    AssignTagsRequest, BulkAssignTagsRequest,
+    AssignTagsRequest, BulkAssignTagsRequest, CreateTagRequest, PaginatedResponse, PaginationQuery,
+    Tag, TagResponse, UpdateTagRequest,
 };
 
 /// Get all tags
@@ -34,17 +34,15 @@ pub async fn list_tags(
     let total = total.clamp(0, i32::MAX as i64) as i32;
 
     // Get paginated tags
-    let tags = sqlx::query_as::<_, Tag>(
-        "SELECT * FROM tags ORDER BY name ASC LIMIT $1 OFFSET $2",
-    )
-    .bind(limit)
-    .bind(offset)
-    .fetch_all(&state.db)
-    .await
-    .map_err(|e| {
-        tracing::error!("Failed to fetch tags: {:?}", e);
-        StatusCode::INTERNAL_SERVER_ERROR
-    })?;
+    let tags = sqlx::query_as::<_, Tag>("SELECT * FROM tags ORDER BY name ASC LIMIT $1 OFFSET $2")
+        .bind(limit)
+        .bind(offset)
+        .fetch_all(&state.db)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to fetch tags: {:?}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
 
     let responses: Vec<TagResponse> = tags.into_iter().map(TagResponse::from).collect();
     Ok(Json(PaginatedResponse::new(
@@ -151,7 +149,7 @@ pub async fn update_tag(
         let conflict = sqlx::query_as::<_, Tag>(
             "SELECT * FROM tags WHERE LOWER(name) = LOWER($1) AND id != $2",
         )
-        .bind(&trimmed)
+        .bind(trimmed)
         .bind(id)
         .fetch_optional(&state.db)
         .await
@@ -296,17 +294,15 @@ pub async fn assign_tags(
     })?;
 
     // Remove existing tags for this entity
-    sqlx::query(
-        "DELETE FROM entity_tags WHERE entity_type = $1 AND entity_id = $2",
-    )
-    .bind(&payload.entity_type)
-    .bind(payload.entity_id)
-    .execute(&mut *tx)
-    .await
-    .map_err(|e| {
-        tracing::error!("Failed to remove existing tags: {:?}", e);
-        StatusCode::INTERNAL_SERVER_ERROR
-    })?;
+    sqlx::query("DELETE FROM entity_tags WHERE entity_type = $1 AND entity_id = $2")
+        .bind(&payload.entity_type)
+        .bind(payload.entity_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to remove existing tags: {:?}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
 
     // Insert new tags
     for tag_id in &payload.tag_ids {
@@ -368,17 +364,15 @@ pub async fn bulk_assign_tags(
     // For each entity, assign the tags
     for entity_id in &payload.entity_ids {
         // Remove existing tags
-        sqlx::query(
-            "DELETE FROM entity_tags WHERE entity_type = $1 AND entity_id = $2",
-        )
-        .bind(&payload.entity_type)
-        .bind(entity_id)
-        .execute(&mut *tx)
-        .await
-        .map_err(|e| {
-            tracing::error!("Failed to remove existing tags: {:?}", e);
-            StatusCode::INTERNAL_SERVER_ERROR
-        })?;
+        sqlx::query("DELETE FROM entity_tags WHERE entity_type = $1 AND entity_id = $2")
+            .bind(&payload.entity_type)
+            .bind(entity_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| {
+                tracing::error!("Failed to remove existing tags: {:?}", e);
+                StatusCode::INTERNAL_SERVER_ERROR
+            })?;
 
         // Insert new tags
         for tag_id in &payload.tag_ids {
@@ -424,12 +418,18 @@ pub async fn bulk_assign_tags(
 
 /// Create tag routes
 pub fn tag_routes() -> Router<Arc<AppState>> {
-    use axum::routing::{delete, get, post, put};
+    use axum::routing::{get, post};
 
     Router::new()
         .route("/api/tags", get(list_tags).post(create_tag))
-        .route("/api/tags/:id", get(get_tag).put(update_tag).delete(delete_tag))
-        .route("/api/tags/entity/:entity_type/:entity_id", get(get_entity_tags))
+        .route(
+            "/api/tags/:id",
+            get(get_tag).put(update_tag).delete(delete_tag),
+        )
+        .route(
+            "/api/tags/entity/:entity_type/:entity_id",
+            get(get_entity_tags),
+        )
         .route("/api/tags/assign", post(assign_tags))
         .route("/api/tags/bulk-assign", post(bulk_assign_tags))
 }

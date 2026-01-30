@@ -322,6 +322,11 @@ pub async fn commit_item_import_draft(
             description: item.description,
             barcode: item.barcode,
             barcode_type: item.barcode_type,
+            product_manual_s3_key: None,
+            receipt_s3_key: None,
+            product_link: None,
+            belongs_to_user_id: None,
+            acquired_date: None,
         };
 
         let created = sqlx::query_as::<_, Item>(

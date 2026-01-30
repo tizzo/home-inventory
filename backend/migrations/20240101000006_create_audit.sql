@@ -1,13 +1,14 @@
 -- Audit logs table
 -- Note: No foreign key constraints for DSQL compatibility
+-- Note: Using JSON instead of JSONB for DSQL compatibility
 CREATE TABLE audit_logs (
     id UUID PRIMARY KEY,
     entity_type VARCHAR(20) NOT NULL,
     entity_id UUID NOT NULL,
     action VARCHAR(20) NOT NULL,
     user_id UUID, -- References users(id) - enforced in application
-    changes JSONB,
-    metadata JSONB,
+    changes JSON,
+    metadata JSON,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

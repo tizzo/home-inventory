@@ -5,7 +5,7 @@ CREATE TABLE tags (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_tags_name ON tags(name);
+CREATE INDEX ASYNC idx_tags_name ON tags(name);
 
 -- Entity tags junction table
 -- Note: No foreign key constraints for DSQL compatibility
@@ -17,6 +17,6 @@ CREATE TABLE entity_tags (
     PRIMARY KEY (entity_type, entity_id, tag_id)
 );
 
-CREATE INDEX idx_entity_tags_tag_id ON entity_tags(tag_id);
-CREATE INDEX idx_entity_tags_entity ON entity_tags(entity_type, entity_id);
+CREATE INDEX ASYNC idx_entity_tags_tag_id ON entity_tags(tag_id);
+CREATE INDEX ASYNC idx_entity_tags_entity ON entity_tags(entity_type, entity_id);
 

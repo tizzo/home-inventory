@@ -8,8 +8,8 @@ CREATE TABLE users (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_users_email ON users(email);
-CREATE INDEX idx_users_cognito_sub ON users(cognito_sub);
+CREATE INDEX ASYNC idx_users_email ON users(email);
+CREATE INDEX ASYNC idx_users_cognito_sub ON users(cognito_sub);
 
 -- Sessions table (for cookie-based auth)
 -- Note: No foreign key constraint for DSQL compatibility
@@ -22,6 +22,6 @@ CREATE TABLE sessions (
     last_activity TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_sessions_user_id ON sessions(user_id);
-CREATE INDEX idx_sessions_expires_at ON sessions(expires_at);
+CREATE INDEX ASYNC idx_sessions_user_id ON sessions(user_id);
+CREATE INDEX ASYNC idx_sessions_expires_at ON sessions(expires_at);
 

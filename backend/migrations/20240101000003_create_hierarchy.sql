@@ -10,9 +10,9 @@ CREATE TABLE rooms (
     created_by UUID NOT NULL -- References users(id) - enforced in application
 );
 
-CREATE INDEX idx_rooms_label_id ON rooms(label_id);
-CREATE INDEX idx_rooms_created_by ON rooms(created_by);
-CREATE INDEX idx_rooms_name ON rooms(name);
+CREATE INDEX ASYNC idx_rooms_label_id ON rooms(label_id);
+CREATE INDEX ASYNC idx_rooms_created_by ON rooms(created_by);
+CREATE INDEX ASYNC idx_rooms_name ON rooms(name);
 
 -- Shelving units table
 CREATE TABLE shelving_units (
@@ -26,10 +26,10 @@ CREATE TABLE shelving_units (
     created_by UUID NOT NULL -- References users(id) - enforced in application
 );
 
-CREATE INDEX idx_shelving_units_room_id ON shelving_units(room_id);
-CREATE INDEX idx_shelving_units_label_id ON shelving_units(label_id);
-CREATE INDEX idx_shelving_units_created_by ON shelving_units(created_by);
-CREATE INDEX idx_shelving_units_name ON shelving_units(name);
+CREATE INDEX ASYNC idx_shelving_units_room_id ON shelving_units(room_id);
+CREATE INDEX ASYNC idx_shelving_units_label_id ON shelving_units(label_id);
+CREATE INDEX ASYNC idx_shelving_units_created_by ON shelving_units(created_by);
+CREATE INDEX ASYNC idx_shelving_units_name ON shelving_units(name);
 
 -- Shelves table
 CREATE TABLE shelves (
@@ -44,10 +44,10 @@ CREATE TABLE shelves (
     created_by UUID NOT NULL -- References users(id) - enforced in application
 );
 
-CREATE INDEX idx_shelves_unit_id ON shelves(shelving_unit_id);
-CREATE INDEX idx_shelves_label_id ON shelves(label_id);
-CREATE INDEX idx_shelves_created_by ON shelves(created_by);
-CREATE INDEX idx_shelves_position ON shelves(shelving_unit_id, position);
+CREATE INDEX ASYNC idx_shelves_unit_id ON shelves(shelving_unit_id);
+CREATE INDEX ASYNC idx_shelves_label_id ON shelves(label_id);
+CREATE INDEX ASYNC idx_shelves_created_by ON shelves(created_by);
+CREATE INDEX ASYNC idx_shelves_position ON shelves(shelving_unit_id, position);
 
 -- Containers table (can nest)
 CREATE TABLE containers (
@@ -66,11 +66,11 @@ CREATE TABLE containers (
     )
 );
 
-CREATE INDEX idx_containers_shelf_id ON containers(shelf_id);
-CREATE INDEX idx_containers_parent_id ON containers(parent_container_id);
-CREATE INDEX idx_containers_label_id ON containers(label_id);
-CREATE INDEX idx_containers_created_by ON containers(created_by);
-CREATE INDEX idx_containers_name ON containers(name);
+CREATE INDEX ASYNC idx_containers_shelf_id ON containers(shelf_id);
+CREATE INDEX ASYNC idx_containers_parent_id ON containers(parent_container_id);
+CREATE INDEX ASYNC idx_containers_label_id ON containers(label_id);
+CREATE INDEX ASYNC idx_containers_created_by ON containers(created_by);
+CREATE INDEX ASYNC idx_containers_name ON containers(name);
 
 -- Items table
 CREATE TABLE items (
@@ -91,11 +91,11 @@ CREATE TABLE items (
     )
 );
 
-CREATE INDEX idx_items_shelf_id ON items(shelf_id);
-CREATE INDEX idx_items_container_id ON items(container_id);
-CREATE INDEX idx_items_label_id ON items(label_id);
-CREATE INDEX idx_items_created_by ON items(created_by);
-CREATE INDEX idx_items_name ON items(name);
+CREATE INDEX ASYNC idx_items_shelf_id ON items(shelf_id);
+CREATE INDEX ASYNC idx_items_container_id ON items(container_id);
+CREATE INDEX ASYNC idx_items_label_id ON items(label_id);
+CREATE INDEX ASYNC idx_items_created_by ON items(created_by);
+CREATE INDEX ASYNC idx_items_name ON items(name);
 -- Note: Removed partial index (WHERE clause) for DSQL compatibility
-CREATE INDEX idx_items_barcode ON items(barcode);
+CREATE INDEX ASYNC idx_items_barcode ON items(barcode);
 

@@ -9,7 +9,7 @@ CREATE TABLE item_import_drafts (
     created_by UUID NOT NULL
 );
 
-CREATE INDEX idx_item_import_drafts_container_id ON item_import_drafts(container_id);
-CREATE INDEX idx_item_import_drafts_status ON item_import_drafts(status);
-CREATE INDEX idx_item_import_drafts_created_at ON item_import_drafts(created_at);
-CREATE INDEX idx_item_import_drafts_created_by ON item_import_drafts(created_by);
+CREATE INDEX ASYNC idx_item_import_drafts_container_id ON item_import_drafts(container_id);
+CREATE INDEX ASYNC idx_item_import_drafts_status ON item_import_drafts(status);
+CREATE INDEX ASYNC idx_item_import_drafts_created_at ON item_import_drafts(created_at);
+CREATE INDEX ASYNC idx_item_import_drafts_created_by ON item_import_drafts(created_by);

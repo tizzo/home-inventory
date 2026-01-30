@@ -186,6 +186,23 @@ Every UI state must have a deep-linkable URL:
 - Pages, modals, filters, search results - all in URL
 - Users must be able to bookmark and share any state
 
+### 🏗️ Infrastructure / Pulumi
+**ALWAYS use the pulumi wrapper script** - never call `pulumi` directly:
+```bash
+# ✅ Correct
+./pulumi-wrapper.sh preview
+./pulumi-wrapper.sh up
+./pulumi-wrapper.sh stack output frontendBucketName
+
+# ❌ Wrong
+pulumi preview
+pulumi up
+pulumi stack output frontendBucketName
+```
+- The wrapper script handles AWS credentials and S3 backend configuration
+- Direct `pulumi` calls will fail with region/credential errors
+- Located at: `infrastructure/pulumi-wrapper.sh`
+
 ## ⚠️ Known Issues & Gotchas
 
 ### Common Problems

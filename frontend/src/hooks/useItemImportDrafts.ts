@@ -59,9 +59,18 @@ export const useCommitItemImportDraft = () => {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['itemImportDrafts'] });
       queryClient.invalidateQueries({ queryKey: ['items'] });
+
+      // Invalidate container queries
       if (data.draft.container_id) {
         queryClient.invalidateQueries({
           queryKey: ['items', 'container', data.draft.container_id],
+        });
+      }
+
+      // Invalidate shelf queries
+      if (data.draft.shelf_id) {
+        queryClient.invalidateQueries({
+          queryKey: ['items', 'shelf', data.draft.shelf_id],
         });
       }
     },

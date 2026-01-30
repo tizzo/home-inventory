@@ -18,6 +18,19 @@ export default function QRScanPage() {
     error: labelError,
   } = useLabel(scannedLabelId || '');
 
+  const stopScanning = useCallback(async () => {
+    if (html5QrCodeRef.current) {
+      try {
+        await html5QrCodeRef.current.stop();
+        await html5QrCodeRef.current.clear();
+      } catch (err) {
+        console.error('Error stopping scanner:', err);
+      }
+      html5QrCodeRef.current = null;
+    }
+    setScanning(false);
+  }, []);
+
   const handleLabelScanned = useCallback(
     (label: LabelResponse) => {
       // Stop scanning
@@ -59,12 +72,13 @@ export default function QRScanPage() {
         navigate(`/l/${label.id}`);
       }
     },
-    [navigate]
+    [navigate, stopScanning]
   );
 
   // Navigate to entity when label is loaded
   useEffect(() => {
     if (label && scannedLabelId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       handleLabelScanned(label);
     }
   }, [label, scannedLabelId, handleLabelScanned]);
@@ -72,6 +86,7 @@ export default function QRScanPage() {
   // Handle label not found error
   useEffect(() => {
     if (labelError && scannedLabelId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setError('Label not found. Please check the QR code and try again.');
       setScannedLabelId(null);
     }
@@ -94,7 +109,7 @@ export default function QRScanPage() {
         return match[0];
       }
       return null;
-    } catch (e) {
+    } catch {
       // If URL parsing fails, try to extract UUID directly
       const uuidRegex =
         /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
@@ -142,7 +157,7 @@ export default function QRScanPage() {
               setScanning(false);
             }
           },
-          (_errorMessage) => {
+          () => {
             // Ignore scanning errors (they're frequent during scanning)
           }
         );
@@ -159,19 +174,6 @@ export default function QRScanPage() {
 
     initializeScanner();
   }, [scanning]);
-
-  const stopScanning = useCallback(async () => {
-    if (html5QrCodeRef.current) {
-      try {
-        await html5QrCodeRef.current.stop();
-        await html5QrCodeRef.current.clear();
-      } catch (err) {
-        console.error('Error stopping scanner:', err);
-      }
-      html5QrCodeRef.current = null;
-    }
-    setScanning(false);
-  }, []);
 
   // Cleanup on unmount
   useEffect(() => {

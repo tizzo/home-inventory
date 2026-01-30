@@ -45,7 +45,7 @@ export default function TagSelector({
 
   // Fetch all tags
   const { data: tagsResponse } = useTags({ limit: 1000 });
-  const allTags = tagsResponse?.data || [];
+  const allTags = useMemo(() => tagsResponse?.data || [], [tagsResponse?.data]);
 
   // Get selected tags
   const selectedTags = useMemo(() => {

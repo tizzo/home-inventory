@@ -62,7 +62,7 @@ export default function ShelvesPage() {
     }
   }, [shelfId, editingShelf]);
 
-  const handleCreate = async (data: Record<string, any>) => {
+  const handleCreate = async (data: Record<string, string>) => {
     await createShelf.mutateAsync({
       shelving_unit_id: data.unit_id || unitId!,
       name: data.name,

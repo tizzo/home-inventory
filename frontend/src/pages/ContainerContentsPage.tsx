@@ -54,7 +54,7 @@ export default function ContainerContentsPage() {
     if (window.confirm(`Are you sure you want to delete container "${name}"?`)) {
       try {
         await deleteContainer.mutateAsync(id);
-      } catch (err) {
+      } catch {
         alert('Failed to delete container. It may have nested containers or items.');
       }
     }
@@ -64,13 +64,13 @@ export default function ContainerContentsPage() {
     if (window.confirm(`Are you sure you want to delete item "${name}"?`)) {
       try {
         await deleteItem.mutateAsync(id);
-      } catch (err) {
+      } catch {
         alert('Failed to delete item.');
       }
     }
   };
   
-  const handleCreateItem = async (data: Record<string, any>) => {
+  const handleCreateItem = async (data: Record<string, string>) => {
     await createItem.mutateAsync({
       shelf_id: data.shelf_id,
       container_id: data.container_id || containerId,

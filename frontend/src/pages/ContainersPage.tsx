@@ -98,7 +98,7 @@ export default function ContainersPage() {
     }
   }, [containerId, editingContainer]);
 
-  const handleCreate = async (data: Record<string, any>) => {
+  const handleCreate = async (data: Record<string, string>) => {
     await createContainer.mutateAsync({
       shelf_id: data.shelf_id,
       parent_container_id: data.container_id,

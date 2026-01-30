@@ -184,7 +184,7 @@ export default function ItemsPage() {
     setSearchParams(newSearchParams, { replace: true });
   };
 
-  const handleCreate = async (data: Record<string, any>) => {
+  const handleCreate = async (data: Record<string, string>) => {
     await createItem.mutateAsync({
       shelf_id: data.shelf_id,
       container_id: data.container_id,

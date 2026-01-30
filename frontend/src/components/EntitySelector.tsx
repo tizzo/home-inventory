@@ -239,6 +239,7 @@ export default function EntitySelector({
     if (!isOpen && scannerActive) {
       console.log('EntitySelector: Dropdown closed, stopping scanner...');
 
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       stopScanner().catch((err) => {
         console.error('EntitySelector: Failed to stop scanner:', err);
       });

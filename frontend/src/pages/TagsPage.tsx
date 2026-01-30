@@ -30,6 +30,7 @@ export default function TagsPage() {
   // Handle URL-based edit modal
   useEffect(() => {
     if (tagId && editingTag) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setEditFormData({
         name: editingTag.name,
       });
@@ -43,9 +44,9 @@ export default function TagsPage() {
       setCreateFormData({ name: '' });
       setShowCreateModal(false);
       showSuccess('Tag created successfully');
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to create tag:', err);
-      const message = err?.response?.status === 409 
+      const message = (err as { response?: { status?: number } })?.response?.status === 409
         ? 'A tag with this name already exists'
         : 'Failed to create tag. Please try again.';
       showError(message);
@@ -64,9 +65,9 @@ export default function TagsPage() {
       setEditFormData({ name: '' });
       navigate('/tags'); // Close modal by navigating back
       showSuccess('Tag updated successfully');
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to update tag:', err);
-      const message = err?.response?.status === 409 
+      const message = (err as { response?: { status?: number } })?.response?.status === 409
         ? 'A tag with this name already exists'
         : 'Failed to update tag. Please try again.';
       showError(message);

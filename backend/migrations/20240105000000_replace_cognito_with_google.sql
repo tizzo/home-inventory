@@ -1,3 +1,4 @@
+-- sqlx:no-transaction
 -- Rename cognito_sub to google_id
 -- Note: DSQL doesn't support DROP/ADD CONSTRAINT, but the UNIQUE constraint
 -- defined in the original table creation will automatically be renamed with the column

@@ -1,3 +1,4 @@
+-- sqlx:no-transaction
 -- Audit logs table
 -- Note: No foreign key constraints for DSQL compatibility
 -- Note: Using TEXT for JSON data - DSQL doesn't support JSON/JSONB datatypes

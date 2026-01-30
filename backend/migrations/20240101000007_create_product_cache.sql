@@ -1,3 +1,4 @@
+-- sqlx:no-transaction
 -- Product cache table (for barcode lookups)
 CREATE TABLE product_cache (
     barcode VARCHAR(50) PRIMARY KEY,

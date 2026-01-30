@@ -1,3 +1,4 @@
+-- sqlx:no-transaction
 -- Rooms table (top level)
 -- Note: No foreign key constraints for DSQL compatibility
 CREATE TABLE rooms (

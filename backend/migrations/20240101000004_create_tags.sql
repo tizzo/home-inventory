@@ -1,3 +1,4 @@
+-- sqlx:no-transaction
 -- Tags table
 CREATE TABLE tags (
     id UUID PRIMARY KEY,

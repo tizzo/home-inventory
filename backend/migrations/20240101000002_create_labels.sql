@@ -1,3 +1,4 @@
+-- sqlx:no-transaction
 -- Labels table (pre-generated QR codes)
 -- Note: No foreign key constraints for DSQL compatibility
 CREATE TABLE labels (

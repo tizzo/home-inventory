@@ -1,3 +1,4 @@
+-- sqlx:no-transaction
 -- Users table
 CREATE TABLE users (
     id UUID PRIMARY KEY,

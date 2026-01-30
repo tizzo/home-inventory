@@ -1,3 +1,4 @@
+-- sqlx:no-transaction
 -- Item import drafts table
 -- Note: Using TEXT for JSON data - DSQL doesn't support JSON/JSONB datatypes
 -- Application code handles JSON serialization/deserialization

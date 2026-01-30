@@ -1,3 +1,4 @@
+-- sqlx:no-transaction
 -- Photos table
 -- Note: No foreign key constraints for DSQL compatibility
 CREATE TABLE photos (

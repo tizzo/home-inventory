@@ -1,11 +1,12 @@
 -- Item import drafts table
--- Note: Using JSON instead of JSONB for DSQL compatibility
+-- Note: Using TEXT for JSON data - DSQL doesn't support JSON/JSONB datatypes
+-- Application code handles JSON serialization/deserialization
 CREATE TABLE item_import_drafts (
     id UUID PRIMARY KEY,
     container_id UUID NOT NULL,
     status VARCHAR(20) NOT NULL,
-    proposed_items JSON NOT NULL,
-    source_photo_ids JSON NOT NULL,
+    proposed_items TEXT NOT NULL,
+    source_photo_ids TEXT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     created_by UUID NOT NULL

@@ -40,7 +40,9 @@ async fn main() -> anyhow::Result<()> {
         Ok(_) => tracing::info!("✓ Migrations completed successfully"),
         Err(e) => {
             tracing::warn!("⚠ Migration warning: {}. Continuing startup...", e);
-            tracing::warn!("  For DSQL: Ensure migrations were run manually with CREATE INDEX ASYNC syntax");
+            tracing::warn!(
+                "  For DSQL: Ensure migrations were run manually with CREATE INDEX ASYNC syntax"
+            );
         }
     }
 

@@ -100,7 +100,7 @@ export default function ImportItemsFromPhoto({
       setStatus('analyzing');
       const draft = await analyzePhoto.mutateAsync({
         container_id: containerId,
-        photo_id: photo.id,
+        photo_ids: [photo.id],
       });
 
       setProgress(100);

@@ -12,10 +12,57 @@ use uuid::Uuid;
 use crate::app::AppState;
 use crate::middleware::auth::AuthUser;
 use crate::models::{
-    AnalyzePhotoRequest, CommitItemImportDraftResponse, ContainerUpdateProposal,
-    CreateItemImportDraftRequest, CreateItemRequest, Item, ItemImportDraft, ItemImportDraftItem,
-    ItemImportDraftResponse, ItemResponse, Photo, UpdateItemImportDraftRequest,
+    AnalyzePhotoRequest, CommitItemImportDraftResponse, CreateItemImportDraftRequest,
+    CreateItemRequest, Item, ItemImportDraft, ItemImportDraftItem, ItemImportDraftResponse,
+    ItemResponse, LocationUpdateProposal, Photo, UpdateItemImportDraftRequest,
 };
+use crate::services::vision::LocationType;
+
+async fn apply_tags(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    entity_type: &str,
+    entity_id: Uuid,
+    tags: Vec<String>,
+) -> Result<(), StatusCode> {
+    // Delete existing tags
+    sqlx::query("DELETE FROM entity_tags WHERE entity_type = $1 AND entity_id = $2")
+        .bind(entity_type)
+        .bind(entity_id)
+        .execute(&mut **tx)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to delete existing tags: {e:?}");
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    // Insert new tags with upsert
+    for tag_name in tags {
+        let tag_id: Uuid = sqlx::query_scalar(
+            "INSERT INTO tags (id, name) VALUES ($1, $2) ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name RETURNING id"
+        )
+        .bind(Uuid::new_v4())
+        .bind(&tag_name)
+        .fetch_one(&mut **tx)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to create/get tag: {e:?}");
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+        sqlx::query("INSERT INTO entity_tags (entity_type, entity_id, tag_id) VALUES ($1, $2, $3)")
+            .bind(entity_type)
+            .bind(entity_id)
+            .bind(tag_id)
+            .execute(&mut **tx)
+            .await
+            .map_err(|e| {
+                tracing::error!("Failed to link tag to entity: {e:?}");
+                StatusCode::INTERNAL_SERVER_ERROR
+            })?;
+    }
+
+    Ok(())
+}
 
 fn draft_to_response(draft: ItemImportDraft) -> Result<ItemImportDraftResponse, StatusCode> {
     let items: Vec<ItemImportDraftItem> =
@@ -30,10 +77,9 @@ fn draft_to_response(draft: ItemImportDraft) -> Result<ItemImportDraftResponse, 
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
 
-    let container_updates: Option<ContainerUpdateProposal> = match draft.proposed_container_updates
-    {
+    let location_updates: Option<LocationUpdateProposal> = match draft.proposed_location_updates {
         Some(updates) => serde_json::from_value(updates).map_err(|e| {
-            tracing::error!("Failed to parse container updates: {e:?}");
+            tracing::error!("Failed to parse location updates: {e:?}");
             StatusCode::INTERNAL_SERVER_ERROR
         })?,
         None => None,
@@ -42,9 +88,11 @@ fn draft_to_response(draft: ItemImportDraft) -> Result<ItemImportDraftResponse, 
     Ok(ItemImportDraftResponse {
         id: draft.id,
         container_id: draft.container_id,
+        shelf_id: draft.shelf_id,
+        hint: draft.hint,
         status: draft.status,
         items,
-        container_updates,
+        location_updates,
         source_photo_ids,
         created_at: draft.created_at,
         updated_at: draft.updated_at,
@@ -225,18 +273,34 @@ pub async fn commit_item_import_draft(
         return Err(StatusCode::BAD_REQUEST);
     }
 
-    // Verify container still exists
-    let container_exists = sqlx::query("SELECT id FROM containers WHERE id = $1")
-        .bind(draft.container_id)
-        .fetch_optional(&mut *tx)
-        .await
-        .map_err(|e| {
-            tracing::error!("Failed to verify container exists: {e:?}");
-            StatusCode::INTERNAL_SERVER_ERROR
-        })?
-        .is_some();
-
-    if !container_exists {
+    // Verify location still exists
+    if let Some(container_id) = draft.container_id {
+        let exists = sqlx::query("SELECT id FROM containers WHERE id = $1")
+            .bind(container_id)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(|e| {
+                tracing::error!("Failed to verify container exists: {e:?}");
+                StatusCode::INTERNAL_SERVER_ERROR
+            })?
+            .is_some();
+        if !exists {
+            return Err(StatusCode::BAD_REQUEST);
+        }
+    } else if let Some(shelf_id) = draft.shelf_id {
+        let exists = sqlx::query("SELECT id FROM shelves WHERE id = $1")
+            .bind(shelf_id)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(|e| {
+                tracing::error!("Failed to verify shelf exists: {e:?}");
+                StatusCode::INTERNAL_SERVER_ERROR
+            })?
+            .is_some();
+        if !exists {
+            return Err(StatusCode::BAD_REQUEST);
+        }
+    } else {
         return Err(StatusCode::BAD_REQUEST);
     }
 
@@ -246,69 +310,53 @@ pub async fn commit_item_import_draft(
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
 
-    // Check if there are container updates to apply
-    if let Some(updates_value) = &draft.proposed_container_updates {
-        let container_updates: ContainerUpdateProposal =
+    // Check if there are location updates to apply
+    if let Some(updates_value) = &draft.proposed_location_updates {
+        let location_updates: LocationUpdateProposal =
             serde_json::from_value(updates_value.clone()).map_err(|e| {
-                tracing::error!("Failed to parse container updates: {e:?}");
+                tracing::error!("Failed to parse location updates: {e:?}");
                 StatusCode::INTERNAL_SERVER_ERROR
             })?;
 
-        // Update container description if provided
-        if let Some(new_description) = container_updates.description {
-            sqlx::query("UPDATE containers SET description = $1, updated_at = NOW() WHERE id = $2")
-                .bind(&new_description)
-                .bind(draft.container_id)
+        if let Some(container_id) = draft.container_id {
+            // Update container description if provided
+            if let Some(new_description) = &location_updates.description {
+                sqlx::query(
+                    "UPDATE containers SET description = $1, updated_at = NOW() WHERE id = $2",
+                )
+                .bind(new_description)
+                .bind(container_id)
                 .execute(&mut *tx)
                 .await
                 .map_err(|e| {
                     tracing::error!("Failed to update container description: {e:?}");
                     StatusCode::INTERNAL_SERVER_ERROR
                 })?;
-        }
+            }
 
-        // Handle tags if provided
-        if let Some(tags) = container_updates.tags {
-            // First, remove existing tags
-            sqlx::query(
-                "DELETE FROM entity_tags WHERE entity_type = 'container' AND entity_id = $1",
-            )
-            .bind(draft.container_id)
-            .execute(&mut *tx)
-            .await
-            .map_err(|e| {
-                tracing::error!("Failed to delete existing tags: {e:?}");
-                StatusCode::INTERNAL_SERVER_ERROR
-            })?;
-
-            // Insert new tags
-            for tag_name in tags {
-                // First, ensure the tag exists
-                let tag_id: Uuid = sqlx::query_scalar(
-                    "INSERT INTO tags (id, name) VALUES ($1, $2) ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name RETURNING id"
-                )
-                .bind(Uuid::new_v4())
-                .bind(&tag_name)
-                .fetch_one(&mut *tx)
-                .await
-                .map_err(|e| {
-                    tracing::error!("Failed to create/get tag: {e:?}");
-                    StatusCode::INTERNAL_SERVER_ERROR
-                })?;
-
-                // Link tag to container
+            // Handle tags if provided
+            if let Some(ref tags) = location_updates.tags {
+                apply_tags(&mut tx, "container", container_id, tags.clone()).await?;
+            }
+        } else if let Some(shelf_id) = draft.shelf_id {
+            // Update shelf description if provided
+            if let Some(new_description) = &location_updates.description {
                 sqlx::query(
-                    "INSERT INTO entity_tags (entity_type, entity_id, tag_id) VALUES ($1, $2, $3)",
+                    "UPDATE shelves SET description = $1, updated_at = NOW() WHERE id = $2",
                 )
-                .bind("container")
-                .bind(draft.container_id)
-                .bind(tag_id)
+                .bind(new_description)
+                .bind(shelf_id)
                 .execute(&mut *tx)
                 .await
                 .map_err(|e| {
-                    tracing::error!("Failed to link tag to container: {e:?}");
+                    tracing::error!("Failed to update shelf description: {e:?}");
                     StatusCode::INTERNAL_SERVER_ERROR
                 })?;
+            }
+
+            // Handle tags if provided
+            if let Some(ref tags) = location_updates.tags {
+                apply_tags(&mut tx, "shelf", shelf_id, tags.clone()).await?;
             }
         }
     }
@@ -316,8 +364,8 @@ pub async fn commit_item_import_draft(
     let mut created_items: Vec<ItemResponse> = Vec::with_capacity(items.len());
     for item in items {
         let create_req = CreateItemRequest {
-            shelf_id: None,
-            container_id: Some(draft.container_id),
+            shelf_id: draft.shelf_id,
+            container_id: draft.container_id,
             name: item.name,
             description: item.description,
             barcode: item.barcode,
@@ -408,7 +456,7 @@ pub async fn commit_item_import_draft(
     }))
 }
 
-/// Analyze a photo using AI and create an item import draft
+/// Analyze photos using AI and create an item import draft
 pub async fn analyze_photo_and_create_draft(
     State(state): State<Arc<AppState>>,
     AuthUser(user_id): AuthUser,
@@ -429,54 +477,107 @@ pub async fn analyze_photo_and_create_draft(
         }
     };
 
-    // Verify container exists
-    let container_exists = match sqlx::query("SELECT id FROM containers WHERE id = $1")
-        .bind(payload.container_id)
-        .fetch_optional(&state.db)
-        .await
-    {
-        Ok(result) => result.is_some(),
-        Err(e) => {
-            tracing::error!("Failed to verify container exists: {e:?}");
-            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
-        }
-    };
-
-    if !container_exists {
-        tracing::error!("Container not found: {}", payload.container_id);
-        return StatusCode::BAD_REQUEST.into_response();
+    // Validate request
+    if let Err(e) = payload.validate_location() {
+        return (StatusCode::BAD_REQUEST, Json(json!({"error": e}))).into_response();
     }
 
-    // Fetch photo record
-    let photo = match sqlx::query_as::<_, Photo>("SELECT * FROM photos WHERE id = $1")
-        .bind(payload.photo_id)
-        .fetch_optional(&state.db)
-        .await
-    {
-        Ok(Some(photo)) => photo,
-        Ok(None) => {
-            tracing::error!("Photo not found: {}", payload.photo_id);
-            return StatusCode::NOT_FOUND.into_response();
+    if payload.photo_ids.is_empty() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({"error": "At least one photo_id required"})),
+        )
+            .into_response();
+    }
+
+    // Verify location exists and determine type
+    let location_type = if let Some(container_id) = payload.container_id {
+        let exists = match sqlx::query("SELECT id FROM containers WHERE id = $1")
+            .bind(container_id)
+            .fetch_optional(&state.db)
+            .await
+        {
+            Ok(result) => result.is_some(),
+            Err(e) => {
+                tracing::error!("Failed to verify container exists: {e:?}");
+                return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+            }
+        };
+        if !exists {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(json!({"error": "Container not found"})),
+            )
+                .into_response();
         }
-        Err(e) => {
-            tracing::error!("Failed to fetch photo: {e:?}");
-            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        LocationType::Container
+    } else {
+        let shelf_id = payload.shelf_id.unwrap();
+        let exists = match sqlx::query("SELECT id FROM shelves WHERE id = $1")
+            .bind(shelf_id)
+            .fetch_optional(&state.db)
+            .await
+        {
+            Ok(result) => result.is_some(),
+            Err(e) => {
+                tracing::error!("Failed to verify shelf exists: {e:?}");
+                return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+            }
+        };
+        if !exists {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(json!({"error": "Shelf not found"})),
+            )
+                .into_response();
         }
+        LocationType::Shelf
     };
 
-    // Download photo from S3
-    let image_bytes = match state.s3.get_object_bytes(&photo.s3_key).await {
-        Ok(bytes) => bytes,
-        Err(e) => {
-            tracing::error!("Failed to download photo from S3: {e:?}");
-            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
-        }
-    };
+    // Fetch and download all photos
+    let mut images: Vec<(Vec<u8>, String)> = Vec::new();
+    for photo_id in &payload.photo_ids {
+        let photo = match sqlx::query_as::<_, Photo>("SELECT * FROM photos WHERE id = $1")
+            .bind(photo_id)
+            .fetch_optional(&state.db)
+            .await
+        {
+            Ok(Some(photo)) => photo,
+            Ok(None) => {
+                tracing::error!("Photo not found: {}", photo_id);
+                return (
+                    StatusCode::NOT_FOUND,
+                    Json(json!({"error": format!("Photo {} not found", photo_id)})),
+                )
+                    .into_response();
+            }
+            Err(e) => {
+                tracing::error!("Failed to fetch photo: {e:?}");
+                return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+            }
+        };
+
+        let image_bytes = match state.s3.get_object_bytes(&photo.s3_key).await {
+            Ok(bytes) => bytes,
+            Err(e) => {
+                tracing::error!("Failed to download photo from S3: {e:?}");
+                return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+            }
+        };
+
+        images.push((image_bytes, photo.content_type));
+    }
+
+    // Convert to references for vision service
+    let image_refs: Vec<(&[u8], &str)> = images
+        .iter()
+        .map(|(bytes, content_type)| (bytes.as_slice(), content_type.as_str()))
+        .collect();
 
     // Analyze with AI
-    tracing::info!("Analyzing photo {} with AI...", payload.photo_id);
-    let (items, container_updates) = match vision
-        .analyze_image_for_items(&image_bytes, &photo.content_type)
+    tracing::info!("Analyzing {} photo(s) with AI...", payload.photo_ids.len());
+    let (items, location_updates) = match vision
+        .analyze_image_for_items(image_refs, payload.hint.as_deref(), location_type)
         .await
     {
         Ok(result) => result,
@@ -506,9 +607,9 @@ pub async fn analyze_photo_and_create_draft(
         }
     };
 
-    tracing::info!("AI found {} items in photo", items.len());
-    if container_updates.is_some() {
-        tracing::info!("AI also suggested container updates");
+    tracing::info!("AI found {} items in photos", items.len());
+    if location_updates.is_some() {
+        tracing::info!("AI also suggested location updates");
     }
 
     // Create the draft
@@ -520,18 +621,18 @@ pub async fn analyze_photo_and_create_draft(
         }
     };
 
-    let proposed_container_updates = match container_updates {
+    let proposed_location_updates = match location_updates {
         Some(updates) => match serde_json::to_value(&updates) {
             Ok(value) => Some(value),
             Err(e) => {
-                tracing::error!("Failed to serialize container updates: {e:?}");
+                tracing::error!("Failed to serialize location updates: {e:?}");
                 return StatusCode::INTERNAL_SERVER_ERROR.into_response();
             }
         },
         None => None,
     };
 
-    let source_photo_ids = match serde_json::to_value(vec![payload.photo_id]) {
+    let source_photo_ids = match serde_json::to_value(&payload.photo_ids) {
         Ok(value) => value,
         Err(e) => {
             tracing::error!("Failed to serialize source_photo_ids: {e:?}");
@@ -544,21 +645,25 @@ pub async fn analyze_photo_and_create_draft(
         INSERT INTO item_import_drafts (
             id,
             container_id,
+            shelf_id,
+            hint,
             status,
             proposed_items,
-            proposed_container_updates,
+            proposed_location_updates,
             source_photo_ids,
             created_by
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
         RETURNING *
         "#,
     )
     .bind(Uuid::new_v4())
     .bind(payload.container_id)
+    .bind(payload.shelf_id)
+    .bind(&payload.hint)
     .bind("draft")
     .bind(proposed_items)
-    .bind(proposed_container_updates)
+    .bind(proposed_location_updates)
     .bind(source_photo_ids)
     .bind(user_id)
     .fetch_one(&state.db)

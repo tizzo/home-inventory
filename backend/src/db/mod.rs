@@ -1,10 +1,10 @@
+use aws_config::{BehaviorVersion, Region};
+use aws_sdk_dsql::auth_token::{AuthTokenGenerator, Config};
 use sqlx::{
     postgres::{PgConnectOptions, PgPoolOptions, PgSslMode},
-    PgPool, ConnectOptions,
+    ConnectOptions, PgPool,
 };
 use std::time::Duration;
-use aws_sdk_dsql::auth_token::{Config, AuthTokenGenerator};
-use aws_config::{BehaviorVersion, Region};
 
 /// Initialize database connection pool
 /// Compatible with both PostgreSQL (local) and Aurora DSQL (Lambda with IAM auth)
@@ -19,10 +19,12 @@ pub async fn init_pool(database_url: &str) -> Result<PgPool, sqlx::Error> {
 
         // Parse database URL to extract connection parameters
         // Format: postgresql://admin@host:port/database?sslmode=require
-        let url = url::Url::parse(database_url)
-            .map_err(|e| sqlx::Error::Configuration(format!("Invalid DATABASE_URL: {}", e).into()))?;
+        let url = url::Url::parse(database_url).map_err(|e| {
+            sqlx::Error::Configuration(format!("Invalid DATABASE_URL: {}", e).into())
+        })?;
 
-        let host = url.host_str()
+        let host = url
+            .host_str()
             .ok_or_else(|| sqlx::Error::Configuration("Missing host in DATABASE_URL".into()))?;
         let port = url.port().unwrap_or(5432);
         let username = url.username();
@@ -47,7 +49,9 @@ pub async fn init_pool(database_url: &str) -> Result<PgPool, sqlx::Error> {
         let auth_token = signer
             .db_connect_admin_auth_token(&sdk_config)
             .await
-            .map_err(|e| sqlx::Error::Configuration(format!("Failed to generate auth token: {}", e).into()))?;
+            .map_err(|e| {
+                sqlx::Error::Configuration(format!("Failed to generate auth token: {}", e).into())
+            })?;
 
         // Convert AuthToken to String
         let password_token = auth_token.to_string();

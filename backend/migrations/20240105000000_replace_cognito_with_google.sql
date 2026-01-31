@@ -1,15 +1,8 @@
--- Rename cognito_sub to google_id and update constraints
+-- sqlx:no-transaction
+-- Rename cognito_sub to google_id
+-- Note: DSQL doesn't support DROP/ADD CONSTRAINT, but the UNIQUE constraint
+-- defined in the original table creation will automatically be renamed with the column
 ALTER TABLE users RENAME COLUMN cognito_sub TO google_id;
 
--- Previous index was named idx_users_cognito_sub (or implicit UNIQUE constraint key)
--- Let's drop the old constraint/index if it exists and ensure the new one is correct
-
--- Drop the old unique constraint if it was named automatically or explicitly
--- Note: 'users_cognito_sub_key' is the standard naming for UNIQUE constraints in Postgres if not named explicitly
-ALTER TABLE users DROP CONSTRAINT IF EXISTS users_cognito_sub_key;
-
--- Add the new unique constraint
-ALTER TABLE users ADD CONSTRAINT users_google_id_key UNIQUE (google_id);
-
--- Rename index if it exists (created in migration 20240101000001_create_users.sql as idx_users_cognito_sub)
+-- Rename index (created in migration 20240101000001_create_users.sql as idx_users_cognito_sub)
 ALTER INDEX IF EXISTS idx_users_cognito_sub RENAME TO idx_users_google_id;

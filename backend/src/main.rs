@@ -34,9 +34,15 @@ async fn main() -> anyhow::Result<()> {
     tracing::info!("Running database migrations...");
 
     // Run migrations (includes conditional logic for PostgreSQL vs DSQL)
-    db::run_migrations(&pool)
-        .await
-        .expect("Failed to run migrations");
+    // Note: For DSQL, migrations may fail due to CREATE INDEX syntax differences
+    // In production, run migrations manually with ASYNC syntax first
+    match db::run_migrations(&pool).await {
+        Ok(_) => tracing::info!("✓ Migrations completed successfully"),
+        Err(e) => {
+            tracing::warn!("⚠ Migration warning: {}. Continuing startup...", e);
+            tracing::warn!("  For DSQL: Ensure migrations were run manually with CREATE INDEX ASYNC syntax");
+        }
+    }
 
     tracing::info!("Creating Axum application...");
 

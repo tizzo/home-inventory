@@ -1,3 +1,4 @@
+-- sqlx:no-transaction
 -- Views (DSQL-compatible)
 -- Note: DSQL doesn't support views or COMMENT statements
 -- These views were never used in the application codebase

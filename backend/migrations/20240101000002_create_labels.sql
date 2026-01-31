@@ -1,3 +1,4 @@
+-- sqlx:no-transaction
 -- Labels table (pre-generated QR codes)
 -- Note: No foreign key constraints for DSQL compatibility
 CREATE TABLE labels (
@@ -11,9 +12,9 @@ CREATE TABLE labels (
     assigned_at TIMESTAMPTZ
 );
 
-CREATE INDEX idx_labels_number ON labels(number);
-CREATE INDEX idx_labels_batch_id ON labels(batch_id);
-CREATE INDEX idx_labels_assigned ON labels(assigned_to_type, assigned_to_id);
+CREATE INDEX ASYNC idx_labels_number ON labels(number);
+CREATE INDEX ASYNC idx_labels_batch_id ON labels(batch_id);
+CREATE INDEX ASYNC idx_labels_assigned ON labels(assigned_to_type, assigned_to_id);
 -- Note: Removed partial index (WHERE clause) for DSQL compatibility
-CREATE INDEX idx_labels_unassigned ON labels(assigned_to_type);
+CREATE INDEX ASYNC idx_labels_unassigned ON labels(assigned_to_type);
 

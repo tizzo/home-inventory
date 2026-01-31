@@ -1,3 +1,4 @@
+-- sqlx:no-transaction
 -- Updated_at triggers (DSQL-compatible)
 -- Note: DSQL doesn't support triggers
 -- Application code manually sets updated_at = NOW() in all UPDATE queries

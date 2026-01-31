@@ -1,0 +1,7 @@
+name: home-inventory-infrastructure
+runtime:
+  name: nodejs
+  options:
+    typescript: true
+    tsConfigPath: tsconfig.json
+description: AWS infrastructure for home inventory application with multi-region deployment

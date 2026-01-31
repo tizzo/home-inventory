@@ -1,3 +1,4 @@
+-- sqlx:no-transaction
 -- Product cache table (for barcode lookups)
 CREATE TABLE product_cache (
     barcode VARCHAR(50) PRIMARY KEY,
@@ -10,5 +11,5 @@ CREATE TABLE product_cache (
     last_accessed TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_product_cache_cached_at ON product_cache(cached_at);
+CREATE INDEX ASYNC idx_product_cache_cached_at ON product_cache(cached_at);
 

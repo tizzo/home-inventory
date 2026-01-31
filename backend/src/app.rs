@@ -154,10 +154,15 @@ pub async fn create_app(db: PgPool) -> anyhow::Result<Router> {
     // This allows sessions to persist across server restarts and work with AWS Lambda
     let session_store = PostgresStore::new(state.db.clone());
     // Ensure the sessions table exists (migration should have created it)
-    session_store
-        .migrate()
-        .await
-        .expect("Failed to run session store migration");
+    // Note: For DSQL, this may fail due to transaction limitations - sessions table
+    // should be created via manual migration
+    match session_store.migrate().await {
+        Ok(_) => tracing::info!("✓ Session store migration completed"),
+        Err(e) => {
+            tracing::warn!("⚠ Session store migration warning: {}", e);
+            tracing::warn!("  Sessions table should exist from manual migration");
+        }
+    }
 
     let session_layer = SessionManagerLayer::new(session_store)
         .with_secure(false) // Keep false for localhost (http)

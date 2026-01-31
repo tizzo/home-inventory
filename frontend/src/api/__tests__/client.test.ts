@@ -15,11 +15,11 @@ describe('apiClient', () => {
 
   it('should log requests in development', async () => {
     const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-    
+
     // Make a request to trigger the interceptor
     try {
       await apiClient.get('/api/test');
-    } catch (e) {
+    } catch {
       // Expected to fail since we're not mocking axios
     }
 
@@ -42,8 +42,8 @@ describe('apiClient', () => {
     if (interceptor && interceptor.rejected) {
       try {
         await interceptor.rejected(error);
-      } catch (e) {
-        expect(window.location.href).toBe('/auth/login');
+      } catch {
+        expect(window.location.href).toBe('/api/auth/login');
       }
     }
   });
@@ -63,7 +63,7 @@ describe('apiClient', () => {
     if (interceptor && interceptor.rejected) {
       try {
         await interceptor.rejected(error);
-      } catch (e) {
+      } catch {
         expect(window.location.href).toBe('');
       }
     }

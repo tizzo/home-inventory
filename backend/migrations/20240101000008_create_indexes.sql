@@ -1,3 +1,4 @@
+-- sqlx:no-transaction
 -- Search indexes (DSQL-compatible)
 -- Note: DSQL doesn't support GIN indexes, so we use regular B-tree indexes
 -- These indexes support ILIKE queries (case-insensitive pattern matching)

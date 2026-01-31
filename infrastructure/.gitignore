@@ -1,0 +1,13 @@
+node_modules/
+dist/
+*.log
+
+# Pulumi state is stored in S3, not locally
+# This directory may contain temporary files
+.pulumi/
+
+# Commit Pulumi config files (secrets are encrypted with AWS KMS)
+# Pulumi.*.yaml files should be committed to share configuration
+# State itself is stored in S3: s3://home-inventory-pulumi-state
+
+.env

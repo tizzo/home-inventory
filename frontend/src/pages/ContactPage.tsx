@@ -33,6 +33,7 @@ export default function ContactPage() {
   // Prefill subject if item is provided
   useEffect(() => {
     if (publicItem && !formData.subject) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setFormData(prev => ({
         ...prev,
         subject: `Regarding: ${publicItem.name}`,

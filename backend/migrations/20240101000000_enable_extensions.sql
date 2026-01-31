@@ -1,3 +1,4 @@
+-- sqlx:no-transaction
 -- Extensions migration (DSQL-compatible)
 -- Note: DSQL doesn't support extensions, but the application doesn't need them:
 -- - UUID generation: Uses uuid::Uuid::new_v4() in Rust code

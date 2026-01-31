@@ -20,7 +20,7 @@ describe('Pagination', () => {
   });
 
   it('should not render when total pages is 1', () => {
-    const { container } = render(
+    render(
       <Pagination {...defaultProps} total={5} limit={10} />
     );
 

@@ -54,7 +54,7 @@ export default function ItemViewPage() {
     queryFn: async () => {
       try {
         return await photosApi.getByEntity('item', itemId!);
-      } catch (error) {
+      } catch {
         // Silently return empty array if unauthorized (public view)
         return [];
       }

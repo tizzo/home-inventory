@@ -43,6 +43,7 @@ export default function ReCaptchaWidget({
   useEffect(() => {
     // Check if script is already loaded
     if (window.grecaptcha) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLoaded(true);
       return;
     }
@@ -116,11 +117,13 @@ export default function ReCaptchaWidget({
  * const token = await executeRecaptcha('contact_form');
  * ```
  */
+// eslint-disable-next-line react-refresh/only-export-components
 export function useReCaptcha(siteKey: string) {
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     if (window.grecaptcha) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLoaded(true);
       return;
     }

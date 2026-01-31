@@ -1,3 +1,4 @@
+-- sqlx:no-transaction
 -- Photos table
 -- Note: No foreign key constraints for DSQL compatibility
 CREATE TABLE photos (
@@ -14,7 +15,7 @@ CREATE TABLE photos (
     created_by UUID NOT NULL -- References users(id) - enforced in application
 );
 
-CREATE INDEX idx_photos_entity ON photos(entity_type, entity_id);
-CREATE INDEX idx_photos_created_by ON photos(created_by);
-CREATE INDEX idx_photos_created_at ON photos(created_at);
+CREATE INDEX ASYNC idx_photos_entity ON photos(entity_type, entity_id);
+CREATE INDEX ASYNC idx_photos_created_by ON photos(created_by);
+CREATE INDEX ASYNC idx_photos_created_at ON photos(created_at);
 

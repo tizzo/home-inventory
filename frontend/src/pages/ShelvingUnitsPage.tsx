@@ -56,7 +56,7 @@ export default function ShelvingUnitsPage() {
     }
   }, [unitId, editingUnit]);
 
-  const handleCreate = async (data: Record<string, any>) => {
+  const handleCreate = async (data: Record<string, string>) => {
     await createUnit.mutateAsync({
       room_id: data.room_id || roomId!,
       name: data.name,

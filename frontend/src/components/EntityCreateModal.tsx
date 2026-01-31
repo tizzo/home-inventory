@@ -29,7 +29,7 @@ interface EntityCreateModalProps {
   parentEntityId?: string; // Pre-selected parent (e.g., when creating from a specific parent page)
   parentTypes?: ParentTypeOption[]; // For entities that can have multiple parent types
   fields: FormField[];
-  onSubmit: (data: Record<string, any>) => Promise<void>;
+  onSubmit: (data: Record<string, string>) => Promise<void>;
   isPending?: boolean;
 }
 
@@ -53,7 +53,7 @@ export default function EntityCreateModal({
   onSubmit,
   isPending = false,
 }: EntityCreateModalProps) {
-  const [formData, setFormData] = useState<Record<string, any>>({});
+  const [formData, setFormData] = useState<Record<string, string>>({});
   const [selectedParentType, setSelectedParentType] = useState<EntityType | undefined>(
     parentTypes ? parentTypes[0].type : parentEntityType
   );
@@ -61,10 +61,11 @@ export default function EntityCreateModal({
   // Initialize parent entity if provided
   useEffect(() => {
     if (parentEntityId && parentEntityType) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setFormData((prev) => ({ ...prev, [`${parentEntityType}_id`]: parentEntityId }));
     } else if (parentTypes) {
       // Initialize with pre-selected parent IDs for each type
-      const initialData: Record<string, any> = {};
+      const initialData: Record<string, string> = {};
       parentTypes.forEach((pt) => {
         if (pt.preSelectedId) {
           initialData[`${pt.type}_id`] = pt.preSelectedId;
@@ -159,9 +160,15 @@ export default function EntityCreateModal({
             label={effectiveParentLabel || effectiveParentType}
             entityType={effectiveParentType}
             value={formData[`${effectiveParentType}_id`] || effectiveParentId}
-            onChange={(value) =>
-              setFormData({ ...formData, [`${effectiveParentType}_id`]: value })
-            }
+            onChange={(value) => {
+              if (value) {
+                setFormData({ ...formData, [`${effectiveParentType}_id`]: value });
+              } else {
+                const newData = { ...formData };
+                delete newData[`${effectiveParentType}_id`];
+                setFormData(newData);
+              }
+            }}
             required={!effectiveParentId}
             placeholder={`Select ${effectiveParentLabel?.toLowerCase() || effectiveParentType}`}
             helpText="Type to search or click the camera icon to scan a QR code"

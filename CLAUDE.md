@@ -213,16 +213,28 @@ pulumi stack output frontendBucketName
 - ❌ `-- sqlx:no-transaction` directive doesn't prevent implicit PostgreSQL transactions
 
 **Migration Strategy for DSQL:**
-1. **Use manual psql scripts** instead of embedded SQLx migrations
-2. Scripts apply migrations statement-by-statement (no implicit transactions)
-3. Located at: `infrastructure/scripts/apply-migrations-to-dsql*.sh`
-4. Must be run separately for each DSQL cluster (us-east-1, us-east-2)
+1. **Use consolidated migrations** (`backend/migrations-v2/`) with one statement per file
+2. Single-statement files work with both `sqlx migrate run` and direct psql execution
+3. Universal migration runner: `infrastructure/scripts/apply-migrations.sh`
+4. Multi-region cluster: Migrations only need to be run once (auto-replicates)
+
+**Running Migrations:**
+```bash
+# Production (DSQL) - run from infrastructure/scripts/
+./apply-migrations.sh --dsql-east    # Applies to linked multi-region cluster
+
+# Local development
+./apply-migrations.sh --local        # Uses DATABASE_URL or defaults to localhost
+# OR use sqlx-cli directly:
+cd backend && sqlx migrate run --source migrations-v2
+```
 
 **Migration File Requirements:**
 - Add `-- sqlx:no-transaction` to the top of all migration files
 - Use `CREATE INDEX ASYNC` instead of `CREATE INDEX` (DSQL requirement)
 - Use `TEXT` instead of `JSON` or `JSONB` (DSQL doesn't support JSON types)
 - Avoid `ALTER TABLE ADD COLUMN ... DEFAULT` (use nullable columns)
+- **One SQL statement per file** for DSQL compatibility
 - Avoid `ALTER TABLE DROP/ADD CONSTRAINT` (manage constraints at table creation)
 
 **Tower Sessions Exception:**
@@ -231,10 +243,11 @@ pulumi stack output frontendBucketName
 - See: `backend/migrations/20240101000013_create_tower_sessions.sql`
 
 **Multi-Region DSQL:**
-- Current setup: **Two independent clusters** (us-east-1, us-east-2)
-- Migrations must be applied to both clusters separately
-- Each cluster maintains its own data (no replication)
-- To create true multi-region replication: Must destroy and recreate as linked cluster set with witness region
+- Current setup: **Single linked multi-region cluster** (us-east-1 + us-east-2, witness in us-west-2)
+- Uses bidirectional peering to create active-active cluster with synchronous replication
+- Data is automatically replicated between regions for 99.999% availability
+- Migrations only need to be applied once (either region endpoint will replicate to both)
+- Each region has its own endpoint but accesses the same replicated data
 
 **References:**
 - [SQLx Issue #3693: Multiple statements per migration](https://github.com/launchbadge/sqlx/issues/3693)

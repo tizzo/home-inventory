@@ -40,7 +40,7 @@ const providers: RegionProviders = {
 };
 
 // Phase 1: Create DSQL database first
-const databaseOutputs = createDatabase(providers);
+const databaseOutputs = createDatabase();
 
 // Phase 2: Create IAM roles (now with proper DSQL ARNs)
 // We need to create a placeholder bucket ARN for the initial IAM setup
@@ -93,6 +93,8 @@ export const dsqlEndpointEast = databaseOutputs.dsqlClusterEast.identifier.apply
 export const dsqlEndpointWest = databaseOutputs.dsqlClusterWest.identifier.apply(
   (id) => `${id}.dsql.us-east-2.on.aws`
 );
+export const dsqlClusterEastArn = databaseOutputs.dsqlClusterEast.arn;
+export const dsqlClusterWestArn = databaseOutputs.dsqlClusterWest.arn;
 export const lambdaFunctionNameEast = lambdaOutputs.lambdaEast.name;
 export const lambdaFunctionNameWest = lambdaOutputs.lambdaWest.name;
 export const websiteUrl = pulumi.interpolate`https://${stackConfig.domainName}`;

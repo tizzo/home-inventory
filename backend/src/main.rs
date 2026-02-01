@@ -33,14 +33,15 @@ async fn main() -> anyhow::Result<()> {
 
     tracing::info!("Running database migrations...");
 
-    // Run migrations (includes conditional logic for PostgreSQL vs DSQL)
-    // Note: For DSQL, migrations may fail due to CREATE INDEX syntax differences
-    // In production, run migrations manually with ASYNC syntax first
+    // Run migrations using migrations-v2 (single-statement files for DSQL compatibility)
+    // On DSQL: May fail on first deploy - run manually with: ./apply-migrations.sh --dsql-east
+    // On success: No-op if migrations already applied, applies any new ones
+    // On failure: Warns but continues - assumes migrations were applied manually
     match db::run_migrations(&pool).await {
         Ok(_) => tracing::info!("✓ Migrations completed successfully"),
         Err(e) => {
             tracing::warn!("⚠ Migration warning: {}. Continuing startup...", e);
-            tracing::warn!("  For DSQL: Ensure migrations were run manually with CREATE INDEX ASYNC syntax");
+            tracing::warn!("  Run migrations manually: ./apply-migrations.sh --dsql-east");
         }
     }
 

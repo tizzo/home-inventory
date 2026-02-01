@@ -85,7 +85,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: lambda-zip
-          path: dist/
+          path: infrastructure/dist/
 
       - name: Download frontend build
         uses: actions/download-artifact@v4

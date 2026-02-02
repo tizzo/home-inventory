@@ -12,7 +12,7 @@ import {
   useRoom,
   usePhotos,
 } from '../hooks';
-import { Modal, PhotoUpload, PhotoGallery, Breadcrumb, Pagination, MoveModal, EntityCreateModal } from '../components';
+import { Modal, PhotoUpload, PhotoGallery, Breadcrumb, Pagination, MoveModal, EntityCreateModal, MultiImageAnalyzer } from '../components';
 import type {
   UpdateShelfRequest,
   ShelfResponse,
@@ -42,6 +42,8 @@ export default function ShelvesPage() {
   const isLoading = unitId ? isLoadingByUnit : isLoadingAll;
 
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showMultiImageAnalyzer, setShowMultiImageAnalyzer] = useState(false);
+  const [analyzerShelfId, setAnalyzerShelfId] = useState<string>('');
   const [editFormData, setEditFormData] = useState<UpdateShelfRequest>({
     name: '',
     description: '',
@@ -356,6 +358,17 @@ export default function ShelvesPage() {
                   // Photos will refresh automatically via React Query
                 }}
               />
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => {
+                  setAnalyzerShelfId(editingShelf.id);
+                  setShowMultiImageAnalyzer(true);
+                }}
+                style={{ marginTop: '1rem' }}
+              >
+                🤖 AI Import Items (Multiple Photos)
+              </button>
             </div>
           )}
 
@@ -425,6 +438,23 @@ export default function ShelvesPage() {
           onPageChange={(newOffset) => setPagination({ ...pagination, offset: newOffset })}
         />
       )}
+
+      {/* Multi-Image AI Analyzer Modal */}
+      <Modal
+        isOpen={showMultiImageAnalyzer}
+        onClose={() => setShowMultiImageAnalyzer(false)}
+        title="AI Item Import (Multiple Photos)"
+      >
+        <MultiImageAnalyzer
+          locationType="shelf"
+          locationId={analyzerShelfId}
+          onAnalysisComplete={(draftId) => {
+            setShowMultiImageAnalyzer(false);
+            navigate(`/drafts/${draftId}`);
+          }}
+          onCancel={() => setShowMultiImageAnalyzer(false)}
+        />
+      </Modal>
     </div>
   );
 }

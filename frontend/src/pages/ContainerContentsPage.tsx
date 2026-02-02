@@ -10,7 +10,7 @@ import {
   useMoveContainer,
   useMoveItem,
 } from '../hooks';
-import { EntityCreateModal, MoveModal } from '../components';
+import { EntityCreateModal, MoveModal, MultiImageAnalyzer, Modal } from '../components';
 import type { EntityType } from '../components/EntitySelector';
 import type {
   ItemResponse,
@@ -45,6 +45,7 @@ export default function ContainerContentsPage() {
   // Modal states
   const [showCreateItemModal, setShowCreateItemModal] = useState(false);
   const [showCreateContainerModal, setShowCreateContainerModal] = useState(false);
+  const [showMultiImageAnalyzer, setShowMultiImageAnalyzer] = useState(false);
   const [moveModalContainer, setMoveModalContainer] = useState<ContainerResponse | null>(null);
   const [moveModalItem, setMoveModalItem] = useState<ItemResponse | null>(null);
   
@@ -145,6 +146,12 @@ export default function ContainerContentsPage() {
             onClick={() => setShowCreateItemModal(true)}
           >
             Add Item
+          </button>
+          <button
+            className="btn btn-secondary"
+            onClick={() => setShowMultiImageAnalyzer(true)}
+          >
+            🤖 AI Import (Multiple Photos)
           </button>
         </div>
       </div>
@@ -390,6 +397,23 @@ export default function ContainerContentsPage() {
           isPending={moveItem.isPending}
         />
       )}
+
+      {/* Multi-Image AI Analyzer Modal */}
+      <Modal
+        isOpen={showMultiImageAnalyzer}
+        onClose={() => setShowMultiImageAnalyzer(false)}
+        title="AI Item Import (Multiple Photos)"
+      >
+        <MultiImageAnalyzer
+          locationType="container"
+          locationId={containerId || ''}
+          onAnalysisComplete={(draftId) => {
+            setShowMultiImageAnalyzer(false);
+            navigate(`/drafts/${draftId}`);
+          }}
+          onCancel={() => setShowMultiImageAnalyzer(false)}
+        />
+      </Modal>
     </div>
   );
 }

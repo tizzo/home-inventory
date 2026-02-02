@@ -18,10 +18,12 @@ pub struct ItemImportDraftItem {
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct ItemImportDraft {
     pub id: Uuid,
-    pub container_id: Uuid,
+    pub container_id: Option<Uuid>,
+    pub shelf_id: Option<Uuid>,
+    pub hint: Option<String>,
     pub status: String,
     pub proposed_items: serde_json::Value,
-    pub proposed_container_updates: Option<serde_json::Value>,
+    pub proposed_location_updates: Option<serde_json::Value>,
     pub source_photo_ids: serde_json::Value,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -44,19 +46,25 @@ pub struct UpdateItemImportDraftRequest {
 
 #[typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ContainerUpdateProposal {
+pub struct LocationUpdateProposal {
     pub description: Option<String>,
     pub tags: Option<Vec<String>>,
 }
+
+// Backward compatibility alias
+#[allow(dead_code)]
+pub type ContainerUpdateProposal = LocationUpdateProposal;
 
 #[typeshare]
 #[derive(Debug, Serialize)]
 pub struct ItemImportDraftResponse {
     pub id: Uuid,
-    pub container_id: Uuid,
+    pub container_id: Option<Uuid>,
+    pub shelf_id: Option<Uuid>,
+    pub hint: Option<String>,
     pub status: String,
     pub items: Vec<ItemImportDraftItem>,
-    pub container_updates: Option<ContainerUpdateProposal>,
+    pub location_updates: Option<LocationUpdateProposal>,
     pub source_photo_ids: Vec<Uuid>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -72,6 +80,17 @@ pub struct CommitItemImportDraftResponse {
 #[typeshare]
 #[derive(Debug, Deserialize)]
 pub struct AnalyzePhotoRequest {
-    pub container_id: Uuid,
-    pub photo_id: Uuid,
+    pub container_id: Option<Uuid>,
+    pub shelf_id: Option<Uuid>,
+    pub photo_ids: Vec<Uuid>,
+    pub hint: Option<String>,
+}
+
+impl AnalyzePhotoRequest {
+    pub fn validate_location(&self) -> Result<(), &'static str> {
+        match (self.container_id, self.shelf_id) {
+            (Some(_), None) | (None, Some(_)) => Ok(()),
+            _ => Err("Exactly one of container_id or shelf_id must be provided"),
+        }
+    }
 }

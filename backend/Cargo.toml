@@ -24,7 +24,11 @@ sqlx = { version = "0.8", features = [
     "chrono",
     "json",
     "migrate",
+    "rust_decimal",
 ] }
+
+# Decimal handling for database
+rust_decimal = { version = "1", features = ["serde"] }
 
 # Async runtime
 tokio = { version = "1", features = ["full"] }

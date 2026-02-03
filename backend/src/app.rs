@@ -203,6 +203,7 @@ pub async fn create_app(db: PgPool) -> anyhow::Result<Router> {
         .merge(crate::routes::item_routes())
         .merge(crate::routes::item_import_draft_routes())
         .merge(crate::routes::photo_routes())
+        .merge(crate::routes::floor_plan_routes())
         .merge(crate::routes::label_routes())
         .merge(crate::routes::tag_routes())
         .merge(crate::routes::move_routes())

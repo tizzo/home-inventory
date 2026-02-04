@@ -2,6 +2,11 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useRooms, useCreateRoom, useUpdateRoom, useDeleteRoom, usePhotos } from '../hooks';
 import { Modal, PhotoUpload, PhotoGallery, Pagination } from '../components';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent } from '@/components/ui/card';
 import type { CreateRoomRequest, UpdateRoomRequest, RoomResponse } from '../types/generated';
 
 export default function RoomsPage() {
@@ -99,8 +104,8 @@ export default function RoomsPage() {
     setCreateFormData({ name: '', description: '' });
   };
 
-  if (isLoading) return <div className="loading">Loading rooms...</div>;
-  if (error) return <div className="error">Error: {error.message}</div>;
+  if (isLoading) return <div className="text-center py-12 text-muted-foreground">Loading rooms...</div>;
+  if (error) return <div className="text-center py-12 text-destructive">Error: {error.message}</div>;
 
   // Room card component with photos
   function RoomCard({
@@ -120,68 +125,69 @@ export default function RoomsPage() {
     const firstPhoto = photos && photos.length > 0 ? photos[0] : null;
 
     return (
-      <div className="room-card">
-        <div className="card-header">
-          <h3>{room.name}</h3>
-          <div className="card-actions">
-            <button
-              className="btn btn-secondary btn-sm"
-              onClick={onEdit}
-              disabled={updateRoomPending}
-            >
-              Edit
-            </button>
-            <button
-              className="btn btn-danger btn-sm"
-              onClick={onDelete}
-              disabled={deleteRoomPending}
-            >
-              Delete
-            </button>
+      <Card className="overflow-hidden hover:shadow-lg transition-shadow">
+        <CardContent className="p-4">
+          <div className="flex justify-between items-start gap-2 mb-3">
+            <h3 className="font-semibold text-lg truncate flex-1">{room.name}</h3>
+            <div className="flex gap-1 flex-shrink-0">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onEdit}
+                disabled={updateRoomPending}
+              >
+                Edit
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={onDelete}
+                disabled={deleteRoomPending}
+              >
+                Delete
+              </Button>
+            </div>
           </div>
-        </div>
-        {firstPhoto && (
-          <div className="room-photo-preview">
-            <img
-              src={firstPhoto.thumbnail_url || firstPhoto.url}
-              alt={room.name}
-              onClick={() => window.open(firstPhoto.url, '_blank')}
-              loading="lazy"
-            />
-            {photos && photos.length > 1 && (
-              <div className="photo-count-badge">
-                +{photos.length - 1}
-              </div>
+          {firstPhoto && (
+            <div className="relative aspect-video rounded-lg overflow-hidden mb-3 bg-muted cursor-pointer hover:opacity-90 transition-opacity">
+              <img
+                src={firstPhoto.thumbnail_url || firstPhoto.url}
+                alt={room.name}
+                onClick={() => window.open(firstPhoto.url, '_blank')}
+                loading="lazy"
+                className="w-full h-full object-cover"
+              />
+              {photos && photos.length > 1 && (
+                <div className="absolute bottom-2 right-2 bg-black/70 text-white px-2 py-0.5 rounded text-xs font-semibold">
+                  +{photos.length - 1}
+                </div>
+              )}
+            </div>
+          )}
+          {room.description && (
+            <p className="text-muted-foreground text-sm mb-3 line-clamp-2">{room.description}</p>
+          )}
+          <div className="text-xs text-muted-foreground pt-3 border-t border-border">
+            <span>Created: {new Date(room.created_at).toLocaleDateString()}</span>
+            {room.updated_at !== room.created_at && (
+              <span className="ml-2">
+                Updated: {new Date(room.updated_at).toLocaleDateString()}
+              </span>
             )}
           </div>
-        )}
-        {room.description && (
-          <p className="room-description">{room.description}</p>
-        )}
-        <div className="room-meta">
-          <small>
-            Created: {new Date(room.created_at).toLocaleDateString()}
-          </small>
-          {room.updated_at !== room.created_at && (
-            <>
-              {' • '}
-              <small>
-                Updated: {new Date(room.updated_at).toLocaleDateString()}
-              </small>
-            </>
-          )}
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <div className="page">
-      <div className="page-header">
-        <h1>Rooms</h1>
-        <button className="btn btn-primary" onClick={openCreateModal}>
+    <div>
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <h1 className="text-2xl font-bold">Rooms</h1>
+        <Button onClick={openCreateModal}>
           Add Room
-        </button>
+        </Button>
       </div>
 
       {/* Create Modal */}
@@ -190,10 +196,10 @@ export default function RoomsPage() {
         onClose={closeCreateModal}
         title="Create New Room"
       >
-        <form onSubmit={handleCreate}>
-          <div className="form-group">
-            <label htmlFor="create-name">Room Name *</label>
-            <input
+        <form onSubmit={handleCreate} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="create-name">Room Name *</Label>
+            <Input
               id="create-name"
               type="text"
               value={createFormData.name}
@@ -206,9 +212,9 @@ export default function RoomsPage() {
             />
           </div>
 
-          <div className="form-group">
-            <label htmlFor="create-description">Description</label>
-            <textarea
+          <div className="space-y-2">
+            <Label htmlFor="create-description">Description</Label>
+            <Textarea
               id="create-description"
               value={createFormData.description}
               onChange={(e) =>
@@ -222,21 +228,22 @@ export default function RoomsPage() {
             />
           </div>
 
-          <div className="form-actions">
-            <button
+          <div className="flex gap-3 pt-4 border-t border-border">
+            <Button
               type="submit"
-              className="btn btn-primary"
               disabled={createRoom.isPending}
+              className="flex-1"
             >
               {createRoom.isPending ? 'Creating...' : 'Create Room'}
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
-              className="btn btn-secondary"
+              variant="outline"
               onClick={closeCreateModal}
+              className="flex-1"
             >
               Cancel
-            </button>
+            </Button>
           </div>
         </form>
       </Modal>
@@ -247,10 +254,10 @@ export default function RoomsPage() {
         onClose={closeEditModal}
         title="Edit Room"
       >
-        <form onSubmit={handleEdit}>
-          <div className="form-group">
-            <label htmlFor="edit-name">Room Name *</label>
-            <input
+        <form onSubmit={handleEdit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="edit-name">Room Name *</Label>
+            <Input
               id="edit-name"
               type="text"
               value={editFormData.name}
@@ -263,9 +270,9 @@ export default function RoomsPage() {
             />
           </div>
 
-          <div className="form-group">
-            <label htmlFor="edit-description">Description</label>
-            <textarea
+          <div className="space-y-2">
+            <Label htmlFor="edit-description">Description</Label>
+            <Textarea
               id="edit-description"
               value={editFormData.description}
               onChange={(e) =>
@@ -280,7 +287,7 @@ export default function RoomsPage() {
           </div>
 
           {editingRoom && (
-            <div className="form-group">
+            <div>
               <PhotoGallery entityType="room" entityId={editingRoom.id} />
               <PhotoUpload
                 entityType="room"
@@ -292,29 +299,30 @@ export default function RoomsPage() {
             </div>
           )}
 
-          <div className="form-actions">
-            <button
+          <div className="flex gap-3 pt-4 border-t border-border">
+            <Button
               type="submit"
-              className="btn btn-primary"
               disabled={updateRoom.isPending}
+              className="flex-1"
             >
               {updateRoom.isPending ? 'Saving...' : 'Save Changes'}
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
-              className="btn btn-secondary"
+              variant="outline"
               onClick={closeEditModal}
+              className="flex-1"
             >
               Cancel
-            </button>
+            </Button>
           </div>
         </form>
       </Modal>
 
       {/* Rooms Grid */}
-      <div className="rooms-grid">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {rooms?.length === 0 ? (
-          <p className="empty-state">
+          <p className="col-span-full text-center py-12 text-muted-foreground">
             No rooms yet. Click "Add Room" to create your first room.
           </p>
         ) : (

@@ -83,14 +83,21 @@ impl S3Service {
         entity_id: Uuid,
         content_type: &str,
     ) -> anyhow::Result<(String, String)> {
-        // Generate unique S3 key
+        // Generate unique S3 key with strict content-type validation
         let file_id = Uuid::new_v4();
         let extension = match content_type {
-            ct if ct.starts_with("image/jpeg") => "jpg",
-            ct if ct.starts_with("image/png") => "png",
-            ct if ct.starts_with("image/webp") => "webp",
-            ct if ct.starts_with("image/gif") => "gif",
-            _ => "bin",
+            "image/jpeg" | "image/jpg" => "jpg",
+            "image/png" => "png",
+            "image/webp" => "webp",
+            "image/gif" => "gif",
+            "image/heic" => "heic",
+            "image/heif" => "heif",
+            _ => {
+                return Err(anyhow::anyhow!(
+                    "Unsupported content type: {}. Allowed: image/jpeg, image/png, image/webp, image/gif, image/heic, image/heif",
+                    content_type
+                ));
+            }
         };
         let s3_key = format!("{}/{}/{}.{}", entity_type, entity_id, file_id, extension);
 

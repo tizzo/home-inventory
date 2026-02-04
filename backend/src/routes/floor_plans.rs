@@ -35,6 +35,7 @@ pub struct UploadUrlRequest {
 
 /// Get presigned URL for uploading a floor plan
 pub async fn get_upload_url(
+    _user: AuthUser,
     State(state): State<Arc<AppState>>,
     Json(payload): Json<UploadUrlRequest>,
 ) -> Result<Json<PresignedUploadUrl>, StatusCode> {

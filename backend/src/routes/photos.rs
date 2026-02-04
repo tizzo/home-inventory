@@ -26,6 +26,7 @@ pub struct UploadUrlRequest {
 
 /// Get presigned URL for uploading a photo
 pub async fn get_upload_url(
+    _user: AuthUser,
     State(state): State<Arc<AppState>>,
     Query(params): Query<GetPhotosQuery>,
     Json(payload): Json<UploadUrlRequest>,

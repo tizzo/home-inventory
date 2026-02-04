@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { useRooms, useCreateRoom, useUpdateRoom, useDeleteRoom, usePhotos } from '../hooks';
+import { useNavigate, useParams, Link } from 'react-router-dom';
+import { useRooms, useCreateRoom, useUpdateRoom, useDeleteRoom, usePhotos, useFloorPlans } from '../hooks';
 import { Modal, PhotoUpload, PhotoGallery, Pagination } from '../components';
 import type { CreateRoomRequest, UpdateRoomRequest, RoomResponse } from '../types/generated';
 
@@ -10,6 +10,7 @@ export default function RoomsPage() {
   const [pagination, setPagination] = useState({ limit: 50, offset: 0 });
   const { data: roomsResponse, isLoading, error } = useRooms(pagination);
   const rooms = roomsResponse?.data || [];
+  const { data: floorPlans } = useFloorPlans();
   const createRoom = useCreateRoom();
   const updateRoom = useUpdateRoom();
   const deleteRoom = useDeleteRoom();
@@ -22,6 +23,7 @@ export default function RoomsPage() {
   const [editFormData, setEditFormData] = useState<UpdateRoomRequest>({
     name: '',
     description: '',
+    floor_plan_id: '',
   });
 
   // Get the room being edited from URL - need to fetch it separately if not in current page
@@ -33,6 +35,7 @@ export default function RoomsPage() {
       setEditFormData({
         name: editingRoom.name,
         description: editingRoom.description || '',
+        floor_plan_id: editingRoom.floor_plan_id || '',
       });
     }
   }, [roomId, editingRoom]);
@@ -58,7 +61,7 @@ export default function RoomsPage() {
         id: roomId,
         data: editFormData,
       });
-      setEditFormData({ name: '', description: '' });
+      setEditFormData({ name: '', description: '', floor_plan_id: '' });
       navigate('/rooms'); // Close modal by navigating back
     } catch (err) {
       console.error('Failed to update room:', err);
@@ -87,7 +90,7 @@ export default function RoomsPage() {
 
   const closeEditModal = () => {
     navigate('/rooms');
-    setEditFormData({ name: '', description: '' });
+    setEditFormData({ name: '', description: '', floor_plan_id: '' });
   };
 
   const openCreateModal = () => {
@@ -118,6 +121,7 @@ export default function RoomsPage() {
   }) {
     const { data: photos } = usePhotos('room', room.id);
     const firstPhoto = photos && photos.length > 0 ? photos[0] : null;
+    const linkedFloorPlan = floorPlans?.find((fp) => fp.id === room.floor_plan_id);
 
     return (
       <div className="room-card">
@@ -153,6 +157,13 @@ export default function RoomsPage() {
                 +{photos.length - 1}
               </div>
             )}
+          </div>
+        )}
+        {linkedFloorPlan && (
+          <div className="room-floor-plan-link">
+            <Link to={`/floor-plans/${linkedFloorPlan.id}`}>
+              📍 {linkedFloorPlan.name}
+            </Link>
           </div>
         )}
         {room.description && (
@@ -277,6 +288,30 @@ export default function RoomsPage() {
               placeholder="Optional description"
               rows={3}
             />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="edit-floor-plan">Floor Plan</label>
+            <select
+              id="edit-floor-plan"
+              value={editFormData.floor_plan_id || ''}
+              onChange={(e) =>
+                setEditFormData({
+                  ...editFormData,
+                  floor_plan_id: e.target.value || undefined,
+                })
+              }
+            >
+              <option value="">No floor plan</option>
+              {floorPlans?.map((fp) => (
+                <option key={fp.id} value={fp.id}>
+                  {fp.name}
+                </option>
+              ))}
+            </select>
+            <small className="form-hint">
+              Link this room to a floor plan to place shelving units on it
+            </small>
           </div>
 
           {editingRoom && (

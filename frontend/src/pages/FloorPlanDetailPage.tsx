@@ -1,5 +1,5 @@
-import { useState, useCallback } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useState, useCallback, useMemo } from 'react';
+import { useParams, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useFloorPlan, useUpdateFloorPlan } from '../hooks/useFloorPlans';
 import { FloorPlanViewer } from '../components/FloorPlanViewer';
 import { FloorPlanSearch } from '../components/FloorPlanSearch';
@@ -9,17 +9,23 @@ export function FloorPlanDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const isEditMode = location.pathname.endsWith('/edit');
 
   const { data, isLoading, error } = useFloorPlan(id);
   const updateFloorPlan = useUpdateFloorPlan();
 
-  const [searchQuery, setSearchQuery] = useState('');
+  // Get initial search from URL, use local state for user typing
+  const urlSearch = useMemo(() => searchParams.get('search') || '', [searchParams]);
+  const [localSearchQuery, setLocalSearchQuery] = useState('');
+
+  // Use URL search if present, otherwise use local state
+  const searchQuery = urlSearch || localSearchQuery;
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState('');
 
   const handleSearchChange = useCallback((query: string) => {
-    setSearchQuery(query);
+    setLocalSearchQuery(query);
   }, []);
 
   const handleNameEdit = async () => {
@@ -109,7 +115,7 @@ export function FloorPlanDetailPage() {
               onSearchChange={handleSearchChange}
               onSelectPosition={(pos) => {
                 // Scroll to the position or highlight it
-                setSearchQuery(pos.shelving_unit_name);
+                setLocalSearchQuery(pos.shelving_unit_name);
               }}
             />
           )}

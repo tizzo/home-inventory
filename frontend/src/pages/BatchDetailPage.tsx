@@ -1,6 +1,8 @@
 import { QRCodeSVG } from 'qrcode.react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useBatch, useDownloadLabelPdf } from '../hooks';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 
 export default function BatchDetailPage() {
   const { batchId } = useParams<{ batchId: string }>();
@@ -54,179 +56,115 @@ export default function BatchDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="page">
-        <div className="loading">Loading batch details...</div>
-      </div>
+      <div className="text-center py-12 text-muted-foreground">Loading batch details...</div>
     );
   }
 
   if (error || !batch) {
     return (
-      <div className="page">
-        <div className="error">
+      <div className="text-center py-12">
+        <div className="text-destructive mb-4">
           {error ? `Error: ${error.message}` : 'Batch not found'}
         </div>
-        <Link to="/labels" className="btn btn-primary" style={{ marginTop: '1rem' }}>
-          Back to Labels
-        </Link>
+        <Button asChild>
+          <Link to="/labels">Back to Labels</Link>
+        </Button>
       </div>
     );
   }
 
   return (
-    <div className="page">
-      <div className="page-header">
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
-            <Link to="/labels" className="btn btn-secondary btn-sm">
-              ← Back
-            </Link>
-            <h1 style={{ margin: 0 }}>Batch Details</h1>
-          </div>
-          <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
-            <div>
-              <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Batch ID:</span>
-              <br />
-              <code style={{ fontSize: '0.875rem', background: 'var(--bg-color)', padding: '0.25rem 0.5rem', borderRadius: '0.25rem' }}>
-                {batch.batch_id}
-              </code>
-            </div>
-            <div>
-              <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Created:</span>
-              <br />
-              <span style={{ fontSize: '0.875rem' }}>{new Date(batch.created_at).toLocaleString()}</span>
-            </div>
-            <div>
-              <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Labels:</span>
-              <br />
-              <span style={{ fontSize: '0.875rem', fontWeight: 600 }}>{batch.labels.length}</span>
-            </div>
+    <div>
+      {/* Page Header */}
+      <div className="mb-6">
+        <div className="flex items-center gap-4 mb-4">
+          <Button variant="outline" size="sm" asChild>
+            <Link to="/labels">← Back</Link>
+          </Button>
+          <h1 className="text-2xl font-bold">Batch Details</h1>
+        </div>
+
+        <div className="flex flex-wrap gap-6 mb-4">
+          <div>
+            <span className="text-sm text-muted-foreground">Batch ID:</span>
+            <br />
+            <code className="text-sm bg-muted px-2 py-0.5 rounded">
+              {batch.batch_id}
+            </code>
           </div>
           <div>
-            <button
-              className="btn btn-primary"
-              onClick={handleReprint}
-              disabled={downloadPdf.isPending}
-            >
-              {downloadPdf.isPending ? 'Generating PDF...' : '🖨️ Re-print PDF'}
-            </button>
+            <span className="text-sm text-muted-foreground">Created:</span>
+            <br />
+            <span className="text-sm">{new Date(batch.created_at).toLocaleString()}</span>
+          </div>
+          <div>
+            <span className="text-sm text-muted-foreground">Labels:</span>
+            <br />
+            <span className="text-sm font-semibold">{batch.labels.length}</span>
           </div>
         </div>
+
+        <Button
+          onClick={handleReprint}
+          disabled={downloadPdf.isPending}
+        >
+          {downloadPdf.isPending ? 'Generating PDF...' : 'Re-print PDF'}
+        </Button>
       </div>
 
-      <div className="form">
-        <h2 style={{ marginBottom: '1.5rem' }}>
-          QR Code Labels
-        </h2>
-        {batch.labels.length === 0 ? (
-          <div className="empty-state">No labels in this batch.</div>
-        ) : (
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
-              gap: '1.5rem',
-            }}
-          >
-            {batch.labels.map((label) => {
-              const labelLink = getLabelLink(label);
-              // If assigned, link to entity; if unassigned, link to assignment page
-              const clickTarget = labelLink || `/l/${label.id}`;
-              
-              return (
-                <div
-                  key={label.id}
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: '1rem',
-                    padding: '1.5rem',
-                    background: 'var(--surface-color)',
-                    borderRadius: '0.75rem',
-                    border: '2px solid var(--border-color)',
-                    boxShadow: 'var(--shadow)',
-                    transition: 'all 0.2s',
-                    cursor: 'pointer',
-                  }}
-                  onClick={() => {
-                    navigate(clickTarget);
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'translateY(-4px)';
-                    e.currentTarget.style.boxShadow = 'var(--shadow-lg)';
-                    e.currentTarget.style.borderColor = 'var(--primary-color)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.boxShadow = 'var(--shadow)';
-                    e.currentTarget.style.borderColor = 'var(--border-color)';
-                  }}
-                >
-                <div
-                  style={{
-                    padding: '0.75rem',
-                    background: 'white',
-                    borderRadius: '0.5rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <QRCodeSVG
-                    value={label.qr_data}
-                    size={140}
-                    level="M"
-                    includeMargin={true}
-                  />
-                </div>
-                <div style={{ textAlign: 'center', width: '100%' }}>
+      {/* QR Code Labels */}
+      <Card>
+        <CardContent className="p-6">
+          <h2 className="text-lg font-semibold mb-6">QR Code Labels</h2>
+          {batch.labels.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">No labels in this batch.</div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+              {batch.labels.map((label) => {
+                const labelLink = getLabelLink(label);
+                // If assigned, link to entity; if unassigned, link to assignment page
+                const clickTarget = labelLink || `/l/${label.id}`;
+
+                return (
                   <div
-                    style={{
-                      fontSize: '1rem',
-                      fontWeight: 700,
-                      marginBottom: '0.5rem',
-                      color: 'var(--primary-color)',
-                      textDecoration: 'underline',
+                    key={label.id}
+                    className="flex flex-col items-center gap-4 p-6 bg-card rounded-xl border-2 border-border shadow-sm cursor-pointer transition-all hover:shadow-lg hover:-translate-y-1 hover:border-primary"
+                    onClick={() => {
+                      navigate(clickTarget);
                     }}
                   >
-                    #{label.number}
+                    <div className="p-3 bg-white rounded-lg flex items-center justify-center">
+                      <QRCodeSVG
+                        value={label.qr_data}
+                        size={140}
+                        level="M"
+                        includeMargin={true}
+                      />
+                    </div>
+                    <div className="text-center w-full">
+                      <div className="text-base font-bold text-primary underline mb-2">
+                        #{label.number}
+                      </div>
+                      {label.assigned_to_type && label.assigned_to_id ? (
+                        <div className="text-xs text-muted-foreground px-2 py-1 bg-muted rounded inline-block">
+                          ✓ Assigned to {label.assigned_to_type}
+                          <span className="ml-2 text-[0.7rem]">
+                            (click to view)
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="text-xs text-primary italic font-semibold">
+                          Unassigned (click to assign)
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  {label.assigned_to_type && label.assigned_to_id ? (
-                    <div
-                      style={{
-                        fontSize: '0.75rem',
-                        color: 'var(--text-secondary)',
-                        padding: '0.25rem 0.5rem',
-                        background: 'var(--bg-color)',
-                        borderRadius: '0.25rem',
-                        display: 'inline-block',
-                      }}
-                    >
-                      ✓ Assigned to {label.assigned_to_type}
-                      <span style={{ marginLeft: '0.5rem', fontSize: '0.7rem' }}>
-                        (click to view)
-                      </span>
-                    </div>
-                  ) : (
-                    <div
-                      style={{
-                        fontSize: '0.75rem',
-                        color: 'var(--primary-color)',
-                        fontStyle: 'italic',
-                        fontWeight: 600,
-                      }}
-                    >
-                      Unassigned (click to assign)
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-            })}
-          </div>
-        )}
-      </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

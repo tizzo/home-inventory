@@ -3,6 +3,11 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useLabel, useAssignLabel, useCreateRoom, useCreateShelvingUnit, useCreateShelf, useCreateContainer, useCreateItem } from '../hooks';
 import { useToast } from '../context/ToastContext';
 import { Modal, PhotoUpload, EntitySelector } from '../components';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent } from '@/components/ui/card';
 import type { AssignLabelRequest, CreateRoomRequest, CreateShelvingUnitRequest, CreateShelfRequest, CreateContainerRequest, CreateItemRequest } from '../types/generated';
 
 export default function LabelDetailPage() {
@@ -11,13 +16,13 @@ export default function LabelDetailPage() {
   const assignLabel = useAssignLabel();
   const navigate = useNavigate();
   const toast = useToast();
-  
+
   const createRoom = useCreateRoom();
   const createUnit = useCreateShelvingUnit();
   const createShelf = useCreateShelf();
   const createContainer = useCreateContainer();
   const createItem = useCreateItem();
-  
+
   const [selectedEntityType, setSelectedEntityType] = useState<string | null>(null);
   const [formData, setFormData] = useState<{
     name: string;
@@ -72,10 +77,10 @@ export default function LabelDetailPage() {
 
   const handleEntityTypeClick = (entityType: string) => {
     if (!label) return;
-    
+
     const displayName = getEntityTypeDisplayName(entityType);
     const prefillName = `${displayName} ${label.number}`;
-    
+
     setSelectedEntityType(entityType);
     setFormData({
       name: prefillName,
@@ -166,7 +171,7 @@ export default function LabelDetailPage() {
 
       await assignLabel.mutateAsync({ id: labelId, data: assignPayload });
       toast.showSuccess(`${getEntityTypeDisplayName(selectedEntityType)} created and label assigned!`);
-      
+
       // Store created entity ID and keep modal open for photo upload
       setCreatedEntityId(createdEntityId);
     } catch (err) {
@@ -179,7 +184,7 @@ export default function LabelDetailPage() {
     setSelectedEntityType(null);
     setFormData({ name: '', description: '' });
     setCreatedEntityId(null);
-    
+
     // Navigate to created entity if it exists
     if (createdEntityId && selectedEntityType) {
       const link = getAssignedEntityLink(selectedEntityType, createdEntityId);
@@ -191,21 +196,19 @@ export default function LabelDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="page">
-        <div className="loading">Loading label...</div>
-      </div>
+      <div className="text-center py-12 text-muted-foreground">Loading label...</div>
     );
   }
 
   if (error || !label) {
     return (
-      <div className="page">
-        <div className="error">
+      <div className="text-center py-12">
+        <div className="text-destructive mb-4">
           {error ? `Error: ${error.message}` : 'Label not found'}
         </div>
-        <Link to="/labels" className="btn btn-primary" style={{ marginTop: '1rem' }}>
-          Back to Labels
-        </Link>
+        <Button asChild>
+          <Link to="/labels">Back to Labels</Link>
+        </Button>
       </div>
     );
   }
@@ -213,104 +216,100 @@ export default function LabelDetailPage() {
   // If assigned, show redirecting message (should redirect via useEffect)
   if (label.assigned_to_type && label.assigned_to_id) {
     return (
-      <div className="page">
-        <div className="loading">Redirecting to {label.assigned_to_type}...</div>
-      </div>
+      <div className="text-center py-12 text-muted-foreground">Redirecting to {label.assigned_to_type}...</div>
     );
   }
 
   // Unassigned label - show assignment interface
   return (
-    <div className="page">
-      <div className="page-header">
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
-            <Link to="/labels" className="btn btn-secondary btn-sm">
-              ← Back
-            </Link>
-            <h1 style={{ margin: 0 }}>Label #{label.number}</h1>
+    <div>
+      {/* Page Header */}
+      <div className="mb-6">
+        <div className="flex items-center gap-4 mb-4">
+          <Button variant="outline" size="sm" asChild>
+            <Link to="/labels">← Back</Link>
+          </Button>
+          <h1 className="text-2xl font-bold">Label #{label.number}</h1>
+        </div>
+
+        <div className="flex flex-wrap gap-6 mb-4">
+          <div>
+            <span className="text-sm text-muted-foreground">Label ID:</span>
+            <br />
+            <code className="text-sm bg-muted px-2 py-0.5 rounded">
+              {label.id.substring(0, 8)}...
+            </code>
           </div>
-          <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
-            <div>
-              <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Label ID:</span>
-              <br />
-              <code style={{ fontSize: '0.875rem', background: 'var(--bg-color)', padding: '0.25rem 0.5rem', borderRadius: '0.25rem' }}>
-                {label.id.substring(0, 8)}...
-              </code>
-            </div>
-            <div>
-              <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Status:</span>
-              <br />
-              <span style={{ fontSize: '0.875rem', fontStyle: 'italic', color: 'var(--text-secondary)' }}>
-                Unassigned
-              </span>
-            </div>
-            {label.batch_id && (
-              <div>
-                <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Batch:</span>
-                <br />
-                <Link
-                  to={`/labels/batches/${label.batch_id}`}
-                  style={{ fontSize: '0.875rem', color: 'var(--primary-color)' }}
-                >
-                  View Batch
-                </Link>
-              </div>
-            )}
+          <div>
+            <span className="text-sm text-muted-foreground">Status:</span>
+            <br />
+            <span className="text-sm italic text-muted-foreground">
+              Unassigned
+            </span>
           </div>
+          {label.batch_id && (
+            <div>
+              <span className="text-sm text-muted-foreground">Batch:</span>
+              <br />
+              <Link
+                to={`/labels/batches/${label.batch_id}`}
+                className="text-sm text-primary hover:underline"
+              >
+                View Batch
+              </Link>
+            </div>
+          )}
         </div>
       </div>
 
-      <div className="form">
-        <h2 style={{ marginBottom: '1.5rem' }}>Create and Assign Label</h2>
-        <p style={{ marginBottom: '2rem', color: 'var(--text-secondary)' }}>
-          This label is not yet assigned. Create a new entity and assign this label to it:
-        </p>
-
-        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '2rem' }}>
-          <button
-            className="btn btn-primary"
-            onClick={() => handleEntityTypeClick('room')}
-            disabled={createRoom.isPending}
-          >
-            Create Room
-          </button>
-          <button
-            className="btn btn-primary"
-            onClick={() => handleEntityTypeClick('unit')}
-            disabled={createUnit.isPending}
-          >
-            Create Shelving Unit
-          </button>
-          <button
-            className="btn btn-primary"
-            onClick={() => handleEntityTypeClick('shelf')}
-            disabled={createShelf.isPending}
-          >
-            Create Shelf
-          </button>
-          <button
-            className="btn btn-primary"
-            onClick={() => handleEntityTypeClick('container')}
-            disabled={createContainer.isPending}
-          >
-            Create Container
-          </button>
-          <button
-            className="btn btn-primary"
-            onClick={() => handleEntityTypeClick('item')}
-            disabled={createItem.isPending}
-          >
-            Create Item
-          </button>
-        </div>
-
-        <div style={{ marginTop: '2rem', padding: '1rem', background: 'var(--bg-color)', borderRadius: '0.5rem' }}>
-          <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', margin: 0 }}>
-            <strong>Note:</strong> After creating and assigning, scanning this label will automatically navigate to the created entity.
+      {/* Create and Assign Section */}
+      <Card>
+        <CardContent className="p-6">
+          <h2 className="text-lg font-semibold mb-4">Create and Assign Label</h2>
+          <p className="text-muted-foreground mb-6">
+            This label is not yet assigned. Create a new entity and assign this label to it:
           </p>
-        </div>
-      </div>
+
+          <div className="flex flex-wrap gap-3 mb-6">
+            <Button
+              onClick={() => handleEntityTypeClick('room')}
+              disabled={createRoom.isPending}
+            >
+              Create Room
+            </Button>
+            <Button
+              onClick={() => handleEntityTypeClick('unit')}
+              disabled={createUnit.isPending}
+            >
+              Create Shelving Unit
+            </Button>
+            <Button
+              onClick={() => handleEntityTypeClick('shelf')}
+              disabled={createShelf.isPending}
+            >
+              Create Shelf
+            </Button>
+            <Button
+              onClick={() => handleEntityTypeClick('container')}
+              disabled={createContainer.isPending}
+            >
+              Create Container
+            </Button>
+            <Button
+              onClick={() => handleEntityTypeClick('item')}
+              disabled={createItem.isPending}
+            >
+              Create Item
+            </Button>
+          </div>
+
+          <div className="p-4 bg-muted rounded-lg">
+            <p className="text-sm text-muted-foreground">
+              <strong>Note:</strong> After creating and assigning, scanning this label will automatically navigate to the created entity.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Create Entity Modal */}
       {selectedEntityType && (
@@ -319,10 +318,10 @@ export default function LabelDetailPage() {
           onClose={closeModal}
           title={`Create ${getEntityTypeDisplayName(selectedEntityType)}`}
         >
-          <form onSubmit={handleCreateAndAssign} className="form">
-            <div className="form-group">
-              <label htmlFor="name">Name</label>
-              <input
+          <form onSubmit={handleCreateAndAssign} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Name</Label>
+              <Input
                 id="name"
                 type="text"
                 value={formData.name}
@@ -332,9 +331,9 @@ export default function LabelDetailPage() {
               />
             </div>
 
-            <div className="form-group">
-              <label htmlFor="description">Description (optional)</label>
-              <textarea
+            <div className="space-y-2">
+              <Label htmlFor="description">Description (optional)</Label>
+              <Textarea
                 id="description"
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
@@ -364,9 +363,9 @@ export default function LabelDetailPage() {
                   label="Shelving Unit"
                   placeholder="Search for a shelving unit..."
                 />
-                <div className="form-group">
-                  <label htmlFor="position">Position (optional)</label>
-                  <input
+                <div className="space-y-2">
+                  <Label htmlFor="position">Position (optional)</Label>
+                  <Input
                     id="position"
                     type="number"
                     value={formData.position || ''}
@@ -393,7 +392,7 @@ export default function LabelDetailPage() {
                   label="Parent Container (optional)"
                   placeholder="Search for a parent container..."
                 />
-                <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginTop: '-0.5rem', marginBottom: '1rem' }}>
+                <p className="text-sm text-muted-foreground">
                   Note: Provide either shelf OR parent container, not both
                 </p>
               </>
@@ -415,12 +414,12 @@ export default function LabelDetailPage() {
                   label="Container (optional)"
                   placeholder="Search for a container..."
                 />
-                <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginTop: '-0.5rem', marginBottom: '1rem' }}>
+                <p className="text-sm text-muted-foreground">
                   Note: Provide either shelf OR container, not both
                 </p>
-                <div className="form-group">
-                  <label htmlFor="barcode">Barcode (optional)</label>
-                  <input
+                <div className="space-y-2">
+                  <Label htmlFor="barcode">Barcode (optional)</Label>
+                  <Input
                     id="barcode"
                     type="text"
                     value={formData.barcode || ''}
@@ -428,9 +427,9 @@ export default function LabelDetailPage() {
                     placeholder="Product barcode"
                   />
                 </div>
-                <div className="form-group">
-                  <label htmlFor="barcode_type">Barcode Type (optional)</label>
-                  <input
+                <div className="space-y-2">
+                  <Label htmlFor="barcode_type">Barcode Type (optional)</Label>
+                  <Input
                     id="barcode_type"
                     type="text"
                     value={formData.barcode_type || ''}
@@ -442,10 +441,9 @@ export default function LabelDetailPage() {
             )}
 
             {!createdEntityId && (
-              <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
-                <button
+              <div className="flex gap-3 pt-4 border-t border-border">
+                <Button
                   type="submit"
-                  className="btn btn-primary"
                   disabled={
                     createRoom.isPending ||
                     createUnit.isPending ||
@@ -454,14 +452,15 @@ export default function LabelDetailPage() {
                     createItem.isPending ||
                     assignLabel.isPending
                   }
+                  className="flex-1"
                 >
                   {assignLabel.isPending || createRoom.isPending || createUnit.isPending || createShelf.isPending || createContainer.isPending || createItem.isPending
                     ? 'Creating...'
                     : `Create ${getEntityTypeDisplayName(selectedEntityType)}`}
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
-                  className="btn btn-secondary"
+                  variant="outline"
                   onClick={closeModal}
                   disabled={
                     createRoom.isPending ||
@@ -471,16 +470,17 @@ export default function LabelDetailPage() {
                     createItem.isPending ||
                     assignLabel.isPending
                   }
+                  className="flex-1"
                 >
                   Cancel
-                </button>
+                </Button>
               </div>
             )}
 
             {createdEntityId && (
               <>
-                <div style={{ marginTop: '2rem', padding: '1rem', background: 'var(--bg-color)', borderRadius: '0.5rem' }}>
-                  <h3 style={{ marginTop: 0, marginBottom: '1rem' }}>Upload Photo (Optional)</h3>
+                <div className="mt-6 p-4 bg-muted rounded-lg">
+                  <h3 className="font-semibold mb-4">Upload Photo (Optional)</h3>
                   <PhotoUpload
                     entityType={selectedEntityType === 'unit' ? 'shelving_unit' : selectedEntityType}
                     entityId={createdEntityId}
@@ -492,14 +492,14 @@ export default function LabelDetailPage() {
                     }}
                   />
                 </div>
-                <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
-                  <button
+                <div className="flex gap-3 pt-4 border-t border-border">
+                  <Button
                     type="button"
-                    className="btn btn-primary"
                     onClick={closeModal}
+                    className="flex-1"
                   >
                     Done
-                  </button>
+                  </Button>
                 </div>
               </>
             )}

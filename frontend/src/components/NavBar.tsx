@@ -16,6 +16,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { ThemeToggleDropdown } from './ThemeToggle';
 
 interface NavLink {
   to: string;
@@ -154,8 +155,9 @@ export function NavBar() {
             />
           </div>
 
-          {/* Desktop Auth */}
-          <div className="hidden md:flex items-center gap-4">
+          {/* Desktop Auth & Theme */}
+          <div className="hidden md:flex items-center gap-2">
+            <ThemeToggleDropdown />
             {isLoading ? (
               <span className="text-sm text-muted-foreground">...</span>
             ) : user ? (
@@ -192,6 +194,7 @@ export function NavBar() {
 
           {/* Mobile Menu Button */}
           <div className="flex md:hidden items-center gap-2">
+            <ThemeToggleDropdown />
             {!isLoading && !user && <GoogleLoginButton />}
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
               <SheetTrigger asChild>

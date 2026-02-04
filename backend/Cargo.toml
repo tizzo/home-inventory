@@ -90,7 +90,7 @@ base64 = "0.22"
 oauth2 = "4.4"
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
 time = "0.3"
-cargo-lambda = "1.8.6"
+# Note: cargo-lambda is installed globally via `cargo install cargo-lambda`, not as a dependency
 
 
 

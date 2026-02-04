@@ -180,9 +180,14 @@ pub async fn create_app(db: PgPool) -> anyhow::Result<Router> {
         }
     }
 
+    // Session security configuration - secure flag must be true in production (HTTPS)
+    let cookie_secure = env::var("COOKIE_SECURE")
+        .map(|v| v == "true")
+        .unwrap_or(false);
+
     let session_layer = SessionManagerLayer::new(session_store)
-        .with_secure(false) // Keep false for localhost (http)
-        .with_same_site(SameSite::Lax) // Allow cookies on redirects from external sites
+        .with_secure(cookie_secure)
+        .with_same_site(SameSite::Strict) // Strict prevents CSRF attacks
         .with_expiry(Expiry::OnInactivity(time::Duration::days(1)));
 
     // Public routes (no authentication required)

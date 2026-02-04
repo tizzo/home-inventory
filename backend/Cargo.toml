@@ -14,6 +14,15 @@ tower-http = { version = "0.5", features = ["cors", "trace"] }
 tower-sessions = "0.13"
 tower-sessions-sqlx-store = { version = "0.14", features = ["postgres"] }
 
+# Security: Rate limiting
+tower_governor = "0.4"
+
+# Security: Input validation
+validator = { version = "0.19", features = ["derive"] }
+
+# Security: Pin bytes to fix RUSTSEC-2026-0007 (integer overflow)
+bytes = ">=1.11.1"
+
 
 # Database
 sqlx = { version = "0.8", features = [

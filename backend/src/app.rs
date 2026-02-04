@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use std::env;
 use std::sync::Arc;
+use tower_governor::{governor::GovernorConfigBuilder, GovernorLayer};
 use tower_http::cors::CorsLayer;
 use tower_sessions::{Expiry, SessionManagerLayer};
 use tower_sessions_sqlx_store::PostgresStore;
@@ -190,6 +191,17 @@ pub async fn create_app(db: PgPool) -> anyhow::Result<Router> {
         .with_same_site(SameSite::Strict) // Strict prevents CSRF attacks
         .with_expiry(Expiry::OnInactivity(time::Duration::days(1)));
 
+    // Rate limiting configuration - 50 requests per second per IP
+    // This prevents brute force attacks while allowing normal usage
+    let governor_conf = GovernorConfigBuilder::default()
+        .per_second(50)
+        .burst_size(100)
+        .finish()
+        .unwrap();
+    let governor_layer = GovernorLayer {
+        config: Arc::new(governor_conf),
+    };
+
     // Public routes (no authentication required)
     use axum::routing::{get, post};
     let public_routes = Router::new()
@@ -233,6 +245,7 @@ pub async fn create_app(db: PgPool) -> anyhow::Result<Router> {
         .merge(protected_routes)
         .layer(session_layer)
         .with_state(state)
+        .layer(governor_layer)
         .layer(cors))
 }
 

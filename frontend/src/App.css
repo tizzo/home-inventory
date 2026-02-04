@@ -1,3 +1,19 @@
+/*
+ * LEGACY CSS - Gradually being replaced by Tailwind + shadcn/ui
+ *
+ * The following components have been migrated to Tailwind:
+ * - NavBar (Navigation with mobile Sheet)
+ * - Modal (uses shadcn Dialog)
+ * - Pagination (responsive with shadcn Button)
+ * - EntitySelector, EntityField (shadcn Input/Button)
+ * - PhotoUpload, PhotoGallery (Tailwind + shadcn)
+ * - EntityCreateModal (shadcn form components)
+ * - RoomsPage (fully migrated as template)
+ *
+ * Remaining pages use these styles for backward compatibility.
+ * Migrate additional pages following RoomsPage pattern.
+ */
+
 :root {
   --primary-color: #3b82f6;
   --secondary-color: #8b5cf6;

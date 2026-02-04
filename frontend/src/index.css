@@ -1,3 +1,21 @@
+@import "tailwindcss";
+
+/* Custom theme configuration for Tailwind v4 */
+@theme {
+  /* Match existing CSS variables */
+  --color-primary: #3b82f6;
+  --color-secondary: #8b5cf6;
+  --color-danger: #ef4444;
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-bg: #f9fafb;
+  --color-surface: #ffffff;
+  --color-text: #1f2937;
+  --color-text-secondary: #6b7280;
+  --color-border: #e5e7eb;
+}
+
+/* Keep existing font rendering optimizations */
 :root {
   font-synthesis: none;
   text-rendering: optimizeLegibility;

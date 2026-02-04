@@ -1,6 +1,6 @@
 import * as pulumi from "@pulumi/pulumi";
 import * as awsNative from "@pulumi/aws-native";
-import { DatabaseOutputs } from "./types.js";
+import { DatabaseOutputs, DsqlClusterCompat } from "./types.js";
 
 export function createDatabase(): DatabaseOutputs {
   // Multi-region DSQL cluster setup using aws-native provider
@@ -60,13 +60,13 @@ export function createDatabase(): DatabaseOutputs {
     }
   );
 
-  // For compatibility with existing code, create wrapper objects that match the aws provider interface
-  const dsqlClusterEastCompat = {
+  // For compatibility with existing code, create wrapper objects that match the generic interface
+  const dsqlClusterEastCompat: DsqlClusterCompat = {
     identifier: dsqlClusterEast.identifier,
     arn: dsqlClusterEast.resourceArn,
   };
 
-  const dsqlClusterWestCompat = {
+  const dsqlClusterWestCompat: DsqlClusterCompat = {
     identifier: dsqlClusterWest.identifier,
     arn: dsqlClusterWest.resourceArn,
   };
@@ -78,8 +78,8 @@ export function createDatabase(): DatabaseOutputs {
   const connectionStringWest = pulumi.interpolate`postgresql://admin@${dsqlClusterWest.identifier}.dsql.us-east-2.on.aws:5432/postgres?sslmode=require`;
 
   return {
-    dsqlClusterEast: dsqlClusterEastCompat as any,
-    dsqlClusterWest: dsqlClusterWestCompat as any,
+    dsqlClusterEast: dsqlClusterEastCompat,
+    dsqlClusterWest: dsqlClusterWestCompat,
     connectionStringEast,
     connectionStringWest,
   };

@@ -15,9 +15,15 @@ export interface RegionProviders {
   west: aws.Provider;
 }
 
+// Generic DSQL cluster interface that works with both aws and aws-native providers
+export interface DsqlClusterCompat {
+  identifier: pulumi.Output<string>;
+  arn: pulumi.Output<string>;
+}
+
 export interface DatabaseOutputs {
-  dsqlClusterEast: aws.dsql.Cluster;
-  dsqlClusterWest: aws.dsql.Cluster;
+  dsqlClusterEast: DsqlClusterCompat;
+  dsqlClusterWest: DsqlClusterCompat;
   connectionStringEast: pulumi.Output<string>;
   connectionStringWest: pulumi.Output<string>;
 }

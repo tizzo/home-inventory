@@ -21,15 +21,20 @@ pub async fn create_contact_submission(
     headers: axum::http::HeaderMap,
     Json(payload): Json<CreateContactSubmissionRequest>,
 ) -> Result<Json<ContactSubmissionResponse>, StatusCode> {
-    // Verify reCAPTCHA token
-    state
-        .captcha
-        .verify_token(&payload.recaptcha_token)
-        .await
-        .map_err(|e| {
-            tracing::warn!("reCAPTCHA verification failed: {:?}", e);
-            StatusCode::BAD_REQUEST
-        })?;
+    // Verify reCAPTCHA token (if captcha service is available)
+    if let Some(ref captcha) = state.captcha {
+        captcha
+            .verify_token(&payload.recaptcha_token)
+            .await
+            .map_err(|e| {
+                tracing::warn!("reCAPTCHA verification failed: {:?}", e);
+                StatusCode::BAD_REQUEST
+            })?;
+    } else {
+        tracing::warn!(
+            "reCAPTCHA not configured - allowing contact submission without verification"
+        );
+    }
 
     // Extract user agent from headers
     let user_agent = headers

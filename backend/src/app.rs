@@ -25,7 +25,7 @@ pub struct AppState {
     pub audit: Arc<crate::services::audit::AuditService>,
     pub oauth_client: BasicClient,
     pub vision: Option<Arc<VisionService>>,
-    pub captcha: Arc<CaptchaService>,
+    pub captcha: Option<Arc<CaptchaService>>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -95,15 +95,24 @@ pub async fn create_app(db: PgPool) -> anyhow::Result<Router> {
         }
     };
 
-    // Initialize captcha service
+    // Initialize captcha service (optional - requires RECAPTCHA_SECRET_KEY)
     tracing::info!("Initializing reCAPTCHA service...");
-    let recaptcha_secret = env::var("RECAPTCHA_SECRET_KEY")
-        .expect("Missing RECAPTCHA_SECRET_KEY environment variable");
-    let recaptcha_threshold = env::var("RECAPTCHA_THRESHOLD")
-        .unwrap_or_else(|_| "0.5".to_string())
-        .parse::<f64>()
-        .expect("RECAPTCHA_THRESHOLD must be a valid f64");
-    let captcha_service = CaptchaService::new(recaptcha_secret, recaptcha_threshold);
+    let captcha_service = match env::var("RECAPTCHA_SECRET_KEY") {
+        Ok(recaptcha_secret) => {
+            let recaptcha_threshold = env::var("RECAPTCHA_THRESHOLD")
+                .unwrap_or_else(|_| "0.5".to_string())
+                .parse::<f64>()
+                .unwrap_or(0.5);
+            tracing::info!("reCAPTCHA service initialized successfully");
+            // CaptchaService::new already returns Arc<CaptchaService>
+            Some(CaptchaService::new(recaptcha_secret, recaptcha_threshold))
+        }
+        Err(_) => {
+            tracing::warn!("reCAPTCHA service not available: RECAPTCHA_SECRET_KEY not set");
+            tracing::warn!("Contact form submissions will not be protected by CAPTCHA");
+            None
+        }
+    };
 
     tracing::info!("Initializing OAuth client...");
     let google_client_id = ClientId::new(

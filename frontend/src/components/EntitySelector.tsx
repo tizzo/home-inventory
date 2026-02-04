@@ -3,6 +3,9 @@ import { Html5Qrcode } from 'html5-qrcode';
 import { useRooms, useShelvingUnits, useShelves, useContainers, useItems } from '../hooks';
 import { labelsApi } from '../api';
 import type { RoomResponse, ShelvingUnitResponse, ShelfResponse, ContainerResponse, ItemResponse } from '../types/generated';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 export type EntityType = 'room' | 'unit' | 'shelf' | 'container' | 'item';
 
@@ -25,10 +28,10 @@ interface Entity {
 const fuzzyMatch = (text: string, query: string): boolean => {
   const lowerText = text.toLowerCase();
   const lowerQuery = query.toLowerCase();
-  
+
   // Exact match
   if (lowerText.includes(lowerQuery)) return true;
-  
+
   // Fuzzy match: check if all query characters appear in order
   let queryIndex = 0;
   for (let i = 0; i < lowerText.length && queryIndex < lowerQuery.length; i++) {
@@ -140,10 +143,10 @@ export default function EntitySelector({
       }
 
       const labelId = match[1];
-      
+
       // Fetch label via API
       const label = await labelsApi.getById(labelId);
-      
+
       // Map label entity type to selector entity type
       const typeMap: Record<string, EntityType> = {
         room: 'room',
@@ -152,7 +155,7 @@ export default function EntitySelector({
         container: 'container',
         item: 'item',
       };
-      
+
       if (!label.assigned_to_id) {
         alert('This label is not assigned to any entity.');
         return;
@@ -185,7 +188,7 @@ export default function EntitySelector({
     // First, show the scanner UI
     setShowScanner(true);
     setScannerActive(true);
-    
+
     // Wait for DOM to update and element to be available
     // Use requestAnimationFrame to ensure DOM is ready
     requestAnimationFrame(() => {
@@ -194,7 +197,7 @@ export default function EntitySelector({
         const elementId = `qr-scanner-${entityType}`;
         const element = document.getElementById(elementId);
         console.log('EntitySelector: Looking for scanner element:', elementId, element ? 'found' : 'not found');
-        
+
         if (!element) {
           console.warn('EntitySelector: Scanner element not found in DOM after render');
           setScannerActive(false);
@@ -268,7 +271,7 @@ export default function EntitySelector({
     e.preventDefault();
     e.stopPropagation();
     scanButtonClickedRef.current = true;
-    
+
     if (scannerActive) {
       console.log('EntitySelector: Scan button clicked, stopping scanner');
       await stopScanner();
@@ -285,7 +288,7 @@ export default function EntitySelector({
         startScanner().catch(console.error);
       }, 100);
     }
-    
+
     // Reset flag after a short delay
     setTimeout(() => {
       scanButtonClickedRef.current = false;
@@ -311,16 +314,16 @@ export default function EntitySelector({
   };
 
   return (
-    <div className="form-group" ref={containerRef} style={{ position: 'relative' }}>
+    <div ref={containerRef} className="relative">
       {label && (
-        <label htmlFor={`entity-selector-${entityType}`}>
+        <Label htmlFor={`entity-selector-${entityType}`} className="mb-2 block">
           {label}
-          {required && <span style={{ color: 'var(--error-color)' }}> *</span>}
-        </label>
+          {required && <span className="text-destructive ml-1">*</span>}
+        </Label>
       )}
-      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'stretch' }}>
-        <div style={{ flex: 1, position: 'relative' }}>
-          <input
+      <div className="flex gap-2 items-stretch">
+        <div className="flex-1 relative">
+          <Input
             id={`entity-selector-${entityType}`}
             type="text"
             value={selectedEntity ? selectedEntity.displayText : searchQuery}
@@ -344,7 +347,7 @@ export default function EntitySelector({
                   console.log('EntitySelector: Ignoring blur - scan button was clicked');
                   return;
                 }
-                
+
                 const activeElement = document.activeElement;
                 const container = containerRef.current;
                 // Don't close if focus moved to something inside the container (like scan button)
@@ -359,50 +362,24 @@ export default function EntitySelector({
             }}
             placeholder={placeholder || `Search ${entityType}...`}
             required={required}
-            style={{ width: '100%' }}
+            className={selectedEntity ? 'pr-8' : ''}
           />
           {selectedEntity && (
             <button
               type="button"
               onClick={handleClear}
-              style={{
-                position: 'absolute',
-                right: '0.5rem',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                fontSize: '1.2rem',
-                color: 'var(--text-secondary)',
-                padding: '0.25rem',
-              }}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1 text-lg leading-none"
               aria-label="Clear selection"
             >
-              ×
+              &times;
             </button>
           )}
 
           {/* Dropdown */}
           {isOpen && !showScanner && (
-            <div
-              style={{
-                position: 'absolute',
-                top: '100%',
-                left: 0,
-                right: 0,
-                zIndex: 1000,
-                background: 'var(--surface-color)',
-                border: '1px solid var(--border-color)',
-                borderRadius: '0.5rem',
-                marginTop: '0.25rem',
-                maxHeight: '300px',
-                overflowY: 'auto',
-                boxShadow: 'var(--shadow-lg)',
-              }}
-            >
+            <div className="absolute top-full left-0 right-0 z-50 bg-background border border-border rounded-md mt-1 max-h-[300px] overflow-y-auto shadow-lg">
               {filteredEntities.length === 0 ? (
-                <div style={{ padding: '1rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                <div className="p-4 text-center text-muted-foreground">
                   {searchQuery ? 'No matches found' : 'No entities available'}
                 </div>
               ) : (
@@ -411,22 +388,9 @@ export default function EntitySelector({
                     key={entity.id}
                     type="button"
                     onClick={() => handleSelect(entity)}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem 1rem',
-                      textAlign: 'left',
-                      background: entity.id === value ? 'rgba(var(--primary-color-rgb), 0.1)' : 'transparent',
-                      border: 'none',
-                      cursor: 'pointer',
-                      borderBottom: '1px solid var(--border-color)',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = 'var(--bg-color)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background =
-                        entity.id === value ? 'rgba(var(--primary-color-rgb), 0.1)' : 'transparent';
-                    }}
+                    className={`w-full px-3 py-2 text-left border-b border-border last:border-b-0 hover:bg-accent transition-colors ${
+                      entity.id === value ? 'bg-primary/10' : ''
+                    }`}
                   >
                     {entity.displayText}
                   </button>
@@ -437,46 +401,35 @@ export default function EntitySelector({
         </div>
 
         {/* QR Scanner Button */}
-        <button
+        <Button
           type="button"
+          variant="secondary"
           onClick={handleScanClick}
           onMouseDown={(e) => {
             // Prevent blur event from firing when clicking the button
             e.preventDefault();
             e.stopPropagation();
           }}
-          className="btn btn-secondary"
-          style={{ whiteSpace: 'nowrap' }}
+          className="whitespace-nowrap h-10"
         >
-          {scannerActive ? '📷 Stop' : '📷 Scan'}
-        </button>
+          {scannerActive ? 'Stop' : 'Scan'}
+        </Button>
       </div>
 
       {/* QR Scanner - Always render when isOpen, but only show when showScanner is true */}
       {isOpen && (
         <div
-          style={{
-            marginTop: '1rem',
-            padding: '1rem',
-            background: 'var(--bg-color)',
-            borderRadius: '0.5rem',
-            border: '2px solid var(--primary-color)',
-            display: showScanner ? 'block' : 'none',
-          }}
+          className={`mt-4 p-4 bg-muted rounded-lg border-2 border-primary ${showScanner ? 'block' : 'hidden'}`}
         >
-          <div style={{ marginBottom: '0.5rem', fontWeight: 600 }}>
+          <div className="font-semibold mb-2">
             Scan Label QR Code
           </div>
           <div
             id={`qr-scanner-${entityType}`}
             ref={scannerElementRef}
-            style={{
-              width: '100%',
-              maxWidth: '400px',
-              margin: '0 auto',
-            }}
+            className="w-full max-w-[400px] mx-auto"
           />
-          <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginTop: '0.5rem', marginBottom: 0 }}>
+          <p className="text-sm text-muted-foreground mt-2">
             Point camera at label QR code
           </p>
         </div>

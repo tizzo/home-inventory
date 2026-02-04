@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useParams, useSearchParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useToast } from '../context/ToastContext';
@@ -20,6 +20,11 @@ import {
   useCreateTag,
 } from '../hooks';
 import { Modal, PhotoUpload, PhotoGallery, Pagination, MoveModal, EntityCreateModal, TagSelector, FileUpload, UserSelector } from '../components';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent } from '@/components/ui/card';
 import { usersApi, itemsApi } from '../api';
 import type { EntityType } from '../components/EntitySelector';
 import type {
@@ -37,15 +42,19 @@ export default function ItemsPage() {
   }>();
 
   // Get search query from URL
-  const searchQuery = searchParams.get('search') || '';
+  const searchQueryFromUrl = searchParams.get('search') || '';
   const offsetFromUrl = parseInt(searchParams.get('offset') || '0', 10);
+
+  // Local state for search input (separate from URL to avoid re-renders on every keystroke)
+  const [searchInputValue, setSearchInputValue] = useState(searchQueryFromUrl);
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Determine context and fetch appropriate data
   const context = shelfId ? 'shelf' : containerId ? 'container' : 'all';
-  const [pagination, setPagination] = useState({ 
-    limit: 50, 
+  const [pagination, setPagination] = useState({
+    limit: 50,
     offset: offsetFromUrl,
-    search: searchQuery || undefined 
+    search: searchQueryFromUrl || undefined
   });
   const { data: allItemsResponse, isLoading: isLoadingAll } = useItems(pagination);
   const { data: shelfItemsResponse, isLoading: isLoadingShelf } = useItemsByShelf(
@@ -126,7 +135,7 @@ export default function ItemsPage() {
     enabled: !!editingItem?.receipt_s3_key,
   });
 
-  // Sync pagination with URL search params
+  // Sync pagination with URL search params (only when URL changes externally)
   useEffect(() => {
     const urlSearch = searchParams.get('search') || '';
     const urlOffset = parseInt(searchParams.get('offset') || '0', 10);
@@ -135,7 +144,18 @@ export default function ItemsPage() {
       offset: urlOffset,
       search: urlSearch || undefined,
     });
+    // Also sync the input value when URL changes (e.g., browser back/forward)
+    setSearchInputValue(urlSearch);
   }, [searchParams]);
+
+  // Cleanup debounce timer on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, []);
 
   // Handle URL-based edit modal
   useEffect(() => {
@@ -164,8 +184,8 @@ export default function ItemsPage() {
     }
   }, [itemId, editingItem, currentTags]);
 
-  // Handle search input change
-  const handleSearchChange = (value: string) => {
+  // Handle search input change with debouncing
+  const updateSearchUrl = useCallback((value: string) => {
     const newSearchParams = new URLSearchParams(searchParams);
     if (value.trim()) {
       newSearchParams.set('search', value.trim());
@@ -175,7 +195,20 @@ export default function ItemsPage() {
     // Reset offset when search changes
     newSearchParams.delete('offset');
     setSearchParams(newSearchParams, { replace: true });
-  };
+  }, [searchParams, setSearchParams]);
+
+  const handleSearchChange = useCallback((value: string) => {
+    // Update local state immediately for responsive input
+    setSearchInputValue(value);
+
+    // Debounce the URL update
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+    debounceTimerRef.current = setTimeout(() => {
+      updateSearchUrl(value);
+    }, 300);
+  }, [updateSearchUrl]);
 
   // Handle pagination change
   const handlePageChange = (newOffset: number) => {
@@ -297,8 +330,6 @@ export default function ItemsPage() {
     showSuccess(`Item "${moveModalItem.name}" moved successfully`);
   };
 
-  if (isLoading) return <div className="loading">Loading items...</div>;
-
   // Item card component with photos
   function ItemCard({
     item,
@@ -326,112 +357,114 @@ export default function ItemsPage() {
     };
 
     return (
-      <div
-        className="room-card"
+      <Card
+        className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
         onClick={handleCardClick}
-        style={{ cursor: 'pointer' }}
       >
-        <div className="card-header">
-          <h3>{item.name}</h3>
-          <div className="card-actions" onClick={(e) => e.stopPropagation()}>
-            <button
-              className="btn btn-secondary btn-sm"
-              onClick={onEdit}
-              disabled={updateItemPending}
-            >
-              Edit
-            </button>
-            <button
-              className="btn btn-secondary btn-sm"
-              onClick={onMove}
-              disabled={moveItemPending}
-            >
-              Move
-            </button>
-            <button
-              className="btn btn-danger btn-sm"
-              onClick={onDelete}
-              disabled={deleteItemPending}
-            >
-              Delete
-            </button>
+        <CardContent className="p-4">
+          <div className="flex justify-between items-start gap-2 mb-3">
+            <h3 className="font-semibold text-lg truncate flex-1">{item.name}</h3>
+            <div className="flex gap-1 flex-shrink-0 flex-wrap justify-end" onClick={(e) => e.stopPropagation()}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onEdit}
+                disabled={updateItemPending}
+              >
+                Edit
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onMove}
+                disabled={moveItemPending}
+              >
+                Move
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={onDelete}
+                disabled={deleteItemPending}
+              >
+                Delete
+              </Button>
+            </div>
           </div>
-        </div>
-        {firstPhoto && (
-          <div className="room-photo-preview">
-            <img
-              src={firstPhoto.thumbnail_url || firstPhoto.url}
-              alt={item.name}
-              loading="lazy"
-              style={{ cursor: 'pointer' }}
-            />
-            {photos && photos.length > 1 && (
-              <div className="photo-count-badge">+{photos.length - 1}</div>
+          {firstPhoto && (
+            <div className="relative aspect-video rounded-lg overflow-hidden mb-3 bg-muted hover:opacity-90 transition-opacity">
+              <img
+                src={firstPhoto.thumbnail_url || firstPhoto.url}
+                alt={item.name}
+                loading="lazy"
+                className="w-full h-full object-cover"
+              />
+              {photos && photos.length > 1 && (
+                <div className="absolute bottom-2 right-2 bg-black/70 text-white px-2 py-0.5 rounded text-xs font-semibold">
+                  +{photos.length - 1}
+                </div>
+              )}
+            </div>
+          )}
+          {item.barcode && (
+            <div className="bg-muted rounded px-2 py-1 mb-3 text-sm">
+              <strong>Barcode:</strong> {item.barcode}
+              {item.barcode_type && ` (${item.barcode_type})`}
+            </div>
+          )}
+          {item.description && (
+            <p className="text-muted-foreground text-sm mb-3 line-clamp-2">{item.description}</p>
+          )}
+          {tags && tags.length > 0 && (
+            <div className="flex flex-wrap gap-1 mb-3">
+              {tags.map((tag) => (
+                <span key={tag.id} className="bg-secondary text-secondary-foreground px-2 py-0.5 rounded text-xs">
+                  {tag.name}
+                </span>
+              ))}
+            </div>
+          )}
+          <div className="text-xs text-muted-foreground pt-3 border-t border-border">
+            <span>Created: {new Date(item.created_at).toLocaleDateString()}</span>
+            {item.updated_at !== item.created_at && (
+              <span className="ml-2">
+                Updated: {new Date(item.updated_at).toLocaleDateString()}
+              </span>
             )}
           </div>
-        )}
-        {item.barcode && (
-          <div className="item-barcode">
-            <strong>Barcode:</strong> {item.barcode}
-            {item.barcode_type && ` (${item.barcode_type})`}
-          </div>
-        )}
-        {item.description && (
-          <p className="room-description">{item.description}</p>
-        )}
-        {tags && tags.length > 0 && (
-          <div className="tags-list">
-            {tags.map((tag) => (
-              <span key={tag.id} className="tag">
-                {tag.name}
-              </span>
-            ))}
-          </div>
-        )}
-        <div className="room-meta">
-          <small>
-            Created: {new Date(item.created_at).toLocaleDateString()}
-          </small>
-          {item.updated_at !== item.created_at && (
-            <>
-              {' • '}
-              <small>
-                Updated: {new Date(item.updated_at).toLocaleDateString()}
-              </small>
-            </>
-          )}
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <div className="page">
-      <div className="page-header">
+    <div>
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div>
           {room && unit && shelf && (
-            <nav className="breadcrumb">
-              <Link to="/rooms">Rooms</Link>
+            <nav className="text-sm text-muted-foreground mb-2">
+              <Link to="/rooms" className="hover:text-foreground">Rooms</Link>
               {' → '}
-              <Link to={`/rooms/${room.id}`}>{room.name}</Link>
+              <Link to={`/rooms/${room.id}`} className="hover:text-foreground">{room.name}</Link>
               {' → '}
-              <Link to={`/units/${unit.id}`}>{unit.name}</Link>
+              <Link to={`/units/${unit.id}`} className="hover:text-foreground">{unit.name}</Link>
               {' → '}
-              <Link to={`/units/${unit.id}/shelves`}>Shelves</Link>
+              <Link to={`/units/${unit.id}/shelves`} className="hover:text-foreground">Shelves</Link>
               {' → '}
               <span>{shelf.name}</span>
               {' → Items'}
             </nav>
           )}
           {container && (
-            <nav className="breadcrumb">
-              <Link to="/containers">Containers</Link>
+            <nav className="text-sm text-muted-foreground mb-2">
+              <Link to="/containers" className="hover:text-foreground">Containers</Link>
               {' → '}
-              <Link to={`/containers/${container.id}`}>{container.name}</Link>
+              <Link to={`/containers/${container.id}`} className="hover:text-foreground">{container.name}</Link>
               {' → Items'}
             </nav>
           )}
-          <h1>
+          <h1 className="text-2xl font-bold">
             {shelf
               ? `Items in ${shelf.name}`
               : container
@@ -439,25 +472,19 @@ export default function ItemsPage() {
                 : 'All Items'}
           </h1>
         </div>
-        <button className="btn btn-primary" onClick={openCreateModal}>
+        <Button onClick={openCreateModal}>
           Add Item
-        </button>
+        </Button>
       </div>
 
       {/* Search Bar */}
-      <div className="search-bar" style={{ marginBottom: '1rem' }}>
-        <input
+      <div className="mb-6">
+        <Input
           type="text"
           placeholder="Search items by name, description, or barcode..."
-          value={searchQuery}
+          value={searchInputValue}
           onChange={(e) => handleSearchChange(e.target.value)}
-          style={{
-            width: '100%',
-            padding: '0.75rem',
-            fontSize: '1rem',
-            border: '1px solid #ddd',
-            borderRadius: '4px',
-          }}
+          className="w-full"
         />
       </div>
 
@@ -518,10 +545,10 @@ export default function ItemsPage() {
         onClose={closeEditModal}
         title="Edit Item"
       >
-        <form onSubmit={handleEdit}>
-          <div className="form-group">
-            <label htmlFor="edit-name">Item Name *</label>
-            <input
+        <form onSubmit={handleEdit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="edit-name">Item Name *</Label>
+            <Input
               id="edit-name"
               type="text"
               value={editFormData.name}
@@ -534,9 +561,9 @@ export default function ItemsPage() {
             />
           </div>
 
-          <div className="form-group">
-            <label htmlFor="edit-description">Description</label>
-            <textarea
+          <div className="space-y-2">
+            <Label htmlFor="edit-description">Description</Label>
+            <Textarea
               id="edit-description"
               value={editFormData.description}
               onChange={(e) =>
@@ -550,9 +577,9 @@ export default function ItemsPage() {
             />
           </div>
 
-          <div className="form-group">
-            <label htmlFor="edit-barcode">Barcode</label>
-            <input
+          <div className="space-y-2">
+            <Label htmlFor="edit-barcode">Barcode</Label>
+            <Input
               id="edit-barcode"
               type="text"
               value={editFormData.barcode}
@@ -563,9 +590,9 @@ export default function ItemsPage() {
             />
           </div>
 
-          <div className="form-group">
-            <label htmlFor="edit-barcode-type">Barcode Type</label>
-            <input
+          <div className="space-y-2">
+            <Label htmlFor="edit-barcode-type">Barcode Type</Label>
+            <Input
               id="edit-barcode-type"
               type="text"
               value={editFormData.barcode_type}
@@ -579,9 +606,9 @@ export default function ItemsPage() {
             />
           </div>
 
-          <div className="form-group">
-            <label htmlFor="edit-product-link">Product Link</label>
-            <input
+          <div className="space-y-2">
+            <Label htmlFor="edit-product-link">Product Link</Label>
+            <Input
               id="edit-product-link"
               type="url"
               value={editFormData.product_link || ''}
@@ -595,9 +622,9 @@ export default function ItemsPage() {
             />
           </div>
 
-          <div className="form-group">
-            <label htmlFor="edit-acquired-date">Acquired Date</label>
-            <input
+          <div className="space-y-2">
+            <Label htmlFor="edit-acquired-date">Acquired Date</Label>
+            <Input
               id="edit-acquired-date"
               type="date"
               value={editFormData.acquired_date || ''}
@@ -610,7 +637,7 @@ export default function ItemsPage() {
             />
           </div>
 
-          <div className="form-group">
+          <div className="space-y-2">
             <UserSelector
               label="Belongs To"
               value={editFormData.belongs_to_user_id}
@@ -672,7 +699,7 @@ export default function ItemsPage() {
           )}
 
           {editingItem && (
-            <div className="form-group">
+            <div className="space-y-2">
               <TagSelector
                 label="Tags"
                 value={selectedTagIds}
@@ -688,7 +715,7 @@ export default function ItemsPage() {
           )}
 
           {editingItem && (
-            <div className="form-group">
+            <div>
               <PhotoGallery entityType="item" entityId={editingItem.id} />
               <PhotoUpload
                 entityType="item"
@@ -700,21 +727,22 @@ export default function ItemsPage() {
             </div>
           )}
 
-          <div className="form-actions">
-            <button
+          <div className="flex gap-3 pt-4 border-t border-border">
+            <Button
               type="submit"
-              className="btn btn-primary"
               disabled={updateItem.isPending}
+              className="flex-1"
             >
               {updateItem.isPending ? 'Saving...' : 'Save Changes'}
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
-              className="btn btn-secondary"
+              variant="outline"
               onClick={closeEditModal}
+              className="flex-1"
             >
               Cancel
-            </button>
+            </Button>
           </div>
         </form>
       </Modal>
@@ -736,9 +764,13 @@ export default function ItemsPage() {
       )}
 
       {/* Items Grid */}
-      <div className="rooms-grid">
-        {items.length === 0 ? (
-          <p className="empty-state">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {isLoading ? (
+          <p className="col-span-full text-center py-12 text-muted-foreground">
+            Loading items...
+          </p>
+        ) : items.length === 0 ? (
+          <p className="col-span-full text-center py-12 text-muted-foreground">
             {shelfId || containerId
               ? 'No items yet. Click "Add Item" to create your first item.'
               : 'No items found.'}

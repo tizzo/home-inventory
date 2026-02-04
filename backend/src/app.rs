@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use std::env;
 use std::sync::Arc;
-use tower_http::cors::{Any, CorsLayer};
+use tower_http::cors::CorsLayer;
 use tower_sessions::{Expiry, SessionManagerLayer};
 use tower_sessions_sqlx_store::PostgresStore;
 
@@ -79,6 +79,19 @@ pub async fn create_app(db: PgPool) -> anyhow::Result<Router> {
     // Get app base URL for QR code generation (defaults to localhost for dev)
     let app_base_url =
         env::var("APP_BASE_URL").unwrap_or_else(|_| "http://localhost:5173".to_string());
+
+    // Configure CORS - restrict to frontend origin for security
+    // Must be created before app_base_url is moved into AppState
+    let cors = CorsLayer::new()
+        .allow_origin(
+            app_base_url
+                .clone()
+                .parse::<header::HeaderValue>()
+                .expect("APP_BASE_URL must be a valid header value"),
+        )
+        .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE])
+        .allow_headers([header::CONTENT_TYPE, header::AUTHORIZATION])
+        .allow_credentials(true);
 
     let audit_service = Arc::new(AuditService::new(Arc::new(db.clone())));
 
@@ -150,12 +163,6 @@ pub async fn create_app(db: PgPool) -> anyhow::Result<Router> {
         vision: vision_service,
         captcha: captcha_service,
     });
-
-    // Configure CORS for local development
-    let cors = CorsLayer::new()
-        .allow_origin(Any)
-        .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE])
-        .allow_headers([header::CONTENT_TYPE, header::AUTHORIZATION]);
 
     use tower_sessions::cookie::SameSite;
 

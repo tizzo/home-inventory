@@ -1,12 +1,22 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Apply migrations to DSQL us-east-1 endpoint
+#
+# NOTE: With the linked multi-region cluster setup, migrations applied to
+# either endpoint (us-east-1 or us-east-2) will automatically replicate to both
+# regions. You only need to run ONE of the migration scripts:
+#   - apply-migrations-to-dsql.sh (us-east-1) - RECOMMENDED
+#   - apply-migrations-to-dsql-west.sh (us-east-2)
+#
+# Running both scripts is harmless (duplicate migrations are skipped) but unnecessary.
+
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m'
 
-echo -e "${YELLOW}Applying migrations to DSQL...${NC}"
+echo -e "${YELLOW}Applying migrations to DSQL us-east-1 (will replicate to us-east-2)...${NC}"
 
 # Get DSQL host from Pulumi
 cd "$(dirname "$0")/.."

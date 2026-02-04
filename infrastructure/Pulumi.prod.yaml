@@ -2,7 +2,6 @@ secretsprovider: awskms://alias/pulumi-home-inventory?region=us-east-1
 encryptedkey: AQICAHgDDgi3caQzg46G94N+iyAQ46qNNDa2AD6alEyAmz+ibgFWkiM6KqakkNDo1b943wEXAAAAfjB8BgkqhkiG9w0BBwagbzBtAgEAMGgGCSqGSIb3DQEHATAeBglghkgBZQMEAS4wEQQMyCqMdPHAkgu4V9abAgEQgDudG1xSK0FB3n3koS406EPNZXYIec8TX39Hpt1Et39JyzGuUSsATI4mzCyPiBvchUrz1xmPS1aZ/WVOJw==
 config:
   aws:region: us-east-1
-  aws:profile: howardtyson
   home-inventory-infrastructure:domainName: inventory.howardandcara.com
   home-inventory-infrastructure:githubRepo: tizzo/home-inventory
   home-inventory-infrastructure:googleClientId:
@@ -11,3 +10,5 @@ config:
     secure: v1:KpSVwzhop14ehC2x:eTAWi/2aSIMmuj0Y/SZKNqwC1eFCOI11n5q/KtUmyxfdx0uHDpfVeoDFk2an9oxJNEbL
   home-inventory-infrastructure:anthropicApiKey:
     secure: v1:Ix4ENBTQV9cPOQF5:KujDTj1B8ndpmZssGtY8H8u2KRCvXh/lw3DTnH1ad3tVllRmok8FZLRpCKRZmU7OWzaZh/9vy9Z4fA2+ABtz0DrEhl5jFX6o1MRZ8sPp+H+2EymVyPHAClfkBD2TyH4hPRW2ksE4V5x7UnfpkT6r+UizNHp5JDNff2vWbw==
+  home-inventory-infrastructure:eastClusterArn: arn:aws:dsql:us-east-1:168450803450:cluster/qztqmt73cfahn2wcry72xe554q
+  home-inventory-infrastructure:westClusterArn: arn:aws:dsql:us-east-2:168450803450:cluster/hbtqmt72rcirbbxtuxhbki2axm

@@ -85,7 +85,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: lambda-zip
-          path: dist/
+          path: infrastructure/dist/
 
       - name: Download frontend build
         uses: actions/download-artifact@v4
@@ -96,7 +96,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.GITHUB_ACTIONS_ROLE_ARN }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: us-east-1
 
       - uses: pulumi/actions@v5

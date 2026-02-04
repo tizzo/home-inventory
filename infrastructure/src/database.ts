@@ -1,27 +1,75 @@
 import * as pulumi from "@pulumi/pulumi";
-import * as aws from "@pulumi/aws";
-import { RegionProviders, DatabaseOutputs } from "./types.js";
+import * as awsNative from "@pulumi/aws-native";
+import { DatabaseOutputs } from "./types.js";
 
-export function createDatabase(providers: RegionProviders): DatabaseOutputs {
+export function createDatabase(): DatabaseOutputs {
+  // Multi-region DSQL cluster setup using aws-native provider
+  //
+  // IMPORTANT: This is a TWO-PHASE deployment process:
+  //
+  // Phase 1 (Initial deployment):
+  //   - Creates both clusters with witnessRegion only
+  //   - Clusters will be in PENDING_SETUP state
+  //   - Run: pulumi up
+  //   - Note the cluster ARNs from the outputs
+  //
+  // Phase 2 (Link clusters):
+  //   - Uncomment the `clusters` arrays below and add the ARNs
+  //   - Run: pulumi up again
+  //   - Clusters will transition to ACTIVE and be fully linked
+  //
+  // For now, we're using the aws-native provider which properly supports multiRegionProperties.
+
+  const config = new pulumi.Config();
+
+  // These will be populated after Phase 1
+  const eastClusterArn = config.get("eastClusterArn") || "";
+  const westClusterArn = config.get("westClusterArn") || "";
+
   // Primary DSQL cluster in us-east-1
-  const dsqlClusterEast = new aws.dsql.Cluster(
+  const dsqlClusterEast = new awsNative.dsql.Cluster(
     "inventory-dsql-east",
     {
-      // DSQL cluster configuration
       deletionProtectionEnabled: false, // Set to true in production
+      multiRegionProperties: {
+        witnessRegion: "us-west-2",
+        // Phase 1: Keep this empty
+        // Phase 2: Uncomment and add west cluster ARN after Phase 1 completes
+        ...(westClusterArn ? { clusters: [westClusterArn] } : {}),
+      },
     },
-    { provider: providers.east }
+    {
+      provider: new awsNative.Provider("aws-native-east", { region: "us-east-1" }),
+    }
   );
 
-  // Linked DSQL cluster in us-east-2 for multi-region support
-  const dsqlClusterWest = new aws.dsql.Cluster(
+  // Secondary DSQL cluster in us-east-2
+  const dsqlClusterWest = new awsNative.dsql.Cluster(
     "inventory-dsql-west",
     {
-      // Note: Multi-region linking configured via AWS console or separate peering resource
       deletionProtectionEnabled: false, // Set to true in production
+      multiRegionProperties: {
+        witnessRegion: "us-west-2",
+        // Phase 1: Keep this empty
+        // Phase 2: Uncomment and add east cluster ARN after Phase 1 completes
+        ...(eastClusterArn ? { clusters: [eastClusterArn] } : {}),
+      },
     },
-    { provider: providers.west }
+    {
+      provider: new awsNative.Provider("aws-native-west", { region: "us-east-2" }),
+    }
   );
+
+  // For compatibility with existing code, create wrapper objects that match the aws provider interface
+  const dsqlClusterEastCompat = {
+    identifier: dsqlClusterEast.identifier,
+    arn: dsqlClusterEast.resourceArn,
+  };
+
+  const dsqlClusterWestCompat = {
+    identifier: dsqlClusterWest.identifier,
+    arn: dsqlClusterWest.resourceArn,
+  };
 
   // Connection strings for Lambda environment variables
   // Note: DSQL endpoint format: <cluster-id>.dsql.<region>.on.aws
@@ -30,8 +78,8 @@ export function createDatabase(providers: RegionProviders): DatabaseOutputs {
   const connectionStringWest = pulumi.interpolate`postgresql://admin@${dsqlClusterWest.identifier}.dsql.us-east-2.on.aws:5432/postgres?sslmode=require`;
 
   return {
-    dsqlClusterEast,
-    dsqlClusterWest,
+    dsqlClusterEast: dsqlClusterEastCompat as any,
+    dsqlClusterWest: dsqlClusterWestCompat as any,
     connectionStringEast,
     connectionStringWest,
   };

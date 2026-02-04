@@ -7,6 +7,7 @@ export interface StackConfig {
   googleClientId: pulumi.Output<string>;
   googleClientSecret: pulumi.Output<string>;
   anthropicApiKey: pulumi.Output<string>;
+  recaptchaSecretKey: pulumi.Output<string>;
 }
 
 export interface RegionProviders {

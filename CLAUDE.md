@@ -1,9 +1,3 @@
-# Claude Code Assistant Guide
-
-This document helps Claude Code quickly find relevant documentation and understand the codebase structure.
-
----
-
 ## 🛑 STOP: Check Uncommitted Files Before Continuing
 
 **Before starting ANY new task**, run `git status`. If you have **more than 5 uncommitted files**, STOP and commit them first.
@@ -12,6 +6,7 @@ This document helps Claude Code quickly find relevant documentation and understa
 1. Make a small change (1-5 files)
 2. Run quality gates
 3. **COMMIT IMMEDIATELY** - do not continue to the next change
+4. **NEVER** attribute commits to claude or ai in any way, neither in the trailer nor the author line.
 4. Repeat
 
 A hook at `.claude/hooks/check-uncommitted.sh` will block Edit/Write if you have >5 uncommitted files.

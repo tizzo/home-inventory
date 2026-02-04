@@ -32,6 +32,8 @@ jobs:
             ~/.cargo/git
             backend/target
           key: ${{ runner.os }}-cargo-lambda-${{ hashFiles('backend/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-lambda-
 
       - name: Build Lambda function
         working-directory: backend

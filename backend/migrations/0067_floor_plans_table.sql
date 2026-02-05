@@ -1,9 +1,5 @@
 -- sqlx:no-transaction
--- Floor plans table
--- Stores floor plan images for building floors (not individual rooms)
--- Multiple rooms can be linked to a single floor plan
-
-CREATE TABLE floor_plans (
+CREATE TABLE IF NOT EXISTS floor_plans (
     id UUID PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     description TEXT,
@@ -17,6 +13,3 @@ CREATE TABLE floor_plans (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     created_by UUID NOT NULL
 );
-
-CREATE INDEX ASYNC idx_floor_plans_created_by ON floor_plans(created_by);
-CREATE INDEX ASYNC idx_floor_plans_name ON floor_plans(name);

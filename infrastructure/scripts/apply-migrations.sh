@@ -26,10 +26,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 INFRA_DIR="$(dirname "$SCRIPT_DIR")"
 BACKEND_DIR="$(cd "$INFRA_DIR/../backend" && pwd)"
 
-# Default to migrations-v2 (consolidated, DSQL-compatible)
-# Use --legacy to use the old multi-statement migrations
-MIGRATIONS_DIR="$BACKEND_DIR/migrations-v2"
-USE_LEGACY=false
+# Default to migrations (consolidated, DSQL-compatible single-statement files)
+MIGRATIONS_DIR="$BACKEND_DIR/migrations"
 
 # Parse arguments
 MODE="auto"
@@ -39,11 +37,6 @@ DSQL_REGION=""
 
 while [[ $# -gt 0 ]]; do
   case $1 in
-    --legacy)
-      USE_LEGACY=true
-      MIGRATIONS_DIR="$BACKEND_DIR/migrations"
-      shift
-      ;;
     --local)
       MODE="local"
       shift

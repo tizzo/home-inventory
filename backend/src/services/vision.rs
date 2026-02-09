@@ -3,7 +3,9 @@ use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::env;
 
-use crate::models::{ItemImportDraftItem, LocationUpdateProposal};
+use crate::models::{
+    ItemImportDraftItem, LocationUpdateProposal, PlacementSuggestion, RoomWithUnits,
+};
 
 pub struct VisionService {
     client: Client,
@@ -158,6 +160,188 @@ impl VisionService {
 
         parse_items_from_response(&text)
     }
+
+    /// Analyze a floor plan image and suggest placements for shelving units
+    pub async fn analyze_floor_plan_for_placements(
+        &self,
+        image_data: &[u8],
+        media_type: &str,
+        rooms_with_units: &[RoomWithUnits],
+    ) -> anyhow::Result<Vec<PlacementSuggestion>> {
+        let base64_image = base64_encode(image_data);
+
+        let prompt = build_floor_plan_prompt(rooms_with_units);
+
+        let request = AnthropicRequest {
+            model: "claude-sonnet-4-20250514".to_string(),
+            max_tokens: 4096,
+            messages: vec![Message {
+                role: "user".to_string(),
+                content: vec![
+                    Content::Image {
+                        source: ImageSource {
+                            source_type: "base64".to_string(),
+                            media_type: media_type.to_string(),
+                            data: base64_image,
+                        },
+                    },
+                    Content::Text { text: prompt },
+                ],
+            }],
+        };
+
+        let response = self
+            .client
+            .post("https://api.anthropic.com/v1/messages")
+            .header("x-api-key", &self.api_key)
+            .header("anthropic-version", "2023-06-01")
+            .header("content-type", "application/json")
+            .json(&request)
+            .send()
+            .await?;
+
+        if !response.status().is_success() {
+            let status = response.status();
+            let body = response.text().await.unwrap_or_default();
+
+            let error_msg = if status.as_u16() == 429 {
+                "Rate limit exceeded. Please wait a moment and try again."
+            } else if status.as_u16() == 401 {
+                "Invalid API key. Please check your ANTHROPIC_API_KEY configuration."
+            } else if status.as_u16() == 400 {
+                "Invalid request. The image may be too large or in an unsupported format."
+            } else {
+                "Failed to analyze floor plan. Please try again later."
+            };
+
+            tracing::error!("Anthropic API error: {} - {}", status, body);
+            return Err(anyhow::anyhow!("{}", error_msg));
+        }
+
+        let anthropic_response: AnthropicResponse = response.json().await?;
+
+        let text = anthropic_response
+            .content
+            .into_iter()
+            .find_map(|c| c.text)
+            .ok_or_else(|| anyhow::anyhow!("No text response from Anthropic"))?;
+
+        parse_floor_plan_response(&text, rooms_with_units)
+    }
+}
+
+fn build_floor_plan_prompt(rooms_with_units: &[RoomWithUnits]) -> String {
+    let mut units_list = String::new();
+    for room in rooms_with_units {
+        units_list.push_str(&format!("\n**{}**:\n", room.room_name));
+        for unit in &room.units {
+            let desc = unit
+                .description
+                .as_ref()
+                .map(|d| format!(" - {}", d))
+                .unwrap_or_default();
+            units_list.push_str(&format!("  - {} (ID: {}){}\n", unit.name, unit.id, desc));
+        }
+    }
+
+    format!(
+        r#"You are analyzing a floor plan image. I need you to suggest where shelving units should be placed on this floor plan.
+
+Here are the rooms and their shelving units that need to be placed:
+{units_list}
+
+For each shelving unit, analyze the floor plan and suggest where it would logically be located based on:
+1. The room it belongs to (find that room in the floor plan)
+2. Typical placement of shelving (along walls, in corners, in closets/storage areas)
+3. The unit's name and description (e.g., "Garage Shelving" should be in the garage area)
+
+Return your response as a JSON object with this exact structure:
+{{
+  "suggestions": [
+    {{
+      "shelving_unit_id": "the-uuid-from-above",
+      "shelving_unit_name": "Name of the unit",
+      "room_name": "Name of the room",
+      "x_percent": 25.5,
+      "y_percent": 42.3,
+      "confidence": "high",
+      "reasoning": "Brief explanation of why this location was chosen"
+    }}
+  ]
+}}
+
+IMPORTANT:
+- x_percent and y_percent are percentages from 0 to 100
+- (0, 0) is the TOP-LEFT corner of the image
+- (100, 100) is the BOTTOM-RIGHT corner
+- confidence can be "high", "medium", or "low"
+- If you cannot find a room or determine a good location, use confidence "low"
+- Return ONLY the JSON object, no other text"#,
+        units_list = units_list
+    )
+}
+
+fn parse_floor_plan_response(
+    text: &str,
+    rooms_with_units: &[RoomWithUnits],
+) -> anyhow::Result<Vec<PlacementSuggestion>> {
+    let text = text.trim();
+    let json_str = if text.starts_with("```json") {
+        text.trim_start_matches("```json")
+            .trim_end_matches("```")
+            .trim()
+    } else if text.starts_with("```") {
+        text.trim_start_matches("```")
+            .trim_end_matches("```")
+            .trim()
+    } else {
+        text
+    };
+
+    #[derive(serde::Deserialize)]
+    struct ParsedFloorPlanResponse {
+        suggestions: Vec<ParsedSuggestion>,
+    }
+
+    #[derive(serde::Deserialize)]
+    struct ParsedSuggestion {
+        shelving_unit_id: String,
+        shelving_unit_name: String,
+        room_name: String,
+        x_percent: f64,
+        y_percent: f64,
+        confidence: String,
+        reasoning: String,
+    }
+
+    let parsed: ParsedFloorPlanResponse = serde_json::from_str(json_str).map_err(|e| {
+        tracing::error!("Failed to parse floor plan AI response: {}", e);
+        tracing::error!("Raw response: {}", text);
+        anyhow::anyhow!("Failed to parse AI response: {}", e)
+    })?;
+
+    // Validate that returned unit IDs match our input
+    let valid_unit_ids: std::collections::HashSet<String> = rooms_with_units
+        .iter()
+        .flat_map(|r| r.units.iter().map(|u| u.id.to_string()))
+        .collect();
+
+    let suggestions = parsed
+        .suggestions
+        .into_iter()
+        .filter(|s| valid_unit_ids.contains(&s.shelving_unit_id))
+        .map(|s| PlacementSuggestion {
+            shelving_unit_id: s.shelving_unit_id,
+            shelving_unit_name: s.shelving_unit_name,
+            room_name: s.room_name,
+            x_percent: s.x_percent.clamp(0.0, 100.0),
+            y_percent: s.y_percent.clamp(0.0, 100.0),
+            confidence: s.confidence,
+            reasoning: s.reasoning,
+        })
+        .collect();
+
+    Ok(suggestions)
 }
 
 fn build_prompt(hint: Option<&str>, location_type: LocationType) -> String {
@@ -264,6 +448,7 @@ fn base64_encode(bytes: &[u8]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::models::{RoomWithUnits, UnitInfo};
 
     #[test]
     fn test_base64_encode() {
@@ -516,5 +701,261 @@ mod tests {
         assert_eq!(items[0].description, Some("Description".to_string()));
         assert_eq!(items[0].barcode, None);
         assert_eq!(items[0].barcode_type, None);
+    }
+
+    // ========================================================================
+    // Floor Plan Placement Tests
+    // ========================================================================
+
+    #[test]
+    fn test_parse_floor_plan_response_basic() {
+        let rooms_with_units = vec![RoomWithUnits {
+            room_name: "Garage".to_string(),
+            units: vec![
+                UnitInfo {
+                    id: uuid::Uuid::parse_str("11111111-1111-1111-1111-111111111111").unwrap(),
+                    name: "Garage Shelving".to_string(),
+                    description: Some("Metal shelving unit".to_string()),
+                },
+                UnitInfo {
+                    id: uuid::Uuid::parse_str("22222222-2222-2222-2222-222222222222").unwrap(),
+                    name: "Tool Cabinet".to_string(),
+                    description: None,
+                },
+            ],
+        }];
+
+        let json = r#"{
+            "suggestions": [
+                {
+                    "shelving_unit_id": "11111111-1111-1111-1111-111111111111",
+                    "shelving_unit_name": "Garage Shelving",
+                    "room_name": "Garage",
+                    "x_percent": 25.5,
+                    "y_percent": 42.3,
+                    "confidence": "high",
+                    "reasoning": "Located along the back wall"
+                },
+                {
+                    "shelving_unit_id": "22222222-2222-2222-2222-222222222222",
+                    "shelving_unit_name": "Tool Cabinet",
+                    "room_name": "Garage",
+                    "x_percent": 75.0,
+                    "y_percent": 30.0,
+                    "confidence": "medium",
+                    "reasoning": "Near the workbench area"
+                }
+            ]
+        }"#;
+
+        let result = parse_floor_plan_response(json, &rooms_with_units);
+        assert!(result.is_ok());
+
+        let suggestions = result.unwrap();
+        assert_eq!(suggestions.len(), 2);
+        assert_eq!(suggestions[0].shelving_unit_name, "Garage Shelving");
+        assert_eq!(suggestions[0].x_percent, 25.5);
+        assert_eq!(suggestions[0].y_percent, 42.3);
+        assert_eq!(suggestions[0].confidence, "high");
+        assert_eq!(suggestions[1].shelving_unit_name, "Tool Cabinet");
+        assert_eq!(suggestions[1].confidence, "medium");
+    }
+
+    #[test]
+    fn test_parse_floor_plan_response_filters_invalid_unit_ids() {
+        let rooms_with_units = vec![RoomWithUnits {
+            room_name: "Garage".to_string(),
+            units: vec![UnitInfo {
+                id: uuid::Uuid::parse_str("11111111-1111-1111-1111-111111111111").unwrap(),
+                name: "Garage Shelving".to_string(),
+                description: None,
+            }],
+        }];
+
+        // Response includes a unit ID that's not in our list
+        let json = r#"{
+            "suggestions": [
+                {
+                    "shelving_unit_id": "11111111-1111-1111-1111-111111111111",
+                    "shelving_unit_name": "Garage Shelving",
+                    "room_name": "Garage",
+                    "x_percent": 25.5,
+                    "y_percent": 42.3,
+                    "confidence": "high",
+                    "reasoning": "Valid unit"
+                },
+                {
+                    "shelving_unit_id": "99999999-9999-9999-9999-999999999999",
+                    "shelving_unit_name": "Unknown Unit",
+                    "room_name": "Unknown",
+                    "x_percent": 50.0,
+                    "y_percent": 50.0,
+                    "confidence": "low",
+                    "reasoning": "This should be filtered out"
+                }
+            ]
+        }"#;
+
+        let result = parse_floor_plan_response(json, &rooms_with_units);
+        assert!(result.is_ok());
+
+        let suggestions = result.unwrap();
+        assert_eq!(suggestions.len(), 1); // Only the valid unit
+        assert_eq!(
+            suggestions[0].shelving_unit_id,
+            "11111111-1111-1111-1111-111111111111"
+        );
+    }
+
+    #[test]
+    fn test_parse_floor_plan_response_clamps_coordinates() {
+        let rooms_with_units = vec![RoomWithUnits {
+            room_name: "Test".to_string(),
+            units: vec![UnitInfo {
+                id: uuid::Uuid::parse_str("11111111-1111-1111-1111-111111111111").unwrap(),
+                name: "Test Unit".to_string(),
+                description: None,
+            }],
+        }];
+
+        // Response with out-of-bounds coordinates
+        let json = r#"{
+            "suggestions": [
+                {
+                    "shelving_unit_id": "11111111-1111-1111-1111-111111111111",
+                    "shelving_unit_name": "Test Unit",
+                    "room_name": "Test",
+                    "x_percent": 150.0,
+                    "y_percent": -20.0,
+                    "confidence": "low",
+                    "reasoning": "Out of bounds"
+                }
+            ]
+        }"#;
+
+        let result = parse_floor_plan_response(json, &rooms_with_units);
+        assert!(result.is_ok());
+
+        let suggestions = result.unwrap();
+        assert_eq!(suggestions.len(), 1);
+        assert_eq!(suggestions[0].x_percent, 100.0); // Clamped from 150
+        assert_eq!(suggestions[0].y_percent, 0.0); // Clamped from -20
+    }
+
+    #[test]
+    fn test_parse_floor_plan_response_with_code_block() {
+        let rooms_with_units = vec![RoomWithUnits {
+            room_name: "Test".to_string(),
+            units: vec![UnitInfo {
+                id: uuid::Uuid::parse_str("11111111-1111-1111-1111-111111111111").unwrap(),
+                name: "Test Unit".to_string(),
+                description: None,
+            }],
+        }];
+
+        let json = r#"```json
+        {
+            "suggestions": [
+                {
+                    "shelving_unit_id": "11111111-1111-1111-1111-111111111111",
+                    "shelving_unit_name": "Test Unit",
+                    "room_name": "Test",
+                    "x_percent": 50.0,
+                    "y_percent": 50.0,
+                    "confidence": "high",
+                    "reasoning": "Center of room"
+                }
+            ]
+        }
+        ```"#;
+
+        let result = parse_floor_plan_response(json, &rooms_with_units);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().len(), 1);
+    }
+
+    #[test]
+    fn test_parse_floor_plan_response_empty_suggestions() {
+        let rooms_with_units = vec![RoomWithUnits {
+            room_name: "Test".to_string(),
+            units: vec![],
+        }];
+
+        let json = r#"{"suggestions": []}"#;
+
+        let result = parse_floor_plan_response(json, &rooms_with_units);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().len(), 0);
+    }
+
+    #[test]
+    fn test_parse_floor_plan_response_invalid_json() {
+        let rooms_with_units = vec![];
+
+        let json = r#"{ invalid json }"#;
+
+        let result = parse_floor_plan_response(json, &rooms_with_units);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_build_floor_plan_prompt_single_room() {
+        let rooms_with_units = vec![RoomWithUnits {
+            room_name: "Garage".to_string(),
+            units: vec![
+                UnitInfo {
+                    id: uuid::Uuid::parse_str("11111111-1111-1111-1111-111111111111").unwrap(),
+                    name: "Garage Shelving".to_string(),
+                    description: Some("Metal shelving".to_string()),
+                },
+                UnitInfo {
+                    id: uuid::Uuid::parse_str("22222222-2222-2222-2222-222222222222").unwrap(),
+                    name: "Tool Cabinet".to_string(),
+                    description: None,
+                },
+            ],
+        }];
+
+        let prompt = build_floor_plan_prompt(&rooms_with_units);
+
+        // Check that the prompt contains expected content
+        assert!(prompt.contains("Garage"));
+        assert!(prompt.contains("Garage Shelving"));
+        assert!(prompt.contains("Metal shelving"));
+        assert!(prompt.contains("Tool Cabinet"));
+        assert!(prompt.contains("11111111-1111-1111-1111-111111111111"));
+        assert!(prompt.contains("x_percent"));
+        assert!(prompt.contains("y_percent"));
+        assert!(prompt.contains("confidence"));
+    }
+
+    #[test]
+    fn test_build_floor_plan_prompt_multiple_rooms() {
+        let rooms_with_units = vec![
+            RoomWithUnits {
+                room_name: "Garage".to_string(),
+                units: vec![UnitInfo {
+                    id: uuid::Uuid::parse_str("11111111-1111-1111-1111-111111111111").unwrap(),
+                    name: "Garage Shelving".to_string(),
+                    description: None,
+                }],
+            },
+            RoomWithUnits {
+                room_name: "Kitchen".to_string(),
+                units: vec![UnitInfo {
+                    id: uuid::Uuid::parse_str("22222222-2222-2222-2222-222222222222").unwrap(),
+                    name: "Pantry Shelves".to_string(),
+                    description: Some("Food storage".to_string()),
+                }],
+            },
+        ];
+
+        let prompt = build_floor_plan_prompt(&rooms_with_units);
+
+        assert!(prompt.contains("**Garage**"));
+        assert!(prompt.contains("**Kitchen**"));
+        assert!(prompt.contains("Garage Shelving"));
+        assert!(prompt.contains("Pantry Shelves"));
+        assert!(prompt.contains("Food storage"));
     }
 }

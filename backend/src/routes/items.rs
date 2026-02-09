@@ -780,10 +780,17 @@ pub async fn get_file_upload_url(
         return Err(StatusCode::BAD_REQUEST);
     }
 
-    // Generate S3 key
+    // Generate S3 key with strict content-type allowlist
+    // Only allow known-safe file types to prevent malicious uploads
     let file_extension = match payload.content_type.as_str() {
         "application/pdf" => "pdf",
-        ct if ct.starts_with("image/") => ct.strip_prefix("image/").unwrap_or("jpg"),
+        "image/jpeg" => "jpeg",
+        "image/jpg" => "jpg",
+        "image/png" => "png",
+        "image/gif" => "gif",
+        "image/webp" => "webp",
+        "image/heic" => "heic",
+        "image/heif" => "heif",
         _ => {
             tracing::warn!("Unsupported content type: {}", payload.content_type);
             return Err(StatusCode::BAD_REQUEST);

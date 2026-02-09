@@ -19,6 +19,8 @@ import {
   ItemImportDraftPage,
   ContactPage,
 } from './pages';
+import { FloorPlansPage } from './pages/FloorPlansPage';
+import { FloorPlanDetailPage } from './pages/FloorPlanDetailPage';
 import { LoginButton } from './components/LoginButton';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import './App.css';
@@ -58,6 +60,14 @@ function NavBar() {
 
           {user && (
             <>
+              <li>
+                <Link
+                  to="/floor-plans"
+                  className={location.pathname.startsWith('/floor-plans') ? 'active' : ''}
+                >
+                  Floor Plans
+                </Link>
+              </li>
               <li>
                 <Link
                   to="/rooms"
@@ -154,6 +164,11 @@ function App() {
 
                 {/* Protected Routes */}
                 <Route element={<ProtectedRoute />}>
+                  {/* Floor Plans */}
+                  <Route path="/floor-plans" element={<FloorPlansPage />} />
+                  <Route path="/floor-plans/:id" element={<FloorPlanDetailPage />} />
+                  <Route path="/floor-plans/:id/edit" element={<FloorPlanDetailPage />} />
+
                   <Route path="/rooms" element={<RoomsPage />} />
                   <Route path="/rooms/:roomId/edit" element={<RoomsPage />} />
                   <Route path="/units" element={<ShelvingUnitsPage />} />

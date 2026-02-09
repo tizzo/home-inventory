@@ -33,7 +33,7 @@ async fn main() -> anyhow::Result<()> {
 
     tracing::info!("Running database migrations...");
 
-    // Run migrations using migrations-v2 (single-statement files for DSQL compatibility)
+    // Run migrations (single-statement files for DSQL compatibility)
     // On DSQL: May fail on first deploy - run manually with: ./apply-migrations.sh --dsql-east
     // On success: No-op if migrations already applied, applies any new ones
     // On failure: Warns but continues - assumes migrations were applied manually
@@ -71,7 +71,12 @@ async fn main() -> anyhow::Result<()> {
 
         tracing::info!("Server listening on http://0.0.0.0:3000");
 
-        axum::serve(listener, app).await?;
+        // Use into_make_service_with_connect_info to enable IP extraction for rate limiting
+        axum::serve(
+            listener,
+            app.into_make_service_with_connect_info::<std::net::SocketAddr>(),
+        )
+        .await?;
         Ok(())
     }
 }

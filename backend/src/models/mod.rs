@@ -1,6 +1,7 @@
 pub mod audit;
 pub mod contact;
 pub mod container;
+pub mod floor_plan;
 pub mod item;
 pub mod item_import_draft;
 pub mod label;
@@ -20,6 +21,8 @@ pub use audit::*;
 pub use contact::*;
 #[allow(unused_imports)]
 pub use container::*;
+#[allow(unused_imports)]
+pub use floor_plan::*;
 #[allow(unused_imports)]
 pub use item::*;
 #[allow(unused_imports)]

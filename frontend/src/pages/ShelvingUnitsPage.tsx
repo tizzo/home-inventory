@@ -9,6 +9,7 @@ import {
   useMoveShelvingUnit,
   useRooms,
   usePhotos,
+  useFloorPlans,
 } from '../hooks';
 import { Modal, PhotoUpload, PhotoGallery, Pagination, MoveModal, EntityCreateModal } from '../components';
 import type {
@@ -24,6 +25,7 @@ export default function ShelvingUnitsPage() {
   const { data: roomUnitsResponse, isLoading: isLoadingByRoom } =
     useShelvingUnitsByRoom(roomId || '', pagination);
   const { data: roomsResponse } = useRooms();
+  const { data: floorPlans } = useFloorPlans();
   const allUnits = allUnitsResponse?.data || [];
   const roomUnits = roomUnitsResponse?.data || [];
   const rooms = roomsResponse?.data || [];
@@ -154,6 +156,9 @@ export default function ShelvingUnitsPage() {
     const { data: photos } = usePhotos('shelving_unit', unit.id);
     const firstPhoto = photos && photos.length > 0 ? photos[0] : null;
     const room = rooms.find((r) => r.id === unit.room_id);
+    const floorPlan = room?.floor_plan_id
+      ? floorPlans?.find((fp) => fp.id === room.floor_plan_id)
+      : null;
 
     return (
       <div className="room-card">
@@ -227,6 +232,15 @@ export default function ShelvingUnitsPage() {
           >
             View Shelves
           </Link>
+          {floorPlan && (
+            <Link
+              to={`/floor-plans/${floorPlan.id}?search=${encodeURIComponent(unit.name)}`}
+              className="btn btn-secondary btn-sm"
+              title={`View on ${floorPlan.name}`}
+            >
+              📍 Floor Plan
+            </Link>
+          )}
         </div>
       </div>
     );

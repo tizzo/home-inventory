@@ -1,6 +1,6 @@
-# Home Inventory Migrations (v2 - Consolidated)
+# Home Inventory Migrations
 
-This directory contains consolidated, DSQL-compatible migrations with **one SQL statement per file**.
+This directory contains DSQL-compatible migrations with **one SQL statement per file**.
 
 ## Why Single-Statement Files?
 
@@ -37,6 +37,8 @@ NNNN_description.sql
 | 0057-0058 | Product cache table |
 | 0059-0063 | Item import drafts table |
 | 0064-0066 | Contact submissions table |
+| 0067-0071 | Floor plans table + rooms.floor_plan_id |
+| 0072-0075 | Shelving unit positions table |
 
 ## Running Migrations
 
@@ -45,7 +47,7 @@ NNNN_description.sql
 ```bash
 # Using sqlx-cli
 cd backend
-sqlx migrate run --source migrations-v2
+sqlx migrate run
 
 # Or using the migration runner script
 cd infrastructure/scripts
@@ -78,7 +80,7 @@ The tower_sessions schema and table are created in migrations 0001-0002. This me
 ## Adding New Migrations
 
 When adding new migrations:
-1. Use the next sequence number (e.g., `0067_xxx.sql`)
+1. Use the next sequence number (e.g., `0076_xxx.sql`)
 2. Include `-- sqlx:no-transaction` at the top
 3. Use `CREATE INDEX ASYNC` instead of `CREATE INDEX`
 4. Avoid foreign key constraints

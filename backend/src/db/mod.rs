@@ -90,14 +90,14 @@ pub async fn init_pool(database_url: &str) -> Result<PgPool, sqlx::Error> {
 
 /// Run database migrations.
 ///
-/// Uses migrations-v2 which has single-statement files for DSQL compatibility.
+/// Uses single-statement migration files for DSQL compatibility.
 /// Each file contains exactly ONE SQL statement, making it work with both:
 /// - Local PostgreSQL (via sqlx::migrate!)
 /// - AWS Aurora DSQL (single statement per transaction requirement)
 ///
 /// Note: Locking is disabled because DSQL doesn't support pg_advisory_lock.
 pub async fn run_migrations(pool: &PgPool) -> Result<(), sqlx::migrate::MigrateError> {
-    sqlx::migrate!("./migrations-v2")
+    sqlx::migrate!("./migrations")
         .set_locking(false)
         .run(pool)
         .await

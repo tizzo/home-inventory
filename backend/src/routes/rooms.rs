@@ -146,20 +146,42 @@ pub async fn update_room(
         );
     }
 
+    // Parse floor_plan_id if provided (empty string means clear it)
+    let floor_plan_id: Option<Option<Uuid>> = match &payload.floor_plan_id {
+        Some(fp_id) if fp_id.is_empty() => Some(None), // Clear floor_plan_id
+        Some(fp_id) => {
+            let parsed = Uuid::parse_str(fp_id).map_err(|_| StatusCode::BAD_REQUEST)?;
+            Some(Some(parsed))
+        }
+        None => None, // Don't change floor_plan_id
+    };
+
+    if floor_plan_id.is_some() && floor_plan_id != Some(existing.floor_plan_id) {
+        changes.insert(
+            "floor_plan_id".to_string(),
+            serde_json::json!({
+                "from": existing.floor_plan_id,
+                "to": floor_plan_id
+            }),
+        );
+    }
+
     // Update fields if provided
     let name = payload.name.unwrap_or(existing.name.clone());
     let description = payload.description.or(existing.description.clone());
+    let final_floor_plan_id = floor_plan_id.unwrap_or(existing.floor_plan_id);
 
     let room = sqlx::query_as::<_, Room>(
         r#"
         UPDATE rooms
-        SET name = $1, description = $2, updated_at = NOW()
-        WHERE id = $3
+        SET name = $1, description = $2, floor_plan_id = $3, updated_at = NOW()
+        WHERE id = $4
         RETURNING *
         "#,
     )
     .bind(&name)
     .bind(&description)
+    .bind(final_floor_plan_id)
     .bind(id)
     .fetch_one(&state.db)
     .await

@@ -11,7 +11,7 @@ use uuid::Uuid;
 use crate::app::AppState;
 use crate::models::label::{BatchWithLabels, *};
 use crate::models::{PaginatedResponse, PaginationQuery};
-use crate::services::generate_label_pdf;
+use crate::services::{generate_label_pdf, generate_label_pdf_94103};
 
 /// Generate a batch of labels
 pub async fn generate_labels(
@@ -25,7 +25,7 @@ pub async fn generate_labels(
 
     // Use default template if not specified
     let template = payload.template.as_deref().unwrap_or("avery_18660");
-    if template != "avery_18660" {
+    if template != "avery_18660" && template != "avery_94103" {
         return Err(StatusCode::BAD_REQUEST);
     }
 
@@ -237,7 +237,7 @@ pub async fn print_labels(
 
     // Use default template if not specified
     let template = query.template.as_deref().unwrap_or("avery_18660");
-    if template != "avery_18660" {
+    if template != "avery_18660" && template != "avery_94103" {
         return Err(StatusCode::BAD_REQUEST);
     }
 
@@ -247,8 +247,12 @@ pub async fn print_labels(
         .map(|l| (l.qr_data.clone(), l.number))
         .collect();
 
-    // Generate PDF
-    let pdf_bytes = generate_label_pdf(&label_data).map_err(|e| {
+    // Generate PDF using the appropriate template
+    let pdf_bytes = match template {
+        "avery_94103" => generate_label_pdf_94103(&label_data),
+        _ => generate_label_pdf(&label_data),
+    }
+    .map_err(|e| {
         tracing::error!("Failed to generate PDF: {:?}", e);
         StatusCode::INTERNAL_SERVER_ERROR
     })?;

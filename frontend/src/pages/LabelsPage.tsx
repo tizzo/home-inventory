@@ -86,7 +86,7 @@ export default function LabelsPage() {
               onChange={(e) => {
                 const newTemplate = e.target.value;
                 // Update count to match template's labels per sheet
-                const labelsPerSheet = newTemplate === 'avery_18660' ? 30 : 30;
+                const labelsPerSheet = newTemplate === 'avery_94103' ? 48 : 30;
                 setFormData({
                   ...formData,
                   template: newTemplate,
@@ -95,6 +95,7 @@ export default function LabelsPage() {
               }}
             >
               <option value="avery_18660">Avery 18660 (30 per sheet)</option>
+              <option value="avery_94103">Avery Presta 94103 (48 per sheet, 1" square)</option>
             </select>
           </div>
 

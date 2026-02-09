@@ -37,6 +37,37 @@ impl Avery18660 {
     pub const SHEET_HEIGHT_INCHES: f32 = 11.0;
 }
 
+/// Avery Presta 94103 template specifications
+/// 1" x 1" square labels, 48 labels per sheet (6 columns x 8 rows)
+/// Sheet size: 8.5" x 11" (US Letter)
+/// Label size: 1" x 1"
+/// Horizontal spacing: 0.25" between columns
+/// Vertical spacing: 0.25" between rows
+/// Top margin: 0.625"
+/// Bottom margin: 0.625"
+/// Left margin: 0.625"
+/// Right margin: 0.625"
+pub struct Avery94103;
+
+impl Avery94103 {
+    pub const LABEL_WIDTH_INCHES: f32 = 1.0;
+    pub const LABEL_HEIGHT_INCHES: f32 = 1.0;
+    pub const LABELS_PER_ROW: usize = 6;
+    #[allow(dead_code)]
+    pub const LABELS_PER_COLUMN: usize = 8;
+    pub const LABELS_PER_SHEET: usize = 48;
+    pub const HORIZONTAL_SPACING_INCHES: f32 = 0.25;
+    pub const VERTICAL_SPACING_INCHES: f32 = 0.25;
+    pub const TOP_MARGIN_INCHES: f32 = 0.625;
+    #[allow(dead_code)]
+    pub const BOTTOM_MARGIN_INCHES: f32 = 0.625;
+    pub const LEFT_MARGIN_INCHES: f32 = 0.625;
+    #[allow(dead_code)]
+    pub const RIGHT_MARGIN_INCHES: f32 = 0.625;
+    pub const SHEET_WIDTH_INCHES: f32 = 8.5;
+    pub const SHEET_HEIGHT_INCHES: f32 = 11.0;
+}
+
 /// Generate a QR code image from data
 pub fn generate_qr_code_image(data: &str, size_pixels: u32) -> Result<Vec<u8>> {
     let qr = QrCode::new(data).context("Failed to generate QR code")?;
@@ -215,6 +246,133 @@ pub fn generate_label_pdf(labels: &[(String, i32)], // (qr_data, number)
     }
 
     // Write PDF to bytes
+    let mut buffer = Vec::new();
+    {
+        let mut writer = BufWriter::new(&mut buffer);
+        doc.save(&mut writer).context("Failed to save PDF")?;
+        writer.flush().context("Failed to flush PDF buffer")?;
+    }
+
+    Ok(buffer)
+}
+
+/// Generate a PDF with labels for Avery Presta 94103 template (1" x 1" square)
+pub fn generate_label_pdf_94103(labels: &[(String, i32)]) -> Result<Vec<u8>> {
+    if labels.is_empty() {
+        return Err(anyhow::anyhow!("No labels provided"));
+    }
+
+    let (doc, page1, layer1) = PdfDocument::new(
+        "Avery 94103 Labels",
+        Mm(Avery94103::SHEET_WIDTH_INCHES * 25.4),
+        Mm(Avery94103::SHEET_HEIGHT_INCHES * 25.4),
+        "Layer 1",
+    );
+
+    let mut current_page = page1;
+    let mut current_layer = layer1;
+
+    let label_width_pt = Avery94103::LABEL_WIDTH_INCHES * 72.0;
+    let label_height_pt = Avery94103::LABEL_HEIGHT_INCHES * 72.0;
+    let horizontal_spacing = Avery94103::HORIZONTAL_SPACING_INCHES * 72.0;
+    let vertical_spacing = Avery94103::VERTICAL_SPACING_INCHES * 72.0;
+    let top_margin_pt = Avery94103::TOP_MARGIN_INCHES * 72.0;
+    let left_margin_pt = Avery94103::LEFT_MARGIN_INCHES * 72.0;
+    let sheet_height_pt = Avery94103::SHEET_HEIGHT_INCHES * 72.0;
+
+    // For 1" square labels: QR code 0.7" with number text below
+    let qr_size_pixels = 300;
+    let qr_size_pt = 0.7 * 72.0;
+
+    let font = doc
+        .add_builtin_font(BuiltinFont::Helvetica)
+        .context("Failed to add font")?;
+
+    for (sheet_idx, label_chunk) in labels.chunks(Avery94103::LABELS_PER_SHEET).enumerate() {
+        if sheet_idx > 0 {
+            let (page, layer) = doc.add_page(
+                Mm(Avery94103::SHEET_WIDTH_INCHES * 25.4),
+                Mm(Avery94103::SHEET_HEIGHT_INCHES * 25.4),
+                "Layer 1",
+            );
+            current_page = page;
+            current_layer = layer;
+        }
+
+        let layer = doc.get_page(current_page).get_layer(current_layer);
+
+        for (label_idx, (qr_data, number)) in label_chunk.iter().enumerate() {
+            let row = label_idx / Avery94103::LABELS_PER_ROW;
+            let col = label_idx % Avery94103::LABELS_PER_ROW;
+
+            let x = left_margin_pt + (col as f32) * (label_width_pt + horizontal_spacing);
+            let y = sheet_height_pt
+                - top_margin_pt
+                - ((row as f32 + 1.0) * label_height_pt)
+                - (row as f32 * vertical_spacing);
+
+            // Generate QR code image
+            let qr_image_data = generate_qr_code_image(qr_data, qr_size_pixels)
+                .context("Failed to generate QR code image")?;
+
+            let img = ::image::load_from_memory(&qr_image_data)
+                .context("Failed to load QR code image")?;
+            let rgb_img = img.to_rgb8();
+
+            let image_xobject = ImageXObject {
+                width: Px(rgb_img.width() as usize),
+                height: Px(rgb_img.height() as usize),
+                color_space: ColorSpace::Rgb,
+                bits_per_component: ColorBits::Bit8,
+                interpolate: true,
+                image_data: rgb_img.as_raw().to_vec(),
+                image_filter: None,
+                clipping_bbox: None,
+                smask: None,
+            };
+
+            let image = Image {
+                image: image_xobject,
+            };
+
+            // Center QR code horizontally in label, position above text
+            let text_area_pt = 10.0; // Reserve 10pt for number text at bottom
+            let qr_x = x + (label_width_pt - qr_size_pt) / 2.0;
+            let qr_y = y + text_area_pt + (label_height_pt - text_area_pt - qr_size_pt) / 2.0;
+
+            let qr_x_mm = qr_x / 72.0 * 25.4;
+            let qr_y_mm = qr_y / 72.0 * 25.4;
+            let qr_size_mm = qr_size_pt / 72.0 * 25.4;
+
+            let natural_size_mm = qr_size_pixels as f32 / 300.0 * 25.4;
+            let scale = qr_size_mm / natural_size_mm;
+
+            let transform = ImageTransform {
+                translate_x: Some(Mm(qr_x_mm)),
+                translate_y: Some(Mm(qr_y_mm)),
+                rotate: None,
+                scale_x: Some(scale),
+                scale_y: Some(scale),
+                dpi: Some(300.0),
+            };
+
+            image.add_to_layer(layer.clone(), transform);
+
+            // Add label number centered below QR code
+            let number_text = format!("#{}", number);
+            let font_size = 7.0;
+            // Approximate text width for centering
+            let approx_text_width = number_text.len() as f32 * font_size * 0.5;
+            let text_x_pt = x + (label_width_pt - approx_text_width) / 2.0;
+            let text_y_pt = y + 2.0; // 2pt from bottom of label
+
+            let text_x_mm = text_x_pt / 72.0 * 25.4;
+            let text_y_mm = text_y_pt / 72.0 * 25.4;
+
+            layer.use_text(number_text, font_size, Mm(text_x_mm), Mm(text_y_mm), &font);
+        }
+    }
+
     let mut buffer = Vec::new();
     {
         let mut writer = BufWriter::new(&mut buffer);

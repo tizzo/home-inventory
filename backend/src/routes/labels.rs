@@ -172,41 +172,46 @@ pub async fn list_batches(
     })?;
     let total = total.clamp(0, i32::MAX as i64) as i32;
 
-    // Get paginated batch IDs
-    let batch_ids: Vec<Uuid> = sqlx::query_scalar(
-        "SELECT DISTINCT batch_id FROM labels WHERE batch_id IS NOT NULL ORDER BY batch_id DESC LIMIT $1 OFFSET $2"
+    // Fetch all labels for the paginated batches in a single query
+    let labels = sqlx::query_as::<_, Label>(
+        "SELECT l.* FROM labels l \
+         INNER JOIN ( \
+             SELECT batch_id, MIN(created_at) as first_created \
+             FROM labels WHERE batch_id IS NOT NULL \
+             GROUP BY batch_id \
+             ORDER BY first_created DESC \
+             LIMIT $1 OFFSET $2 \
+         ) b ON l.batch_id = b.batch_id \
+         ORDER BY b.first_created DESC, l.number ASC",
     )
     .bind(limit)
     .bind(offset)
     .fetch_all(&state.db)
     .await
     .map_err(|e| {
-        tracing::error!("Failed to fetch batch IDs: {:?}", e);
+        tracing::error!("Failed to fetch batches: {:?}", e);
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
 
-    let mut batches = Vec::new();
-    for batch_id in batch_ids {
-        // Get all labels for this batch
-        let labels = sqlx::query_as::<_, Label>(
-            "SELECT * FROM labels WHERE batch_id = $1 ORDER BY number ASC",
-        )
-        .bind(batch_id)
-        .fetch_all(&state.db)
-        .await
-        .map_err(|e| {
-            tracing::error!("Failed to fetch labels for batch: {:?}", e);
-            StatusCode::INTERNAL_SERVER_ERROR
-        })?;
+    // Group labels by batch_id preserving query order
+    let mut batches: Vec<BatchWithLabels> = Vec::new();
+    let mut current_batch_id: Option<Uuid> = None;
 
-        if !labels.is_empty() {
-            let created_at = labels[0].created_at;
+    for label in labels {
+        let bid = label.batch_id.unwrap();
+        if current_batch_id != Some(bid) {
+            current_batch_id = Some(bid);
             batches.push(BatchWithLabels {
-                batch_id,
-                labels: labels.into_iter().map(LabelResponse::from).collect(),
-                created_at,
+                batch_id: bid,
+                labels: Vec::new(),
+                created_at: label.created_at,
             });
         }
+        batches
+            .last_mut()
+            .unwrap()
+            .labels
+            .push(LabelResponse::from(label));
     }
 
     Ok(axum::Json(PaginatedResponse::new(

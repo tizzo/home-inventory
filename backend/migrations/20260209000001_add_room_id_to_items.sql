@@ -1,0 +1,1 @@
+ALTER TABLE items ADD COLUMN room_id UUID;

@@ -1,7 +1,8 @@
 -- sqlx:no-transaction
 CREATE TABLE item_import_drafts (
     id UUID PRIMARY KEY,
-    container_id UUID NOT NULL,
+    container_id UUID,
+    room_id UUID,
     status VARCHAR(20) NOT NULL,
     proposed_items TEXT NOT NULL,
     proposed_container_updates TEXT,

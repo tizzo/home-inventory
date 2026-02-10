@@ -61,6 +61,24 @@ export const containersApi = {
     return response.data;
   },
 
+  // Get containers by room
+  getByRoom: async (roomId: string, params?: PaginationQuery): Promise<PaginatedResponse<ContainerResponse>> => {
+    const response = await apiClient.get<PaginatedResponse<ContainerResponse>>(
+      `/api/rooms/${roomId}/containers`,
+      { params }
+    );
+    return response.data;
+  },
+
+  // Get unplaced containers
+  getUnplaced: async (params?: PaginationQuery): Promise<PaginatedResponse<ContainerResponse>> => {
+    const response = await apiClient.get<PaginatedResponse<ContainerResponse>>(
+      '/api/containers/unplaced',
+      { params }
+    );
+    return response.data;
+  },
+
   // Delete a container
   delete: async (id: string): Promise<void> => {
     await apiClient.delete(`/api/containers/${id}`);

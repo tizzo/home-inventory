@@ -166,20 +166,21 @@ pub async fn create_container(
     AuthUser(user_id): AuthUser,
     Json(payload): Json<CreateContainerRequest>,
 ) -> Result<Json<ContainerResponse>, StatusCode> {
-    // Validate location constraint: exactly one of shelf_id or parent_container_id must be provided
-    let (shelf_id, parent_container_id) = match (payload.shelf_id, payload.parent_container_id) {
-        (Some(sid), None) => (Some(sid), None),
-        (None, Some(pid)) => (None, Some(pid)),
-        (Some(_), Some(_)) => {
-            return Err(StatusCode::BAD_REQUEST);
-        }
-        (None, None) => {
-            return Err(StatusCode::BAD_REQUEST);
-        }
-    };
+    // Validate location constraint: at most one location
+    let location_count = [
+        payload.shelf_id.is_some(),
+        payload.parent_container_id.is_some(),
+        payload.room_id.is_some(),
+    ]
+    .iter()
+    .filter(|&&x| x)
+    .count();
+    if location_count > 1 {
+        return Err(StatusCode::BAD_REQUEST);
+    }
 
     // Verify location exists
-    if let Some(sid) = shelf_id {
+    if let Some(sid) = payload.shelf_id {
         let shelf_exists = sqlx::query("SELECT id FROM shelves WHERE id = $1")
             .bind(sid)
             .fetch_optional(&state.db)
@@ -195,7 +196,7 @@ pub async fn create_container(
         }
     }
 
-    if let Some(pid) = parent_container_id {
+    if let Some(pid) = payload.parent_container_id {
         let parent_exists = sqlx::query("SELECT id FROM containers WHERE id = $1")
             .bind(pid)
             .fetch_optional(&state.db)
@@ -211,16 +212,33 @@ pub async fn create_container(
         }
     }
 
+    if let Some(rid) = payload.room_id {
+        let room_exists = sqlx::query("SELECT id FROM rooms WHERE id = $1")
+            .bind(rid)
+            .fetch_optional(&state.db)
+            .await
+            .map_err(|e| {
+                tracing::error!("Failed to verify room: {:?}", e);
+                StatusCode::INTERNAL_SERVER_ERROR
+            })?
+            .is_some();
+
+        if !room_exists {
+            return Err(StatusCode::BAD_REQUEST);
+        }
+    }
+
     let container = sqlx::query_as::<_, Container>(
         r#"
-        INSERT INTO containers (id, shelf_id, parent_container_id, name, description, created_by)
-        VALUES ($1, $2, $3, $4, $5, $6)
+        INSERT INTO containers (id, shelf_id, parent_container_id, room_id, name, description, created_by)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
         RETURNING *
         "#,
     )
     .bind(Uuid::new_v4())
-    .bind(shelf_id)
-    .bind(parent_container_id)
+    .bind(payload.shelf_id)
+    .bind(payload.parent_container_id)
+    .bind(payload.room_id)
     .bind(&payload.name)
     .bind(&payload.description)
     .bind(user_id)
@@ -260,57 +278,80 @@ pub async fn update_container(
         .ok_or(StatusCode::NOT_FOUND)?;
 
     // Handle location changes
-    let (shelf_id, parent_container_id) =
-        if payload.shelf_id.is_some() || payload.parent_container_id.is_some() {
-            // New location provided - validate constraint
-            let new_shelf_id = payload.shelf_id.or(existing.shelf_id);
-            let new_parent_id = payload.parent_container_id.or(existing.parent_container_id);
+    let (shelf_id, parent_container_id, room_id) = if payload.shelf_id.is_some()
+        || payload.parent_container_id.is_some()
+        || payload.room_id.is_some()
+    {
+        // New location provided — at most one allowed
+        // When a new location field is set, clear the others
+        let location_count = [
+            payload.shelf_id.is_some(),
+            payload.parent_container_id.is_some(),
+            payload.room_id.is_some(),
+        ]
+        .iter()
+        .filter(|&&x| x)
+        .count();
+        if location_count > 1 {
+            return Err(StatusCode::BAD_REQUEST);
+        }
 
-            match (new_shelf_id, new_parent_id) {
-                (Some(sid), None) => {
-                    // Verify shelf exists
-                    let shelf_exists = sqlx::query("SELECT id FROM shelves WHERE id = $1")
-                        .bind(sid)
-                        .fetch_optional(&state.db)
-                        .await
-                        .map_err(|e| {
-                            tracing::error!("Failed to verify shelf: {:?}", e);
-                            StatusCode::INTERNAL_SERVER_ERROR
-                        })?
-                        .is_some();
-
-                    if !shelf_exists {
-                        return Err(StatusCode::BAD_REQUEST);
-                    }
-                    (Some(sid), None)
-                }
-                (None, Some(pid)) => {
-                    // Verify parent exists and prevent circular reference
-                    if pid == id {
-                        return Err(StatusCode::BAD_REQUEST);
-                    }
-                    let parent_exists = sqlx::query("SELECT id FROM containers WHERE id = $1")
-                        .bind(pid)
-                        .fetch_optional(&state.db)
-                        .await
-                        .map_err(|e| {
-                            tracing::error!("Failed to verify parent container: {:?}", e);
-                            StatusCode::INTERNAL_SERVER_ERROR
-                        })?
-                        .is_some();
-
-                    if !parent_exists {
-                        return Err(StatusCode::BAD_REQUEST);
-                    }
-                    (None, Some(pid))
-                }
-                (Some(_), Some(_)) => return Err(StatusCode::BAD_REQUEST),
-                (None, None) => return Err(StatusCode::BAD_REQUEST),
+        if let Some(sid) = payload.shelf_id {
+            let shelf_exists = sqlx::query("SELECT id FROM shelves WHERE id = $1")
+                .bind(sid)
+                .fetch_optional(&state.db)
+                .await
+                .map_err(|e| {
+                    tracing::error!("Failed to verify shelf: {:?}", e);
+                    StatusCode::INTERNAL_SERVER_ERROR
+                })?
+                .is_some();
+            if !shelf_exists {
+                return Err(StatusCode::BAD_REQUEST);
             }
+            (Some(sid), None, None)
+        } else if let Some(pid) = payload.parent_container_id {
+            if pid == id {
+                return Err(StatusCode::BAD_REQUEST);
+            }
+            let parent_exists = sqlx::query("SELECT id FROM containers WHERE id = $1")
+                .bind(pid)
+                .fetch_optional(&state.db)
+                .await
+                .map_err(|e| {
+                    tracing::error!("Failed to verify parent container: {:?}", e);
+                    StatusCode::INTERNAL_SERVER_ERROR
+                })?
+                .is_some();
+            if !parent_exists {
+                return Err(StatusCode::BAD_REQUEST);
+            }
+            (None, Some(pid), None)
+        } else if let Some(rid) = payload.room_id {
+            let room_exists = sqlx::query("SELECT id FROM rooms WHERE id = $1")
+                .bind(rid)
+                .fetch_optional(&state.db)
+                .await
+                .map_err(|e| {
+                    tracing::error!("Failed to verify room: {:?}", e);
+                    StatusCode::INTERNAL_SERVER_ERROR
+                })?
+                .is_some();
+            if !room_exists {
+                return Err(StatusCode::BAD_REQUEST);
+            }
+            (None, None, Some(rid))
         } else {
-            // No location change
-            (existing.shelf_id, existing.parent_container_id)
-        };
+            unreachable!()
+        }
+    } else {
+        // No location change
+        (
+            existing.shelf_id,
+            existing.parent_container_id,
+            existing.room_id,
+        )
+    };
 
     // Track changes for audit before consuming payload
     let mut changes = serde_json::Map::new();
@@ -340,17 +381,22 @@ pub async fn update_container(
     // Update fields if provided
     let name = payload.name.unwrap_or(existing.name.clone());
     let description = payload.description.or(existing.description.clone());
-    if shelf_id != existing.shelf_id || parent_container_id != existing.parent_container_id {
+    if shelf_id != existing.shelf_id
+        || parent_container_id != existing.parent_container_id
+        || room_id != existing.room_id
+    {
         changes.insert(
             "location".to_string(),
             serde_json::json!({
                 "from": {
                     "shelf_id": existing.shelf_id,
-                    "parent_container_id": existing.parent_container_id
+                    "parent_container_id": existing.parent_container_id,
+                    "room_id": existing.room_id
                 },
                 "to": {
                     "shelf_id": shelf_id,
-                    "parent_container_id": parent_container_id
+                    "parent_container_id": parent_container_id,
+                    "room_id": room_id
                 }
             }),
         );
@@ -359,8 +405,8 @@ pub async fn update_container(
     let container = sqlx::query_as::<_, Container>(
         r#"
         UPDATE containers
-        SET name = $1, description = $2, shelf_id = $3, parent_container_id = $4, updated_at = NOW()
-        WHERE id = $5
+        SET name = $1, description = $2, shelf_id = $3, parent_container_id = $4, room_id = $5, updated_at = NOW()
+        WHERE id = $6
         RETURNING *
         "#,
     )
@@ -368,6 +414,7 @@ pub async fn update_container(
     .bind(&description)
     .bind(shelf_id)
     .bind(parent_container_id)
+    .bind(room_id)
     .bind(id)
     .fetch_one(&state.db)
     .await
@@ -451,6 +498,87 @@ pub async fn delete_container(
     Ok(Json(json!({ "message": "Container deleted successfully" })))
 }
 
+/// Get containers by room
+pub async fn list_containers_by_room(
+    State(state): State<Arc<AppState>>,
+    Path(room_id): Path<Uuid>,
+    Query(params): Query<PaginationQuery>,
+) -> Result<Json<PaginatedResponse<ContainerResponse>>, StatusCode> {
+    let limit = params.limit.unwrap_or(50).clamp(1, 1000);
+    let offset = params.offset.unwrap_or(0).max(0);
+
+    let total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM containers WHERE room_id = $1")
+        .bind(room_id)
+        .fetch_one(&state.db)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to count containers: {:?}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+    let total = total.clamp(0, i32::MAX as i64) as i32;
+
+    let containers = sqlx::query_as::<_, Container>(
+        "SELECT * FROM containers WHERE room_id = $1 ORDER BY created_at LIMIT $2 OFFSET $3",
+    )
+    .bind(room_id)
+    .bind(limit)
+    .bind(offset)
+    .fetch_all(&state.db)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to fetch containers: {:?}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    let responses: Vec<ContainerResponse> = containers
+        .into_iter()
+        .map(ContainerResponse::from)
+        .collect();
+    Ok(Json(PaginatedResponse::new(
+        responses, total, limit, offset,
+    )))
+}
+
+/// Get unplaced containers
+pub async fn list_unplaced_containers(
+    State(state): State<Arc<AppState>>,
+    Query(params): Query<PaginationQuery>,
+) -> Result<Json<PaginatedResponse<ContainerResponse>>, StatusCode> {
+    let limit = params.limit.unwrap_or(50).clamp(1, 1000);
+    let offset = params.offset.unwrap_or(0).max(0);
+
+    let total: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM containers WHERE room_id IS NULL AND shelf_id IS NULL AND parent_container_id IS NULL",
+    )
+    .fetch_one(&state.db)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to count unplaced containers: {:?}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+    let total = total.clamp(0, i32::MAX as i64) as i32;
+
+    let containers = sqlx::query_as::<_, Container>(
+        "SELECT * FROM containers WHERE room_id IS NULL AND shelf_id IS NULL AND parent_container_id IS NULL ORDER BY created_at DESC LIMIT $1 OFFSET $2",
+    )
+    .bind(limit)
+    .bind(offset)
+    .fetch_all(&state.db)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to fetch unplaced containers: {:?}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    let responses: Vec<ContainerResponse> = containers
+        .into_iter()
+        .map(ContainerResponse::from)
+        .collect();
+    Ok(Json(PaginatedResponse::new(
+        responses, total, limit, offset,
+    )))
+}
+
 /// Create container routes
 pub fn container_routes() -> Router<Arc<AppState>> {
     use axum::routing::get;
@@ -460,6 +588,7 @@ pub fn container_routes() -> Router<Arc<AppState>> {
             "/api/containers",
             get(list_containers).post(create_container),
         )
+        .route("/api/containers/unplaced", get(list_unplaced_containers))
         .route(
             "/api/containers/:id",
             get(get_container)
@@ -473,5 +602,9 @@ pub fn container_routes() -> Router<Arc<AppState>> {
         .route(
             "/api/containers/:parent_id/children",
             get(list_containers_by_parent),
+        )
+        .route(
+            "/api/rooms/:room_id/containers",
+            get(list_containers_by_room),
         )
 }

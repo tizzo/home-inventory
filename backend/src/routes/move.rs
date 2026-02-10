@@ -26,12 +26,14 @@ pub struct MoveShelfRequest {
 pub struct MoveContainerRequest {
     pub target_shelf_id: Option<Uuid>,
     pub target_parent_id: Option<Uuid>,
+    pub target_room_id: Option<Uuid>,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct MoveItemRequest {
     pub target_shelf_id: Option<Uuid>,
     pub target_container_id: Option<Uuid>,
+    pub target_room_id: Option<Uuid>,
 }
 
 #[derive(Debug, Serialize)]
@@ -129,26 +131,28 @@ pub async fn move_container(
     Json(payload): Json<MoveContainerRequest>,
 ) -> Result<Json<MoveResponse>, StatusCode> {
     // Get current location for audit
-    let current: Option<(Option<Uuid>, Option<Uuid>)> =
-        sqlx::query_as("SELECT shelf_id, parent_container_id FROM containers WHERE id = $1")
-            .bind(container_id)
-            .fetch_optional(&state.db)
-            .await
-            .map_err(|e| {
-                tracing::error!("Failed to get container location: {:?}", e);
-                StatusCode::INTERNAL_SERVER_ERROR
-            })?;
+    let current: Option<(Option<Uuid>, Option<Uuid>, Option<Uuid>)> = sqlx::query_as(
+        "SELECT shelf_id, parent_container_id, room_id FROM containers WHERE id = $1",
+    )
+    .bind(container_id)
+    .fetch_optional(&state.db)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to get container location: {:?}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
 
     move_service::move_container(
         &state.db,
         container_id,
         payload.target_shelf_id,
         payload.target_parent_id,
+        payload.target_room_id,
     )
     .await?;
 
     // Log audit
-    if let Some((from_shelf, from_parent)) = current {
+    if let Some((from_shelf, from_parent, from_room)) = current {
         state
             .audit
             .log_move(
@@ -157,11 +161,13 @@ pub async fn move_container(
                 Some(user_id),
                 serde_json::json!({
                     "shelf_id": from_shelf,
-                    "parent_container_id": from_parent
+                    "parent_container_id": from_parent,
+                    "room_id": from_room
                 }),
                 serde_json::json!({
                     "shelf_id": payload.target_shelf_id,
-                    "parent_container_id": payload.target_parent_id
+                    "parent_container_id": payload.target_parent_id,
+                    "room_id": payload.target_room_id
                 }),
                 None,
             )
@@ -182,8 +188,8 @@ pub async fn move_item(
     Json(payload): Json<MoveItemRequest>,
 ) -> Result<Json<MoveResponse>, StatusCode> {
     // Get current location for audit
-    let current: Option<(Option<Uuid>, Option<Uuid>)> =
-        sqlx::query_as("SELECT shelf_id, container_id FROM items WHERE id = $1")
+    let current: Option<(Option<Uuid>, Option<Uuid>, Option<Uuid>)> =
+        sqlx::query_as("SELECT shelf_id, container_id, room_id FROM items WHERE id = $1")
             .bind(item_id)
             .fetch_optional(&state.db)
             .await
@@ -197,11 +203,12 @@ pub async fn move_item(
         item_id,
         payload.target_shelf_id,
         payload.target_container_id,
+        payload.target_room_id,
     )
     .await?;
 
     // Log audit
-    if let Some((from_shelf, from_container)) = current {
+    if let Some((from_shelf, from_container, from_room)) = current {
         state
             .audit
             .log_move(
@@ -210,11 +217,13 @@ pub async fn move_item(
                 Some(user_id),
                 serde_json::json!({
                     "shelf_id": from_shelf,
-                    "container_id": from_container
+                    "container_id": from_container,
+                    "room_id": from_room
                 }),
                 serde_json::json!({
                     "shelf_id": payload.target_shelf_id,
-                    "container_id": payload.target_container_id
+                    "container_id": payload.target_container_id,
+                    "room_id": payload.target_room_id
                 }),
                 None,
             )

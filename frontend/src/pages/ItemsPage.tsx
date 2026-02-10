@@ -6,6 +6,7 @@ import {
   useItems,
   useItemsByShelf,
   useItemsByContainer,
+  useItemsByRoom,
   useCreateItem,
   useUpdateItem,
   useDeleteItem,
@@ -30,10 +31,11 @@ import type {
 export default function ItemsPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { shelfId, containerId, itemId } = useParams<{
+  const { shelfId, containerId, itemId, roomId } = useParams<{
     shelfId?: string;
     containerId?: string;
     itemId?: string;
+    roomId?: string;
   }>();
 
   // Get search query from URL
@@ -41,11 +43,11 @@ export default function ItemsPage() {
   const offsetFromUrl = parseInt(searchParams.get('offset') || '0', 10);
 
   // Determine context and fetch appropriate data
-  const context = shelfId ? 'shelf' : containerId ? 'container' : 'all';
-  const [pagination, setPagination] = useState({ 
-    limit: 50, 
+  const context = shelfId ? 'shelf' : containerId ? 'container' : roomId ? 'room' : 'all';
+  const [pagination, setPagination] = useState({
+    limit: 50,
     offset: offsetFromUrl,
-    search: searchQuery || undefined 
+    search: searchQuery || undefined
   });
   const { data: allItemsResponse, isLoading: isLoadingAll } = useItems(pagination);
   const { data: shelfItemsResponse, isLoading: isLoadingShelf } = useItemsByShelf(
@@ -54,35 +56,46 @@ export default function ItemsPage() {
   );
   const { data: containerItemsResponse, isLoading: isLoadingContainer } =
     useItemsByContainer(containerId || '', pagination);
+  const { data: roomItemsResponse, isLoading: isLoadingRoom } =
+    useItemsByRoom(roomId || '', pagination);
 
   const allItems = allItemsResponse?.data || [];
   const shelfItems = shelfItemsResponse?.data || [];
   const containerItems = containerItemsResponse?.data || [];
+  const roomItems = roomItemsResponse?.data || [];
 
   const items =
     context === 'shelf'
       ? shelfItems
       : context === 'container'
         ? containerItems
-        : allItems;
+        : context === 'room'
+          ? roomItems
+          : allItems;
   const itemsResponse =
     context === 'shelf'
       ? shelfItemsResponse
       : context === 'container'
         ? containerItemsResponse
-        : allItemsResponse;
+        : context === 'room'
+          ? roomItemsResponse
+          : allItemsResponse;
   const isLoading =
     context === 'shelf'
       ? isLoadingShelf
       : context === 'container'
         ? isLoadingContainer
-        : isLoadingAll;
+        : context === 'room'
+          ? isLoadingRoom
+          : isLoadingAll;
 
   // Fetch context data for breadcrumbs
   const { data: shelf } = useShelf(shelfId || '');
   const { data: container } = useContainer(containerId || '');
   const { data: unit } = useShelvingUnit(shelf?.shelving_unit_id || '');
-  const { data: room } = useRoom(unit?.room_id || '');
+  const { data: shelfRoom } = useRoom(unit?.room_id || '');
+  const { data: directRoom } = useRoom(roomId || '');
+  const room = directRoom || shelfRoom;
 
   const createItem = useCreateItem();
   const updateItem = useUpdateItem();
@@ -188,6 +201,7 @@ export default function ItemsPage() {
     await createItem.mutateAsync({
       shelf_id: data.shelf_id,
       container_id: data.container_id,
+      room_id: data.room_id,
       name: data.name,
       description: data.description || '',
       barcode: data.barcode || undefined,
@@ -225,6 +239,8 @@ export default function ItemsPage() {
         navigate(`/shelves/${shelfId}/items`);
       } else if (containerId) {
         navigate(`/containers/${containerId}/items`);
+      } else if (roomId) {
+        navigate(`/rooms/${roomId}/items`);
       } else {
         navigate('/items');
       }
@@ -243,6 +259,8 @@ export default function ItemsPage() {
             navigate(`/shelves/${shelfId}/items`);
           } else if (containerId) {
             navigate(`/containers/${containerId}/items`);
+          } else if (roomId) {
+            navigate(`/rooms/${roomId}/items`);
           } else {
             navigate('/items');
           }
@@ -259,6 +277,8 @@ export default function ItemsPage() {
       navigate(`/shelves/${shelfId}/items/${id}/edit`);
     } else if (containerId) {
       navigate(`/containers/${containerId}/items/${id}/edit`);
+    } else if (roomId) {
+      navigate(`/rooms/${roomId}/items/${id}/edit`);
     } else {
       navigate(`/items/${id}/edit`);
     }
@@ -269,6 +289,8 @@ export default function ItemsPage() {
       navigate(`/shelves/${shelfId}/items`);
     } else if (containerId) {
       navigate(`/containers/${containerId}/items`);
+    } else if (roomId) {
+      navigate(`/rooms/${roomId}/items`);
     } else {
       navigate('/items');
     }
@@ -292,6 +314,7 @@ export default function ItemsPage() {
       data: {
         target_shelf_id: selectedType === 'shelf' ? targetId : undefined,
         target_container_id: selectedType === 'container' ? targetId : undefined,
+        target_room_id: selectedType === 'room' ? targetId : undefined,
       },
     });
     showSuccess(`Item "${moveModalItem.name}" moved successfully`);
@@ -431,12 +454,22 @@ export default function ItemsPage() {
               {' → Items'}
             </nav>
           )}
+          {context === 'room' && directRoom && (
+            <nav className="breadcrumb">
+              <Link to="/rooms">Rooms</Link>
+              {' → '}
+              <Link to={`/rooms/${directRoom.id}`}>{directRoom.name}</Link>
+              {' → Items'}
+            </nav>
+          )}
           <h1>
             {shelf
               ? `Items in ${shelf.name}`
               : container
                 ? `Items in ${container.name}`
-                : 'All Items'}
+                : context === 'room' && directRoom
+                  ? `Items in ${directRoom.name}`
+                  : 'All Items'}
           </h1>
         </div>
         <button className="btn btn-primary" onClick={openCreateModal}>
@@ -467,6 +500,12 @@ export default function ItemsPage() {
         onClose={closeCreateModal}
         title="Create New Item"
         parentTypes={[
+          {
+            type: 'room',
+            label: 'Room',
+            displayName: 'In Room',
+            preSelectedId: roomId,
+          },
           {
             type: 'shelf',
             label: 'Shelf',
@@ -727,6 +766,7 @@ export default function ItemsPage() {
           title="Move Item"
           entityName={moveModalItem.name}
           locationTypes={[
+            { type: 'room', label: 'Target Room', displayName: 'In Room' },
             { type: 'shelf', label: 'Target Shelf', displayName: 'On Shelf' },
             { type: 'container', label: 'Target Container', displayName: 'In Container' },
           ]}
@@ -739,7 +779,7 @@ export default function ItemsPage() {
       <div className="rooms-grid">
         {items.length === 0 ? (
           <p className="empty-state">
-            {shelfId || containerId
+            {shelfId || containerId || roomId
               ? 'No items yet. Click "Add Item" to create your first item.'
               : 'No items found.'}
           </p>

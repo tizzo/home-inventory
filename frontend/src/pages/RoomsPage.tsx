@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, Link } from 'react-router-dom';
 import { useRooms, useCreateRoom, useUpdateRoom, useDeleteRoom, usePhotos } from '../hooks';
 import { Modal, PhotoUpload, PhotoGallery, Pagination } from '../components';
 import type { CreateRoomRequest, UpdateRoomRequest, RoomResponse } from '../types/generated';
@@ -158,6 +158,17 @@ export default function RoomsPage() {
         {room.description && (
           <p className="room-description">{room.description}</p>
         )}
+        <div className="room-links" style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', margin: '0.5rem 0' }}>
+          <Link to={`/rooms/${room.id}/units`} className="btn btn-secondary btn-sm">
+            Shelving Units
+          </Link>
+          <Link to={`/rooms/${room.id}/containers`} className="btn btn-secondary btn-sm">
+            Containers
+          </Link>
+          <Link to={`/rooms/${room.id}/items`} className="btn btn-secondary btn-sm">
+            Items
+          </Link>
+        </div>
         <div className="room-meta">
           <small>
             Created: {new Date(room.created_at).toLocaleDateString()}

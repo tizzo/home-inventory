@@ -286,16 +286,21 @@ pub async fn bulk_create_items(
     let mut created_items: Vec<ItemResponse> = Vec::with_capacity(payload.items.len());
 
     for item_req in payload.items {
-        // Validate location constraint: exactly one of shelf_id or container_id must be provided
-        let (shelf_id, container_id) = match (item_req.shelf_id, item_req.container_id) {
-            (Some(sid), None) => (Some(sid), None),
-            (None, Some(cid)) => (None, Some(cid)),
-            (Some(_), Some(_)) => return Err(StatusCode::BAD_REQUEST),
-            (None, None) => return Err(StatusCode::BAD_REQUEST),
-        };
+        // Validate location constraint: at most one location
+        let location_count = [
+            item_req.shelf_id.is_some(),
+            item_req.container_id.is_some(),
+            item_req.room_id.is_some(),
+        ]
+        .iter()
+        .filter(|&&x| x)
+        .count();
+        if location_count > 1 {
+            return Err(StatusCode::BAD_REQUEST);
+        }
 
         // Verify location exists
-        if let Some(sid) = shelf_id {
+        if let Some(sid) = item_req.shelf_id {
             let shelf_exists = sqlx::query("SELECT id FROM shelves WHERE id = $1")
                 .bind(sid)
                 .fetch_optional(&mut *tx)
@@ -311,7 +316,7 @@ pub async fn bulk_create_items(
             }
         }
 
-        if let Some(cid) = container_id {
+        if let Some(cid) = item_req.container_id {
             let container_exists = sqlx::query("SELECT id FROM containers WHERE id = $1")
                 .bind(cid)
                 .fetch_optional(&mut *tx)
@@ -327,18 +332,35 @@ pub async fn bulk_create_items(
             }
         }
 
+        if let Some(rid) = item_req.room_id {
+            let room_exists = sqlx::query("SELECT id FROM rooms WHERE id = $1")
+                .bind(rid)
+                .fetch_optional(&mut *tx)
+                .await
+                .map_err(|e| {
+                    tracing::error!("Failed to verify room in bulk item create: {:?}", e);
+                    StatusCode::INTERNAL_SERVER_ERROR
+                })?
+                .is_some();
+
+            if !room_exists {
+                return Err(StatusCode::BAD_REQUEST);
+            }
+        }
+
         let item = sqlx::query_as::<_, Item>(
             r#"
-            INSERT INTO items (id, shelf_id, container_id, name, description, barcode, barcode_type,
+            INSERT INTO items (id, shelf_id, container_id, room_id, name, description, barcode, barcode_type,
                               product_manual_s3_key, receipt_s3_key, product_link,
                               belongs_to_user_id, acquired_date, created_by)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
             RETURNING *
             "#,
         )
         .bind(Uuid::new_v4())
-        .bind(shelf_id)
-        .bind(container_id)
+        .bind(item_req.shelf_id)
+        .bind(item_req.container_id)
+        .bind(item_req.room_id)
         .bind(&item_req.name)
         .bind(&item_req.description)
         .bind(&item_req.barcode)
@@ -401,20 +423,21 @@ pub async fn create_item(
     AuthUser(user_id): AuthUser,
     Json(payload): Json<CreateItemRequest>,
 ) -> Result<Json<ItemResponse>, StatusCode> {
-    // Validate location constraint: exactly one of shelf_id or container_id must be provided
-    let (shelf_id, container_id) = match (payload.shelf_id, payload.container_id) {
-        (Some(sid), None) => (Some(sid), None),
-        (None, Some(cid)) => (None, Some(cid)),
-        (Some(_), Some(_)) => {
-            return Err(StatusCode::BAD_REQUEST);
-        }
-        (None, None) => {
-            return Err(StatusCode::BAD_REQUEST);
-        }
-    };
+    // Validate location constraint: at most one location
+    let location_count = [
+        payload.shelf_id.is_some(),
+        payload.container_id.is_some(),
+        payload.room_id.is_some(),
+    ]
+    .iter()
+    .filter(|&&x| x)
+    .count();
+    if location_count > 1 {
+        return Err(StatusCode::BAD_REQUEST);
+    }
 
     // Verify location exists
-    if let Some(sid) = shelf_id {
+    if let Some(sid) = payload.shelf_id {
         let shelf_exists = sqlx::query("SELECT id FROM shelves WHERE id = $1")
             .bind(sid)
             .fetch_optional(&state.db)
@@ -430,7 +453,7 @@ pub async fn create_item(
         }
     }
 
-    if let Some(cid) = container_id {
+    if let Some(cid) = payload.container_id {
         let container_exists = sqlx::query("SELECT id FROM containers WHERE id = $1")
             .bind(cid)
             .fetch_optional(&state.db)
@@ -446,18 +469,35 @@ pub async fn create_item(
         }
     }
 
+    if let Some(rid) = payload.room_id {
+        let room_exists = sqlx::query("SELECT id FROM rooms WHERE id = $1")
+            .bind(rid)
+            .fetch_optional(&state.db)
+            .await
+            .map_err(|e| {
+                tracing::error!("Failed to verify room: {:?}", e);
+                StatusCode::INTERNAL_SERVER_ERROR
+            })?
+            .is_some();
+
+        if !room_exists {
+            return Err(StatusCode::BAD_REQUEST);
+        }
+    }
+
     let item = sqlx::query_as::<_, Item>(
         r#"
-        INSERT INTO items (id, shelf_id, container_id, name, description, barcode, barcode_type,
+        INSERT INTO items (id, shelf_id, container_id, room_id, name, description, barcode, barcode_type,
                           product_manual_s3_key, receipt_s3_key, product_link,
                           belongs_to_user_id, acquired_date, created_by)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
         RETURNING *
         "#,
     )
     .bind(Uuid::new_v4())
-    .bind(shelf_id)
-    .bind(container_id)
+    .bind(payload.shelf_id)
+    .bind(payload.container_id)
+    .bind(payload.room_id)
     .bind(&payload.name)
     .bind(&payload.description)
     .bind(&payload.barcode)
@@ -504,52 +544,70 @@ pub async fn update_item(
         .ok_or(StatusCode::NOT_FOUND)?;
 
     // Handle location changes
-    let (shelf_id, container_id) = if payload.shelf_id.is_some() || payload.container_id.is_some() {
-        // New location provided - validate constraint
-        let new_shelf_id = payload.shelf_id.or(existing.shelf_id);
-        let new_container_id = payload.container_id.or(existing.container_id);
+    let (shelf_id, container_id, room_id) = if payload.shelf_id.is_some()
+        || payload.container_id.is_some()
+        || payload.room_id.is_some()
+    {
+        let location_count = [
+            payload.shelf_id.is_some(),
+            payload.container_id.is_some(),
+            payload.room_id.is_some(),
+        ]
+        .iter()
+        .filter(|&&x| x)
+        .count();
+        if location_count > 1 {
+            return Err(StatusCode::BAD_REQUEST);
+        }
 
-        match (new_shelf_id, new_container_id) {
-            (Some(sid), None) => {
-                // Verify shelf exists
-                let shelf_exists = sqlx::query("SELECT id FROM shelves WHERE id = $1")
-                    .bind(sid)
-                    .fetch_optional(&state.db)
-                    .await
-                    .map_err(|e| {
-                        tracing::error!("Failed to verify shelf: {:?}", e);
-                        StatusCode::INTERNAL_SERVER_ERROR
-                    })?
-                    .is_some();
-
-                if !shelf_exists {
-                    return Err(StatusCode::BAD_REQUEST);
-                }
-                (Some(sid), None)
+        if let Some(sid) = payload.shelf_id {
+            let shelf_exists = sqlx::query("SELECT id FROM shelves WHERE id = $1")
+                .bind(sid)
+                .fetch_optional(&state.db)
+                .await
+                .map_err(|e| {
+                    tracing::error!("Failed to verify shelf: {:?}", e);
+                    StatusCode::INTERNAL_SERVER_ERROR
+                })?
+                .is_some();
+            if !shelf_exists {
+                return Err(StatusCode::BAD_REQUEST);
             }
-            (None, Some(cid)) => {
-                // Verify container exists
-                let container_exists = sqlx::query("SELECT id FROM containers WHERE id = $1")
-                    .bind(cid)
-                    .fetch_optional(&state.db)
-                    .await
-                    .map_err(|e| {
-                        tracing::error!("Failed to verify container: {:?}", e);
-                        StatusCode::INTERNAL_SERVER_ERROR
-                    })?
-                    .is_some();
-
-                if !container_exists {
-                    return Err(StatusCode::BAD_REQUEST);
-                }
-                (None, Some(cid))
+            (Some(sid), None, None)
+        } else if let Some(cid) = payload.container_id {
+            let container_exists = sqlx::query("SELECT id FROM containers WHERE id = $1")
+                .bind(cid)
+                .fetch_optional(&state.db)
+                .await
+                .map_err(|e| {
+                    tracing::error!("Failed to verify container: {:?}", e);
+                    StatusCode::INTERNAL_SERVER_ERROR
+                })?
+                .is_some();
+            if !container_exists {
+                return Err(StatusCode::BAD_REQUEST);
             }
-            (Some(_), Some(_)) => return Err(StatusCode::BAD_REQUEST),
-            (None, None) => return Err(StatusCode::BAD_REQUEST),
+            (None, Some(cid), None)
+        } else if let Some(rid) = payload.room_id {
+            let room_exists = sqlx::query("SELECT id FROM rooms WHERE id = $1")
+                .bind(rid)
+                .fetch_optional(&state.db)
+                .await
+                .map_err(|e| {
+                    tracing::error!("Failed to verify room: {:?}", e);
+                    StatusCode::INTERNAL_SERVER_ERROR
+                })?
+                .is_some();
+            if !room_exists {
+                return Err(StatusCode::BAD_REQUEST);
+            }
+            (None, None, Some(rid))
+        } else {
+            unreachable!()
         }
     } else {
         // No location change
-        (existing.shelf_id, existing.container_id)
+        (existing.shelf_id, existing.container_id, existing.room_id)
     };
 
     // Track changes for audit before consuming payload
@@ -656,17 +714,22 @@ pub async fn update_item(
     let product_link = payload.product_link.or(existing.product_link.clone());
     let belongs_to_user_id = payload.belongs_to_user_id.or(existing.belongs_to_user_id);
     let acquired_date = payload.acquired_date.or(existing.acquired_date);
-    if shelf_id != existing.shelf_id || container_id != existing.container_id {
+    if shelf_id != existing.shelf_id
+        || container_id != existing.container_id
+        || room_id != existing.room_id
+    {
         changes.insert(
             "location".to_string(),
             serde_json::json!({
                 "from": {
                     "shelf_id": existing.shelf_id,
-                    "container_id": existing.container_id
+                    "container_id": existing.container_id,
+                    "room_id": existing.room_id
                 },
                 "to": {
                     "shelf_id": shelf_id,
-                    "container_id": container_id
+                    "container_id": container_id,
+                    "room_id": room_id
                 }
             }),
         );
@@ -675,11 +738,11 @@ pub async fn update_item(
     let item = sqlx::query_as::<_, Item>(
         r#"
         UPDATE items
-        SET name = $1, description = $2, shelf_id = $3, container_id = $4,
-            barcode = $5, barcode_type = $6,
-            product_manual_s3_key = $7, receipt_s3_key = $8, product_link = $9,
-            belongs_to_user_id = $10, acquired_date = $11, updated_at = NOW()
-        WHERE id = $12
+        SET name = $1, description = $2, shelf_id = $3, container_id = $4, room_id = $5,
+            barcode = $6, barcode_type = $7,
+            product_manual_s3_key = $8, receipt_s3_key = $9, product_link = $10,
+            belongs_to_user_id = $11, acquired_date = $12, updated_at = NOW()
+        WHERE id = $13
         RETURNING *
         "#,
     )
@@ -687,6 +750,7 @@ pub async fn update_item(
     .bind(&description)
     .bind(shelf_id)
     .bind(container_id)
+    .bind(room_id)
     .bind(&barcode)
     .bind(&barcode_type)
     .bind(&product_manual_s3_key)
@@ -810,6 +874,81 @@ pub async fn get_file_upload_url(
     Ok(Json(FileUploadResponse { upload_url, s3_key }))
 }
 
+/// Get items by room
+pub async fn list_items_by_room(
+    State(state): State<Arc<AppState>>,
+    Path(room_id): Path<Uuid>,
+    Query(params): Query<PaginationQuery>,
+) -> Result<Json<PaginatedResponse<ItemResponse>>, StatusCode> {
+    let limit = params.limit.unwrap_or(50).clamp(1, 1000);
+    let offset = params.offset.unwrap_or(0).max(0);
+
+    let total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM items WHERE room_id = $1")
+        .bind(room_id)
+        .fetch_one(&state.db)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to count items: {:?}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+    let total = total.clamp(0, i32::MAX as i64) as i32;
+
+    let items = sqlx::query_as::<_, Item>(
+        "SELECT * FROM items WHERE room_id = $1 ORDER BY created_at LIMIT $2 OFFSET $3",
+    )
+    .bind(room_id)
+    .bind(limit)
+    .bind(offset)
+    .fetch_all(&state.db)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to fetch items: {:?}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    let responses: Vec<ItemResponse> = items.into_iter().map(ItemResponse::from).collect();
+    Ok(Json(PaginatedResponse::new(
+        responses, total, limit, offset,
+    )))
+}
+
+/// Get unplaced items
+pub async fn list_unplaced_items(
+    State(state): State<Arc<AppState>>,
+    Query(params): Query<PaginationQuery>,
+) -> Result<Json<PaginatedResponse<ItemResponse>>, StatusCode> {
+    let limit = params.limit.unwrap_or(50).clamp(1, 1000);
+    let offset = params.offset.unwrap_or(0).max(0);
+
+    let total: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM items WHERE room_id IS NULL AND shelf_id IS NULL AND container_id IS NULL",
+    )
+    .fetch_one(&state.db)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to count unplaced items: {:?}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+    let total = total.clamp(0, i32::MAX as i64) as i32;
+
+    let items = sqlx::query_as::<_, Item>(
+        "SELECT * FROM items WHERE room_id IS NULL AND shelf_id IS NULL AND container_id IS NULL ORDER BY created_at DESC LIMIT $1 OFFSET $2",
+    )
+    .bind(limit)
+    .bind(offset)
+    .fetch_all(&state.db)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to fetch unplaced items: {:?}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    let responses: Vec<ItemResponse> = items.into_iter().map(ItemResponse::from).collect();
+    Ok(Json(PaginatedResponse::new(
+        responses, total, limit, offset,
+    )))
+}
+
 /// Create item routes
 pub fn item_routes() -> Router<Arc<AppState>> {
     use axum::routing::{get, post};
@@ -818,6 +957,7 @@ pub fn item_routes() -> Router<Arc<AppState>> {
         .route("/api/items", get(list_items).post(create_item))
         // Specific routes MUST come before parameterized routes
         .route("/api/items/bulk", post(bulk_create_items))
+        .route("/api/items/unplaced", get(list_unplaced_items))
         .route("/api/items/file-upload-url", post(get_file_upload_url))
         .route("/api/items/file-download-url", post(get_file_download_url))
         .route("/api/items/barcode/:barcode", get(get_item_by_barcode))
@@ -831,6 +971,7 @@ pub fn item_routes() -> Router<Arc<AppState>> {
             "/api/containers/:container_id/items",
             get(list_items_by_container),
         )
+        .route("/api/rooms/:room_id/items", get(list_items_by_room))
 }
 
 /// Get public item view (no authentication required)

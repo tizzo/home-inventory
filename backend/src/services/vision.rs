@@ -13,6 +13,7 @@ pub struct VisionService {
 pub enum LocationType {
     Container,
     Shelf,
+    Room,
 }
 
 #[derive(Debug, Serialize)]
@@ -164,6 +165,7 @@ fn build_prompt(hint: Option<&str>, location_type: LocationType) -> String {
     let location_name = match location_type {
         LocationType::Container => "container",
         LocationType::Shelf => "shelf",
+        LocationType::Room => "room",
     };
 
     let hint_text = match hint {
@@ -200,10 +202,9 @@ Focus on physical objects that would be stored in a home inventory system (house
 For tags, use simple, searchable terms like: "tools", "electronics", "office-supplies", "kitchen", "bathroom", "hardware", "crafts", etc.
 
 Return ONLY the JSON object, no other text."#,
-        preposition = if matches!(location_type, LocationType::Shelf) {
-            "on "
-        } else {
-            "in "
+        preposition = match location_type {
+            LocationType::Shelf => "on ",
+            _ => "in ",
         },
         location = location_name,
         hint = hint_text

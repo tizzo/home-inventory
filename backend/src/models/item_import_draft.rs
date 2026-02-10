@@ -20,6 +20,7 @@ pub struct ItemImportDraft {
     pub id: Uuid,
     pub container_id: Option<Uuid>,
     pub shelf_id: Option<Uuid>,
+    pub room_id: Option<Uuid>,
     pub hint: Option<String>,
     pub status: String,
     pub proposed_items: serde_json::Value,
@@ -61,6 +62,7 @@ pub struct ItemImportDraftResponse {
     pub id: Uuid,
     pub container_id: Option<Uuid>,
     pub shelf_id: Option<Uuid>,
+    pub room_id: Option<Uuid>,
     pub hint: Option<String>,
     pub status: String,
     pub items: Vec<ItemImportDraftItem>,
@@ -82,15 +84,25 @@ pub struct CommitItemImportDraftResponse {
 pub struct AnalyzePhotoRequest {
     pub container_id: Option<Uuid>,
     pub shelf_id: Option<Uuid>,
+    pub room_id: Option<Uuid>,
     pub photo_ids: Vec<Uuid>,
     pub hint: Option<String>,
 }
 
 impl AnalyzePhotoRequest {
     pub fn validate_location(&self) -> Result<(), &'static str> {
-        match (self.container_id, self.shelf_id) {
-            (Some(_), None) | (None, Some(_)) => Ok(()),
-            _ => Err("Exactly one of container_id or shelf_id must be provided"),
+        let count = [
+            self.container_id.is_some(),
+            self.shelf_id.is_some(),
+            self.room_id.is_some(),
+        ]
+        .iter()
+        .filter(|&&x| x)
+        .count();
+        if count > 1 {
+            return Err("At most one of container_id, shelf_id, or room_id must be provided");
         }
+        // 0 = unplaced, 1 = placed — both OK
+        Ok(())
     }
 }

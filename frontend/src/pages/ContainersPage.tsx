@@ -5,6 +5,7 @@ import {
   useContainers,
   useContainersByShelf,
   useContainersByParent,
+  useContainersByRoom,
   useCreateContainer,
   useUpdateContainer,
   useDeleteContainer,
@@ -27,49 +28,61 @@ import type {
 
 export default function ContainersPage() {
   const navigate = useNavigate();
-  const { shelfId, containerId, parentId } = useParams<{
+  const { shelfId, containerId, parentId, roomId } = useParams<{
     shelfId?: string;
     containerId?: string;
     parentId?: string;
+    roomId?: string;
   }>();
 
   // Determine context and fetch appropriate data
-  const context = shelfId ? 'shelf' : parentId ? 'parent' : 'all';
+  const context = shelfId ? 'shelf' : parentId ? 'parent' : roomId ? 'room' : 'all';
   const [pagination, setPagination] = useState({ limit: 50, offset: 0 });
   const { data: allContainersResponse, isLoading: isLoadingAll } = useContainers(pagination);
   const { data: shelfContainersResponse, isLoading: isLoadingShelf } =
     useContainersByShelf(shelfId || '', pagination);
   const { data: parentContainersResponse, isLoading: isLoadingParent } =
     useContainersByParent(parentId || '', pagination);
+  const { data: roomContainersResponse, isLoading: isLoadingRoom } =
+    useContainersByRoom(roomId || '', pagination);
 
   const allContainers = allContainersResponse?.data || [];
   const shelfContainers = shelfContainersResponse?.data || [];
   const parentContainers = parentContainersResponse?.data || [];
+  const roomContainers = roomContainersResponse?.data || [];
 
   const containers =
     context === 'shelf'
       ? shelfContainers
       : context === 'parent'
         ? parentContainers
-        : allContainers;
+        : context === 'room'
+          ? roomContainers
+          : allContainers;
   const containersResponse =
     context === 'shelf'
       ? shelfContainersResponse
       : context === 'parent'
         ? parentContainersResponse
-        : allContainersResponse;
+        : context === 'room'
+          ? roomContainersResponse
+          : allContainersResponse;
   const isLoading =
     context === 'shelf'
       ? isLoadingShelf
       : context === 'parent'
         ? isLoadingParent
-        : isLoadingAll;
+        : context === 'room'
+          ? isLoadingRoom
+          : isLoadingAll;
 
   // Fetch context data for breadcrumbs
   const { data: shelf } = useShelf(shelfId || '');
   const { data: parentContainer } = useContainer(parentId || '');
   const { data: unit } = useShelvingUnit(shelf?.shelving_unit_id || '');
-  const { data: room } = useRoom(unit?.room_id || '');
+  const { data: shelfRoom } = useRoom(unit?.room_id || '');
+  const { data: directRoom } = useRoom(roomId || '');
+  const room = directRoom || shelfRoom;
 
   const createContainer = useCreateContainer();
   const updateContainer = useUpdateContainer();
@@ -102,6 +115,7 @@ export default function ContainersPage() {
     await createContainer.mutateAsync({
       shelf_id: data.shelf_id,
       parent_container_id: data.container_id,
+      room_id: data.room_id,
       name: data.name,
       description: data.description || '',
     });
@@ -122,6 +136,8 @@ export default function ContainersPage() {
         navigate(`/shelves/${shelfId}/containers`);
       } else if (parentId) {
         navigate(`/containers/${parentId}/children`);
+      } else if (roomId) {
+        navigate(`/rooms/${roomId}/containers`);
       } else {
         navigate('/containers');
       }
@@ -144,6 +160,8 @@ export default function ContainersPage() {
             navigate(`/shelves/${shelfId}/containers`);
           } else if (parentId) {
             navigate(`/containers/${parentId}/children`);
+          } else if (roomId) {
+            navigate(`/rooms/${roomId}/containers`);
           } else {
             navigate('/containers');
           }
@@ -162,6 +180,8 @@ export default function ContainersPage() {
       navigate(`/shelves/${shelfId}/containers/${id}/edit`);
     } else if (parentId) {
       navigate(`/containers/${parentId}/children/${id}/edit`);
+    } else if (roomId) {
+      navigate(`/rooms/${roomId}/containers/${id}/edit`);
     } else {
       navigate(`/containers/${id}/edit`);
     }
@@ -172,6 +192,8 @@ export default function ContainersPage() {
       navigate(`/shelves/${shelfId}/containers`);
     } else if (parentId) {
       navigate(`/containers/${parentId}/children`);
+    } else if (roomId) {
+      navigate(`/rooms/${roomId}/containers`);
     } else {
       navigate('/containers');
     }
@@ -196,6 +218,7 @@ export default function ContainersPage() {
       data: {
         target_shelf_id: selectedType === 'shelf' ? targetId : undefined,
         target_parent_id: selectedType === 'container' ? targetId : undefined,
+        target_room_id: selectedType === 'room' ? targetId : undefined,
       },
     });
     showSuccess(`Container "${moveModalContainer.name}" moved successfully`);
@@ -348,12 +371,22 @@ export default function ContainersPage() {
               {' → Containers'}
             </nav>
           )}
+          {roomId && directRoom && !shelf && (
+            <nav className="breadcrumb">
+              <Link to="/rooms">Rooms</Link>
+              {' → '}
+              <Link to={`/rooms/${directRoom.id}`}>{directRoom.name}</Link>
+              {' → Containers'}
+            </nav>
+          )}
           <h1>
             {shelf
               ? `Containers in ${shelf.name}`
               : parentContainer
                 ? `Containers in ${parentContainer.name}`
-                : 'All Containers'}
+                : roomId && directRoom
+                  ? `Containers in ${directRoom.name}`
+                  : 'All Containers'}
           </h1>
         </div>
         <button className="btn btn-primary" onClick={openCreateModal}>
@@ -367,6 +400,12 @@ export default function ContainersPage() {
         onClose={closeCreateModal}
         title="Create New Container"
         parentTypes={[
+          {
+            type: 'room',
+            label: 'Room',
+            displayName: 'In Room',
+            preSelectedId: roomId,
+          },
           {
             type: 'shelf',
             label: 'Shelf',
@@ -481,6 +520,7 @@ export default function ContainersPage() {
           title="Move Container"
           entityName={moveModalContainer.name}
           locationTypes={[
+            { type: 'room', label: 'Target Room', displayName: 'In Room' },
             { type: 'shelf', label: 'Target Shelf', displayName: 'On Shelf' },
             { type: 'container', label: 'Parent Container', displayName: 'Inside Container' },
           ]}

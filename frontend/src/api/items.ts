@@ -38,6 +38,24 @@ export const itemsApi = {
     return response.data;
   },
 
+  // Get items by room
+  getByRoom: async (roomId: string, params?: PaginationQuery): Promise<PaginatedResponse<ItemResponse>> => {
+    const response = await apiClient.get<PaginatedResponse<ItemResponse>>(
+      `/api/rooms/${roomId}/items`,
+      { params }
+    );
+    return response.data;
+  },
+
+  // Get unplaced items
+  getUnplaced: async (params?: PaginationQuery): Promise<PaginatedResponse<ItemResponse>> => {
+    const response = await apiClient.get<PaginatedResponse<ItemResponse>>(
+      '/api/items/unplaced',
+      { params }
+    );
+    return response.data;
+  },
+
   // Get a single item by ID
   getById: async (id: string): Promise<ItemResponse> => {
     const response = await apiClient.get<ItemResponse>(`/api/items/${id}`);

@@ -206,6 +206,22 @@ function App() {
                     path="/containers/:containerId/items/:itemId/edit"
                     element={<ItemsPage />}
                   />
+                  <Route
+                    path="/rooms/:roomId/containers"
+                    element={<ContainersPage />}
+                  />
+                  <Route
+                    path="/rooms/:roomId/containers/:containerId/edit"
+                    element={<ContainersPage />}
+                  />
+                  <Route
+                    path="/rooms/:roomId/items"
+                    element={<ItemsPage />}
+                  />
+                  <Route
+                    path="/rooms/:roomId/items/:itemId/edit"
+                    element={<ItemsPage />}
+                  />
                   <Route path="/labels" element={<LabelsPage />} />
                   <Route path="/labels/batches/:batchId" element={<BatchDetailPage />} />
                   <Route path="/l/:labelId" element={<LabelDetailPage />} />

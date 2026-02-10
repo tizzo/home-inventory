@@ -89,6 +89,7 @@ fn draft_to_response(draft: ItemImportDraft) -> Result<ItemImportDraftResponse, 
         id: draft.id,
         container_id: draft.container_id,
         shelf_id: draft.shelf_id,
+        room_id: draft.room_id,
         hint: draft.hint,
         status: draft.status,
         items,
@@ -300,8 +301,21 @@ pub async fn commit_item_import_draft(
         if !exists {
             return Err(StatusCode::BAD_REQUEST);
         }
+    } else if let Some(room_id) = draft.room_id {
+        let exists = sqlx::query("SELECT id FROM rooms WHERE id = $1")
+            .bind(room_id)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(|e| {
+                tracing::error!("Failed to verify room exists: {e:?}");
+                StatusCode::INTERNAL_SERVER_ERROR
+            })?
+            .is_some();
+        if !exists {
+            return Err(StatusCode::BAD_REQUEST);
+        }
     } else {
-        return Err(StatusCode::BAD_REQUEST);
+        // No location = unplaced, which is now allowed
     }
 
     let items: Vec<ItemImportDraftItem> = serde_json::from_value(draft.proposed_items.clone())
@@ -366,6 +380,7 @@ pub async fn commit_item_import_draft(
         let create_req = CreateItemRequest {
             shelf_id: draft.shelf_id,
             container_id: draft.container_id,
+            room_id: draft.room_id,
             name: item.name,
             description: item.description,
             barcode: item.barcode,
@@ -379,14 +394,15 @@ pub async fn commit_item_import_draft(
 
         let created = sqlx::query_as::<_, Item>(
             r#"
-            INSERT INTO items (id, shelf_id, container_id, name, description, barcode, barcode_type, created_by)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            INSERT INTO items (id, shelf_id, container_id, room_id, name, description, barcode, barcode_type, created_by)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
             RETURNING *
             "#,
         )
         .bind(Uuid::new_v4())
         .bind(create_req.shelf_id)
         .bind(create_req.container_id)
+        .bind(create_req.room_id)
         .bind(&create_req.name)
         .bind(&create_req.description)
         .bind(&create_req.barcode)
@@ -511,8 +527,7 @@ pub async fn analyze_photo_and_create_draft(
                 .into_response();
         }
         LocationType::Container
-    } else {
-        let shelf_id = payload.shelf_id.unwrap();
+    } else if let Some(shelf_id) = payload.shelf_id {
         let exists = match sqlx::query("SELECT id FROM shelves WHERE id = $1")
             .bind(shelf_id)
             .fetch_optional(&state.db)
@@ -532,6 +547,29 @@ pub async fn analyze_photo_and_create_draft(
                 .into_response();
         }
         LocationType::Shelf
+    } else if let Some(room_id) = payload.room_id {
+        let exists = match sqlx::query("SELECT id FROM rooms WHERE id = $1")
+            .bind(room_id)
+            .fetch_optional(&state.db)
+            .await
+        {
+            Ok(result) => result.is_some(),
+            Err(e) => {
+                tracing::error!("Failed to verify room exists: {e:?}");
+                return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+            }
+        };
+        if !exists {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(json!({"error": "Room not found"})),
+            )
+                .into_response();
+        }
+        LocationType::Room
+    } else {
+        // No location = analyze without location context, default to container-like
+        LocationType::Container
     };
 
     // Fetch and download all photos
@@ -646,6 +684,7 @@ pub async fn analyze_photo_and_create_draft(
             id,
             container_id,
             shelf_id,
+            room_id,
             hint,
             status,
             proposed_items,
@@ -653,13 +692,14 @@ pub async fn analyze_photo_and_create_draft(
             source_photo_ids,
             created_by
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
         RETURNING *
         "#,
     )
     .bind(Uuid::new_v4())
     .bind(payload.container_id)
     .bind(payload.shelf_id)
+    .bind(payload.room_id)
     .bind(&payload.hint)
     .bind("draft")
     .bind(proposed_items)

@@ -10,6 +10,7 @@ pub struct Container {
     pub id: Uuid,
     pub shelf_id: Option<Uuid>,
     pub parent_container_id: Option<Uuid>,
+    pub room_id: Option<Uuid>,
     pub name: String,
     pub description: Option<String>,
     pub label_id: Option<Uuid>,
@@ -23,6 +24,7 @@ pub struct Container {
 pub struct CreateContainerRequest {
     pub shelf_id: Option<Uuid>,
     pub parent_container_id: Option<Uuid>,
+    pub room_id: Option<Uuid>,
     pub name: String,
     pub description: Option<String>,
 }
@@ -34,6 +36,7 @@ pub struct UpdateContainerRequest {
     pub description: Option<String>,
     pub shelf_id: Option<Uuid>,
     pub parent_container_id: Option<Uuid>,
+    pub room_id: Option<Uuid>,
 }
 
 #[typeshare]
@@ -42,6 +45,7 @@ pub struct ContainerResponse {
     pub id: Uuid,
     pub shelf_id: Option<Uuid>,
     pub parent_container_id: Option<Uuid>,
+    pub room_id: Option<Uuid>,
     pub name: String,
     pub description: Option<String>,
     pub label_id: Option<Uuid>,
@@ -55,6 +59,7 @@ impl From<Container> for ContainerResponse {
             id: container.id,
             shelf_id: container.shelf_id,
             parent_container_id: container.parent_container_id,
+            room_id: container.room_id,
             name: container.name,
             description: container.description,
             label_id: container.label_id,
@@ -74,6 +79,7 @@ mod tests {
             id: Uuid::new_v4(),
             shelf_id: Some(Uuid::new_v4()),
             parent_container_id: None,
+            room_id: None,
             name: "Test Container".to_string(),
             description: Some("Test Description".to_string()),
             label_id: Some(Uuid::new_v4()),
@@ -91,6 +97,7 @@ mod tests {
         assert_eq!(response.id, container.id);
         assert_eq!(response.shelf_id, container.shelf_id);
         assert_eq!(response.parent_container_id, container.parent_container_id);
+        assert_eq!(response.room_id, container.room_id);
         assert_eq!(response.name, container.name);
         assert_eq!(response.description, container.description);
         assert_eq!(response.label_id, container.label_id);
@@ -116,6 +123,7 @@ mod tests {
             id: Uuid::new_v4(),
             shelf_id: None,
             parent_container_id: None,
+            room_id: None,
             name: "Standalone Container".to_string(),
             description: None,
             label_id: None,

@@ -34,6 +34,23 @@ export const useItemsByContainer = (containerId: string, params?: PaginationQuer
   });
 };
 
+// Get items by room
+export const useItemsByRoom = (roomId: string, params?: PaginationQuery) => {
+  return useQuery<PaginatedResponse<ItemResponse>, Error>({
+    queryKey: ['items', 'room', roomId, params],
+    queryFn: () => itemsApi.getByRoom(roomId, params),
+    enabled: !!roomId,
+  });
+};
+
+// Get unplaced items
+export const useUnplacedItems = (params?: PaginationQuery) => {
+  return useQuery<PaginatedResponse<ItemResponse>, Error>({
+    queryKey: ['items', 'unplaced', params],
+    queryFn: () => itemsApi.getUnplaced(params),
+  });
+};
+
 // Get a single item
 export const useItem = (id: string) => {
   return useQuery<ItemResponse, Error>({

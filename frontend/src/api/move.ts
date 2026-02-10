@@ -11,11 +11,13 @@ export interface MoveShelfRequest {
 export interface MoveContainerRequest {
   target_shelf_id?: string;
   target_parent_id?: string;
+  target_room_id?: string;
 }
 
 export interface MoveItemRequest {
   target_shelf_id?: string;
   target_container_id?: string;
+  target_room_id?: string;
 }
 
 export interface MoveResponse {

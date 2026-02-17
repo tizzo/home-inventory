@@ -254,8 +254,8 @@ pub async fn print_labels(
 
     // Generate PDF using the appropriate template
     let pdf_bytes = match template {
-        "avery_94103" => generate_label_pdf_94103(&label_data),
-        _ => generate_label_pdf(&label_data),
+        "avery_94103" => generate_label_pdf_94103(&label_data, &state.family_initial),
+        _ => generate_label_pdf(&label_data, &state.family_initial),
     }
     .map_err(|e| {
         tracing::error!("Failed to generate PDF: {:?}", e);

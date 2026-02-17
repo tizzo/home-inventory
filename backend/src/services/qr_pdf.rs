@@ -6,6 +6,8 @@ use printpdf::*;
 use qrcode::QrCode;
 use std::io::{BufWriter, Write};
 
+use super::branding;
+
 /// Avery 18660 template specifications
 /// 1" x 2-5/8" labels, 30 labels per sheet (3 columns x 10 rows)
 /// Sheet size: 8.5" x 11" (US Letter)
@@ -91,14 +93,68 @@ pub fn generate_qr_code_image(data: &str, size_pixels: u32) -> Result<Vec<u8>> {
     Ok(buffer)
 }
 
-/// Generate a PDF with labels for Avery 18660 template
-pub fn generate_label_pdf(labels: &[(String, i32)], // (qr_data, number)
-) -> Result<Vec<u8>> {
+/// Helper: add an RGB image to a PDF layer at the given position/size (all in points)
+fn add_image_to_layer(
+    layer: &PdfLayerReference,
+    rgb_img: &::image::RgbImage,
+    x_pt: f32,
+    y_pt: f32,
+    size_pt: f32,
+    dpi: f32,
+) {
+    let image_xobject = ImageXObject {
+        width: Px(rgb_img.width() as usize),
+        height: Px(rgb_img.height() as usize),
+        color_space: ColorSpace::Rgb,
+        bits_per_component: ColorBits::Bit8,
+        interpolate: true,
+        image_data: rgb_img.as_raw().to_vec(),
+        image_filter: None,
+        clipping_bbox: None,
+        smask: None,
+    };
+
+    let image = Image {
+        image: image_xobject,
+    };
+
+    let size_mm = size_pt / 72.0 * 25.4;
+    let natural_size_mm = rgb_img.width() as f32 / dpi * 25.4;
+    let scale = size_mm / natural_size_mm;
+
+    let transform = ImageTransform {
+        translate_x: Some(Mm(x_pt / 72.0 * 25.4)),
+        translate_y: Some(Mm(y_pt / 72.0 * 25.4)),
+        rotate: None,
+        scale_x: Some(scale),
+        scale_y: Some(scale),
+        dpi: Some(dpi),
+    };
+
+    image.add_to_layer(layer.clone(), transform);
+}
+
+/// Helper: convert points to Mm for use_text
+fn pt_to_mm(pt: f32) -> Mm {
+    Mm(pt / 72.0 * 25.4)
+}
+
+/// Generate a PDF with labels for Avery 18660 template (2.625" x 1" rectangular)
+///
+/// Layout per label:
+/// ```text
+/// ┌──────────────────────────────────────────┐
+/// │ ┌──────┐  ┌────┐  HOME INVENTORY  #123  │
+/// │ │  QR  │  │ 🏠 │  SCAN IF FOUND         │
+/// │ │ CODE │  │ H  │  REWARD                │
+/// │ └──────┘  └────┘                         │
+/// └──────────────────────────────────────────┘
+/// ```
+pub fn generate_label_pdf(labels: &[(String, i32)], family_initial: &str) -> Result<Vec<u8>> {
     if labels.is_empty() {
         return Err(anyhow::anyhow!("No labels provided"));
     }
 
-    // Create PDF document
     let (doc, page1, layer1) = PdfDocument::new(
         "Avery 18660 Labels",
         Mm(Avery18660::SHEET_WIDTH_INCHES * 25.4),
@@ -109,7 +165,6 @@ pub fn generate_label_pdf(labels: &[(String, i32)], // (qr_data, number)
     let mut current_page = page1;
     let mut current_layer = layer1;
 
-    // Convert inches to points (1 inch = 72 points)
     let label_width_pt = Avery18660::LABEL_WIDTH_INCHES * 72.0;
     let label_height_pt = Avery18660::LABEL_HEIGHT_INCHES * 72.0;
     let horizontal_spacing = Avery18660::HORIZONTAL_SPACING_INCHES * 72.0;
@@ -118,19 +173,23 @@ pub fn generate_label_pdf(labels: &[(String, i32)], // (qr_data, number)
     let left_margin_pt = Avery18660::LEFT_MARGIN_INCHES * 72.0;
     let sheet_height_pt = Avery18660::SHEET_HEIGHT_INCHES * 72.0;
 
-    // QR code size within label - make it larger since label is 2.625" wide
-    // Use 0.85" x 0.85" QR code to leave room for number text below (0.15" for text)
-    let qr_size_pixels = 300; // Higher resolution for larger QR code at 300 DPI
-    let qr_size_pt = 0.85 * 72.0; // 0.85" square QR code
+    let qr_size_pixels: u32 = 300;
+    let qr_size_pt = 0.85 * 72.0;
+    let logo_size_pt = 0.35 * 72.0; // House logo size
+    let logo_pixels: u32 = 128;
 
-    // Add Helvetica font for text (using regular Helvetica for closest match)
     let font = doc
         .add_builtin_font(BuiltinFont::Helvetica)
         .context("Failed to add font")?;
+    let font_bold = doc
+        .add_builtin_font(BuiltinFont::HelveticaBold)
+        .context("Failed to add bold font")?;
+
+    // Pre-render house logo
+    let logo_img = branding::render_house_logo(family_initial, logo_pixels);
 
     for (sheet_idx, label_chunk) in labels.chunks(Avery18660::LABELS_PER_SHEET).enumerate() {
         if sheet_idx > 0 {
-            // Create new page for additional sheets
             let (page, layer) = doc.add_page(
                 Mm(Avery18660::SHEET_WIDTH_INCHES * 25.4),
                 Mm(Avery18660::SHEET_HEIGHT_INCHES * 25.4),
@@ -146,106 +205,50 @@ pub fn generate_label_pdf(labels: &[(String, i32)], // (qr_data, number)
             let row = label_idx / Avery18660::LABELS_PER_ROW;
             let col = label_idx % Avery18660::LABELS_PER_ROW;
 
-            // Calculate label position (PDF coordinates: bottom-left is origin)
-            // For Avery 18660: labels are arranged in 3 columns, 10 rows
-            // Each label is 2.625" wide x 1" tall
-            // X position: left margin + (column * (label width + spacing))
             let x = left_margin_pt + (col as f32) * (label_width_pt + horizontal_spacing);
-            // Y position: start from top of sheet, work downward
-            // Row 0 (top): y = sheet_height - top_margin - label_height
-            // Row 1: y = sheet_height - top_margin - (2 * label_height)
-            // Row n: y = sheet_height - top_margin - ((n + 1) * label_height)
             let y = sheet_height_pt - top_margin_pt - ((row as f32 + 1.0) * label_height_pt);
 
-            // Generate QR code image
+            // Generate and place QR code on left
             let qr_image_data = generate_qr_code_image(qr_data, qr_size_pixels)
                 .context("Failed to generate QR code image")?;
-
-            // Load image using image crate
             let img = ::image::load_from_memory(&qr_image_data)
                 .context("Failed to load QR code image")?;
             let rgb_img = img.to_rgb8();
 
-            // Create ImageXObject from RgbImage
-            let image_xobject = ImageXObject {
-                width: Px(rgb_img.width() as usize),
-                height: Px(rgb_img.height() as usize),
-                color_space: ColorSpace::Rgb,
-                bits_per_component: ColorBits::Bit8,
-                interpolate: true,
-                image_data: rgb_img.as_raw().to_vec(),
-                image_filter: None,
-                clipping_bbox: None,
-                smask: None,
-            };
-
-            // Create Image struct and add to layer
-            let image = Image {
-                image: image_xobject,
-            };
-
-            // Position and scale the QR code image
-            // Place QR code on the left side of the label
-            // Label is 2.625" wide, QR is 0.85" square
-            // Leave some margin on the left, then QR code, then space for text on right
-            let qr_left_margin = 5.0; // 5pt margin from left edge
+            let qr_left_margin = 3.0;
             let qr_x = x + qr_left_margin;
-            // Center QR code vertically in the label (label is 1" = 72pt tall)
             let qr_y = y + (label_height_pt - qr_size_pt) / 2.0;
+            add_image_to_layer(&layer, &rgb_img, qr_x, qr_y, qr_size_pt, 300.0);
 
-            // Convert points to millimeters (1 point = 0.352778 mm, or 1 inch = 72 points = 25.4 mm)
-            let qr_x_mm = qr_x / 72.0 * 25.4;
-            let qr_y_mm = qr_y / 72.0 * 25.4;
-            let qr_size_mm = qr_size_pt / 72.0 * 25.4;
+            // Place house logo next to QR code
+            let logo_x = qr_x + qr_size_pt + 4.0;
+            let logo_y = y + (label_height_pt - logo_size_pt) / 2.0;
+            add_image_to_layer(&layer, &logo_img, logo_x, logo_y, logo_size_pt, 300.0);
 
-            // Calculate scale factors for ImageTransform
-            // The image is generated at qr_size_pixels (300px) which represents the QR code
-            // At 300 DPI, 300 pixels = 1 inch = 25.4 mm
-            // We want the image to be qr_size_mm in the PDF
-            // So scale = desired_size_mm / natural_size_mm
-            // Natural size at 300 DPI: 300px / 300 DPI = 1 inch = 25.4 mm
-            let natural_size_mm = qr_size_pixels as f32 / 300.0 * 25.4;
-            let scale_x = qr_size_mm / natural_size_mm;
-            let scale_y = qr_size_mm / natural_size_mm;
+            // Branding text to the right of logo
+            let text_x = logo_x + logo_size_pt + 4.0;
 
-            // Create ImageTransform for positioning and scaling (uses Mm)
-            let transform = ImageTransform {
-                translate_x: Some(Mm(qr_x_mm)),
-                translate_y: Some(Mm(qr_y_mm)),
-                rotate: None,
-                scale_x: Some(scale_x),
-                scale_y: Some(scale_y),
-                dpi: Some(300.0),
-            };
+            // Line 1: "HOME INVENTORY  #123"
+            let line1 = format!("HOME INVENTORY  #{}", number);
+            let line1_y = y + label_height_pt - 20.0;
+            layer.use_text(line1, 8.0, pt_to_mm(text_x), pt_to_mm(line1_y), &font_bold);
 
-            // Add image to layer
-            image.add_to_layer(layer.clone(), transform);
+            // Line 2: "SCAN IF FOUND"
+            let line2_y = line1_y - 14.0;
+            layer.use_text(
+                "SCAN IF FOUND",
+                7.0,
+                pt_to_mm(text_x),
+                pt_to_mm(line2_y),
+                &font,
+            );
 
-            // Add label number text to the right of QR code
-            let number_text = format!("#{}", number);
-            let font_size = 12.0; // Slightly larger font for better visibility
-
-            // Position text to the right of QR code
-            // QR code starts at qr_x and is qr_size_pt wide
-            // Add some spacing between QR code and text
-            let text_spacing = 8.0; // 8pt spacing between QR code and text
-            let text_x_pt = qr_x + qr_size_pt + text_spacing;
-
-            // Center text vertically with QR code
-            // QR code is centered at: y + (label_height_pt - qr_size_pt) / 2.0
-            // Text baseline should align with QR code center
-            // Approximate: font_size * 0.7 gives approximate center alignment
-            let text_y_pt = y + (label_height_pt / 2.0) + (font_size * 0.35); // Center vertically
-
-            // Convert points to millimeters for use_text
-            let text_x_mm = text_x_pt / 72.0 * 25.4;
-            let text_y_mm = text_y_pt / 72.0 * 25.4;
-
-            layer.use_text(number_text, font_size, Mm(text_x_mm), Mm(text_y_mm), &font);
+            // Line 3: "REWARD"
+            let line3_y = line2_y - 12.0;
+            layer.use_text("REWARD", 7.0, pt_to_mm(text_x), pt_to_mm(line3_y), &font);
         }
     }
 
-    // Write PDF to bytes
     let mut buffer = Vec::new();
     {
         let mut writer = BufWriter::new(&mut buffer);
@@ -257,10 +260,28 @@ pub fn generate_label_pdf(labels: &[(String, i32)], // (qr_data, number)
 }
 
 /// Generate a PDF with labels for Avery Presta 94103 template (1" x 1" square)
-pub fn generate_label_pdf_94103(labels: &[(String, i32)]) -> Result<Vec<u8>> {
+///
+/// Layout per label:
+/// ```text
+/// ┌───────────────────────┐
+/// │   HOME  INVENTORY     │  ← top edge text
+/// │ R                   S │
+/// │ E    ┌─────────┐    C │  ← left: "REWARD" rotated 90° CCW
+/// │ W    │   QR    │    A │  ← right: "SCAN IF FOUND" rotated 90° CW
+/// │ A    │  CODE   │    N │
+/// │ R    │         │      │
+/// │ D    └─────────┘    I │
+/// │        #123         F │
+/// │                       │
+/// └───────────────────────┘
+/// ```
+pub fn generate_label_pdf_94103(labels: &[(String, i32)], family_initial: &str) -> Result<Vec<u8>> {
     if labels.is_empty() {
         return Err(anyhow::anyhow!("No labels provided"));
     }
+
+    // Suppress unused variable warning - initial is used for rectangular template only
+    let _ = family_initial;
 
     let (doc, page1, layer1) = PdfDocument::new(
         "Avery 94103 Labels",
@@ -280,13 +301,22 @@ pub fn generate_label_pdf_94103(labels: &[(String, i32)]) -> Result<Vec<u8>> {
     let left_margin_pt = Avery94103::LEFT_MARGIN_INCHES * 72.0;
     let sheet_height_pt = Avery94103::SHEET_HEIGHT_INCHES * 72.0;
 
-    // For 1" square labels: QR code 0.7" with number text below
-    let qr_size_pixels = 300;
-    let qr_size_pt = 0.7 * 72.0;
+    // Edge text margins eat into space; QR code fills the remaining center
+    let edge_margin = 8.0; // pts reserved for edge text on each side
+    let top_text_margin = 8.0; // pts for "HOME INVENTORY" at top
+    let bottom_text_margin = 10.0; // pts for label number at bottom
+
+    // QR fills the square minus edge text areas
+    let qr_size_pt = label_width_pt - 2.0 * edge_margin - 2.0; // ~0.78" minus a little padding
+    let qr_size_pt = qr_size_pt.min(label_height_pt - top_text_margin - bottom_text_margin - 2.0);
+    let qr_size_pixels: u32 = 300;
 
     let font = doc
         .add_builtin_font(BuiltinFont::Helvetica)
         .context("Failed to add font")?;
+    let font_bold = doc
+        .add_builtin_font(BuiltinFont::HelveticaBold)
+        .context("Failed to add bold font")?;
 
     for (sheet_idx, label_chunk) in labels.chunks(Avery94103::LABELS_PER_SHEET).enumerate() {
         if sheet_idx > 0 {
@@ -311,65 +341,78 @@ pub fn generate_label_pdf_94103(labels: &[(String, i32)]) -> Result<Vec<u8>> {
                 - ((row as f32 + 1.0) * label_height_pt)
                 - (row as f32 * vertical_spacing);
 
-            // Generate QR code image
+            // --- QR code centered in available area ---
             let qr_image_data = generate_qr_code_image(qr_data, qr_size_pixels)
                 .context("Failed to generate QR code image")?;
-
             let img = ::image::load_from_memory(&qr_image_data)
                 .context("Failed to load QR code image")?;
             let rgb_img = img.to_rgb8();
 
-            let image_xobject = ImageXObject {
-                width: Px(rgb_img.width() as usize),
-                height: Px(rgb_img.height() as usize),
-                color_space: ColorSpace::Rgb,
-                bits_per_component: ColorBits::Bit8,
-                interpolate: true,
-                image_data: rgb_img.as_raw().to_vec(),
-                image_filter: None,
-                clipping_bbox: None,
-                smask: None,
-            };
-
-            let image = Image {
-                image: image_xobject,
-            };
-
-            // Center QR code horizontally in label, position above text
-            let text_area_pt = 10.0; // Reserve 10pt for number text at bottom
             let qr_x = x + (label_width_pt - qr_size_pt) / 2.0;
-            let qr_y = y + text_area_pt + (label_height_pt - text_area_pt - qr_size_pt) / 2.0;
+            let qr_y = y
+                + bottom_text_margin
+                + (label_height_pt - top_text_margin - bottom_text_margin - qr_size_pt) / 2.0;
+            add_image_to_layer(&layer, &rgb_img, qr_x, qr_y, qr_size_pt, 300.0);
 
-            let qr_x_mm = qr_x / 72.0 * 25.4;
-            let qr_y_mm = qr_y / 72.0 * 25.4;
-            let qr_size_mm = qr_size_pt / 72.0 * 25.4;
+            // --- "HOME INVENTORY" across top ---
+            let top_text = "HOME INVENTORY";
+            let top_font_size = 5.0;
+            let approx_top_width = top_text.len() as f32 * top_font_size * 0.52;
+            let top_text_x = x + (label_width_pt - approx_top_width) / 2.0;
+            let top_text_y = y + label_height_pt - top_text_margin + 1.0;
+            layer.use_text(
+                top_text,
+                top_font_size,
+                pt_to_mm(top_text_x),
+                pt_to_mm(top_text_y),
+                &font_bold,
+            );
 
-            let natural_size_mm = qr_size_pixels as f32 / 300.0 * 25.4;
-            let scale = qr_size_mm / natural_size_mm;
-
-            let transform = ImageTransform {
-                translate_x: Some(Mm(qr_x_mm)),
-                translate_y: Some(Mm(qr_y_mm)),
-                rotate: None,
-                scale_x: Some(scale),
-                scale_y: Some(scale),
-                dpi: Some(300.0),
-            };
-
-            image.add_to_layer(layer.clone(), transform);
-
-            // Add label number centered below QR code
+            // --- Label number centered below QR ---
             let number_text = format!("#{}", number);
-            let font_size = 7.0;
-            // Approximate text width for centering
-            let approx_text_width = number_text.len() as f32 * font_size * 0.5;
-            let text_x_pt = x + (label_width_pt - approx_text_width) / 2.0;
-            let text_y_pt = y + 2.0; // 2pt from bottom of label
+            let num_font_size = 5.0;
+            let approx_num_width = number_text.len() as f32 * num_font_size * 0.52;
+            let num_x = x + (label_width_pt - approx_num_width) / 2.0;
+            let num_y = y + 2.0;
+            layer.use_text(
+                number_text,
+                num_font_size,
+                pt_to_mm(num_x),
+                pt_to_mm(num_y),
+                &font,
+            );
 
-            let text_x_mm = text_x_pt / 72.0 * 25.4;
-            let text_y_mm = text_y_pt / 72.0 * 25.4;
+            // --- "REWARD" rotated 90° CCW on left edge ---
+            // Rotation: text reads bottom-to-top
+            let left_text = "REWARD";
+            let side_font_size = 4.5;
+            // Position: left edge of label, vertically centered
+            let left_text_x_pt = x + 5.0;
+            let left_text_y_pt = y + label_height_pt / 2.0 - 8.0;
 
-            layer.use_text(number_text, font_size, Mm(text_x_mm), Mm(text_y_mm), &font);
+            layer.save_graphics_state();
+            layer.set_ctm(CurTransMat::TranslateRotate(
+                Pt(left_text_x_pt),
+                Pt(left_text_y_pt),
+                90.0, // CCW rotation
+            ));
+            layer.use_text(left_text, side_font_size, Mm(0.0), Mm(0.0), &font);
+            layer.restore_graphics_state();
+
+            // --- "SCAN IF FOUND" rotated 90° CW on right edge ---
+            // Rotation: text reads top-to-bottom
+            let right_text = "SCAN IF FOUND";
+            let right_text_x_pt = x + label_width_pt - 2.0;
+            let right_text_y_pt = y + label_height_pt / 2.0 + 14.0;
+
+            layer.save_graphics_state();
+            layer.set_ctm(CurTransMat::TranslateRotate(
+                Pt(right_text_x_pt),
+                Pt(right_text_y_pt),
+                -90.0, // CW rotation (negative = clockwise)
+            ));
+            layer.use_text(right_text, side_font_size, Mm(0.0), Mm(0.0), &font);
+            layer.restore_graphics_state();
         }
     }
 
@@ -389,7 +432,6 @@ mod tests {
 
     #[test]
     fn test_avery18660_constants() {
-        // Verify Avery 18660 template constants are correct
         assert_eq!(Avery18660::LABEL_WIDTH_INCHES, 2.625);
         assert_eq!(Avery18660::LABEL_HEIGHT_INCHES, 1.0);
         assert_eq!(Avery18660::LABELS_PER_ROW, 3);
@@ -397,8 +439,6 @@ mod tests {
         assert_eq!(Avery18660::LABELS_PER_SHEET, 30);
         assert_eq!(Avery18660::SHEET_WIDTH_INCHES, 8.5);
         assert_eq!(Avery18660::SHEET_HEIGHT_INCHES, 11.0);
-
-        // Verify calculations
         assert_eq!(
             Avery18660::LABELS_PER_SHEET,
             Avery18660::LABELS_PER_ROW * Avery18660::LABELS_PER_COLUMN
@@ -408,15 +448,10 @@ mod tests {
     #[test]
     fn test_generate_qr_code_image_success() {
         let data = "https://example.com/item/123";
-        let size = 200;
-
-        let result = generate_qr_code_image(data, size);
-
+        let result = generate_qr_code_image(data, 200);
         assert!(result.is_ok());
         let image_data = result.unwrap();
         assert!(!image_data.is_empty());
-
-        // Verify it's a valid PNG by checking PNG signature
         assert_eq!(
             &image_data[0..8],
             &[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]
@@ -426,45 +461,26 @@ mod tests {
     #[test]
     fn test_generate_qr_code_image_different_sizes() {
         let data = "test-data";
-
-        let small = generate_qr_code_image(data, 100).unwrap();
-        let medium = generate_qr_code_image(data, 200).unwrap();
-        let large = generate_qr_code_image(data, 400).unwrap();
-
-        // Larger sizes should generally produce larger files (though compression can vary)
-        // At minimum, they should all be valid PNGs
-        assert!(!small.is_empty());
-        assert!(!medium.is_empty());
-        assert!(!large.is_empty());
-
-        // All should be valid PNGs
-        assert_eq!(
-            &small[0..8],
-            &[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]
-        );
-        assert_eq!(
-            &medium[0..8],
-            &[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]
-        );
-        assert_eq!(
-            &large[0..8],
-            &[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]
-        );
+        for size in [100, 200, 400] {
+            let result = generate_qr_code_image(data, size).unwrap();
+            assert!(!result.is_empty());
+            assert_eq!(
+                &result[0..8],
+                &[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]
+            );
+        }
     }
 
     #[test]
     fn test_generate_qr_code_image_empty_data() {
-        // QR codes can be generated with empty data, though it's unusual
         let result = generate_qr_code_image("", 100);
         assert!(result.is_ok());
     }
 
     #[test]
     fn test_generate_qr_code_image_long_data() {
-        // Test with longer data to ensure it works with various data sizes
         let long_data = "a".repeat(1000);
         let result = generate_qr_code_image(&long_data, 200);
-
         assert!(result.is_ok());
         let image_data = result.unwrap();
         assert!(!image_data.is_empty());
@@ -477,8 +493,7 @@ mod tests {
     #[test]
     fn test_generate_label_pdf_empty_labels() {
         let labels: Vec<(String, i32)> = vec![];
-        let result = generate_label_pdf(&labels);
-
+        let result = generate_label_pdf(&labels, "H");
         assert!(result.is_err());
         assert!(result
             .unwrap_err()
@@ -489,13 +504,10 @@ mod tests {
     #[test]
     fn test_generate_label_pdf_single_label() {
         let labels = vec![("https://example.com/item/1".to_string(), 1)];
-        let result = generate_label_pdf(&labels);
-
+        let result = generate_label_pdf(&labels, "H");
         assert!(result.is_ok());
         let pdf_data = result.unwrap();
         assert!(!pdf_data.is_empty());
-
-        // Verify it's a PDF by checking PDF signature
         assert_eq!(&pdf_data[0..4], b"%PDF");
     }
 
@@ -506,8 +518,7 @@ mod tests {
             ("https://example.com/item/2".to_string(), 2),
             ("https://example.com/item/3".to_string(), 3),
         ];
-        let result = generate_label_pdf(&labels);
-
+        let result = generate_label_pdf(&labels, "T");
         assert!(result.is_ok());
         let pdf_data = result.unwrap();
         assert!(!pdf_data.is_empty());
@@ -516,49 +527,36 @@ mod tests {
 
     #[test]
     fn test_generate_label_pdf_exactly_one_sheet() {
-        // Test with exactly 30 labels (one sheet)
         let labels: Vec<(String, i32)> = (1..=30)
             .map(|i| (format!("https://example.com/item/{}", i), i))
             .collect();
-
-        let result = generate_label_pdf(&labels);
+        let result = generate_label_pdf(&labels, "H");
         assert!(result.is_ok());
-        let pdf_data = result.unwrap();
-        assert!(!pdf_data.is_empty());
-        assert_eq!(&pdf_data[0..4], b"%PDF");
+        assert_eq!(&result.unwrap()[0..4], b"%PDF");
     }
 
     #[test]
     fn test_generate_label_pdf_multiple_sheets() {
-        // Test with 31 labels (should create 2 sheets)
         let labels: Vec<(String, i32)> = (1..=31)
             .map(|i| (format!("https://example.com/item/{}", i), i))
             .collect();
-
-        let result = generate_label_pdf(&labels);
+        let result = generate_label_pdf(&labels, "H");
         assert!(result.is_ok());
-        let pdf_data = result.unwrap();
-        assert!(!pdf_data.is_empty());
-        assert_eq!(&pdf_data[0..4], b"%PDF");
+        assert_eq!(&result.unwrap()[0..4], b"%PDF");
     }
 
     #[test]
     fn test_generate_label_pdf_many_labels() {
-        // Test with 100 labels (should create multiple sheets)
         let labels: Vec<(String, i32)> = (1..=100)
             .map(|i| (format!("https://example.com/item/{}", i), i))
             .collect();
-
-        let result = generate_label_pdf(&labels);
+        let result = generate_label_pdf(&labels, "H");
         assert!(result.is_ok());
-        let pdf_data = result.unwrap();
-        assert!(!pdf_data.is_empty());
-        assert_eq!(&pdf_data[0..4], b"%PDF");
+        assert_eq!(&result.unwrap()[0..4], b"%PDF");
     }
 
     #[test]
     fn test_generate_label_pdf_special_characters() {
-        // Test with special characters in QR data
         let labels = vec![
             (
                 "https://example.com/item/1?param=value&other=test".to_string(),
@@ -566,35 +564,46 @@ mod tests {
             ),
             ("item with spaces and symbols !@#$%".to_string(), 2),
         ];
-        let result = generate_label_pdf(&labels);
-
+        let result = generate_label_pdf(&labels, "H");
         assert!(result.is_ok());
-        let pdf_data = result.unwrap();
-        assert!(!pdf_data.is_empty());
-        assert_eq!(&pdf_data[0..4], b"%PDF");
+        assert_eq!(&result.unwrap()[0..4], b"%PDF");
     }
 
     #[test]
     fn test_label_positioning_calculations() {
-        // Verify label positioning calculations are correct
         let label_width_pt = Avery18660::LABEL_WIDTH_INCHES * 72.0;
         let _label_height_pt = Avery18660::LABEL_HEIGHT_INCHES * 72.0;
         let horizontal_spacing = Avery18660::HORIZONTAL_SPACING_INCHES * 72.0;
         let left_margin_pt = Avery18660::LEFT_MARGIN_INCHES * 72.0;
 
-        // First label (row 0, col 0)
         let x0 = left_margin_pt + (0 as f32) * (label_width_pt + horizontal_spacing);
         assert_eq!(x0, left_margin_pt);
 
-        // Second label in row (row 0, col 1)
         let x1 = left_margin_pt + (1 as f32) * (label_width_pt + horizontal_spacing);
         assert_eq!(x1, left_margin_pt + label_width_pt + horizontal_spacing);
 
-        // Third label in row (row 0, col 2)
         let x2 = left_margin_pt + (2 as f32) * (label_width_pt + horizontal_spacing);
         assert_eq!(
             x2,
             left_margin_pt + 2.0 * (label_width_pt + horizontal_spacing)
         );
+    }
+
+    #[test]
+    fn test_generate_label_pdf_94103_single() {
+        let labels = vec![("https://example.com/item/1".to_string(), 1)];
+        let result = generate_label_pdf_94103(&labels, "H");
+        assert!(result.is_ok());
+        assert_eq!(&result.unwrap()[0..4], b"%PDF");
+    }
+
+    #[test]
+    fn test_generate_label_pdf_94103_full_sheet() {
+        let labels: Vec<(String, i32)> = (1..=48)
+            .map(|i| (format!("https://example.com/item/{}", i), i))
+            .collect();
+        let result = generate_label_pdf_94103(&labels, "H");
+        assert!(result.is_ok());
+        assert_eq!(&result.unwrap()[0..4], b"%PDF");
     }
 }

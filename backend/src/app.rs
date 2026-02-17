@@ -26,6 +26,7 @@ pub struct AppState {
     pub oauth_client: BasicClient,
     pub vision: Option<Arc<VisionService>>,
     pub captcha: Option<Arc<CaptchaService>>,
+    pub family_initial: String,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -141,6 +142,8 @@ pub async fn create_app(db: PgPool) -> anyhow::Result<Router> {
         .expect("Invalid redirect URL"),
     );
 
+    let family_initial = env::var("FAMILY_INITIAL").unwrap_or_else(|_| "H".to_string());
+
     let state = Arc::new(AppState {
         db,
         s3: s3_service,
@@ -149,6 +152,7 @@ pub async fn create_app(db: PgPool) -> anyhow::Result<Router> {
         oauth_client,
         vision: vision_service,
         captcha: captcha_service,
+        family_initial,
     });
 
     // Configure CORS for local development

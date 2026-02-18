@@ -149,11 +149,13 @@ export function NavBar() {
                 isActive={isActive(link.to)}
               />
             ))}
-            <NavLink
-              to="/scan"
-              label="Scan"
-              isActive={isActive('/scan')}
-            />
+            {user && (
+              <NavLink
+                to="/scan"
+                label="Scan"
+                isActive={isActive('/scan')}
+              />
+            )}
           </div>
 
           {/* Desktop Auth & Theme */}
@@ -245,12 +247,14 @@ export function NavBar() {
                         onClick={() => setMobileMenuOpen(false)}
                       />
                     ))}
-                    <MobileNavLink
-                      to="/scan"
-                      label="Scan QR Code"
-                      isActive={isActive('/scan')}
-                      onClick={() => setMobileMenuOpen(false)}
-                    />
+                    {user && (
+                      <MobileNavLink
+                        to="/scan"
+                        label="Scan QR Code"
+                        isActive={isActive('/scan')}
+                        onClick={() => setMobileMenuOpen(false)}
+                      />
+                    )}
                     {user && (
                       <MobileNavLink
                         to="/audit"

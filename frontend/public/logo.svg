@@ -1,8 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
-  <!-- House body -->
-  <rect x="15" y="45" width="70" height="50" rx="3" fill="#2563eb" stroke="white" stroke-width="3"/>
-  <!-- Roof -->
-  <polygon points="5,48 50,8 95,48" fill="#2563eb" stroke="white" stroke-width="3" stroke-linejoin="round"/>
+  <!-- House as single unified path (roof + body, no internal seam) -->
+  <path d="M50,8 L95,48 L85,48 L85,95 L15,95 L15,48 L5,48 Z" fill="#2563eb" stroke="white" stroke-width="3" stroke-linejoin="round"/>
   <!-- Letter centered on house body (serif, large, white) -->
   <text x="50" y="84" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-weight="bold" font-size="36" fill="white">H</text>
 </svg>

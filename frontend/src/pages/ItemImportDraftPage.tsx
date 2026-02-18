@@ -146,7 +146,7 @@ export default function ItemImportDraftPage() {
                 boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
               }}
             />
-            <p style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: '#666' }}>
+            <p className="mt-2 text-sm text-muted-foreground">
               Click to view full size
             </p>
           </div>

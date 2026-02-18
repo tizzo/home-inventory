@@ -98,24 +98,24 @@ export default function UserSelector({
   return (
     <div className="mb-4" ref={containerRef}>
       {label && (
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label className="block text-sm font-medium text-foreground mb-2">
           {label}
-          {required && <span className="text-red-500 ml-1">*</span>}
+          {required && <span className="text-destructive ml-1">*</span>}
         </label>
       )}
 
       <div className="relative">
         {/* Display selected user or input */}
         {selectedUser ? (
-          <div className="flex items-center justify-between bg-white border border-gray-300 rounded-md px-3 py-2">
+          <div className="flex items-center justify-between bg-background border border-input rounded-md px-3 py-2">
             <div className="flex flex-col">
-              <span className="text-sm font-medium text-gray-900">{selectedUser.name}</span>
-              <span className="text-xs text-gray-500">{selectedUser.email}</span>
+              <span className="text-sm font-medium text-foreground">{selectedUser.name}</span>
+              <span className="text-xs text-muted-foreground">{selectedUser.email}</span>
             </div>
             <button
               type="button"
               onClick={handleClear}
-              className="text-gray-400 hover:text-gray-600"
+              className="text-muted-foreground hover:text-foreground"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -132,28 +132,28 @@ export default function UserSelector({
             }}
             onFocus={() => setIsOpen(true)}
             placeholder={placeholder}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-input bg-background text-foreground rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
           />
         )}
 
         {/* Dropdown */}
         {isOpen && !selectedUser && (
-          <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+          <div className="absolute z-10 w-full mt-1 bg-popover border border-border rounded-md shadow-lg max-h-60 overflow-y-auto">
             {loading ? (
-              <div className="px-3 py-2 text-sm text-gray-500">Loading...</div>
+              <div className="px-3 py-2 text-sm text-muted-foreground">Loading...</div>
             ) : filteredUsers.length === 0 ? (
-              <div className="px-3 py-2 text-sm text-gray-500">No users found</div>
+              <div className="px-3 py-2 text-sm text-muted-foreground">No users found</div>
             ) : (
               filteredUsers.map((user) => (
                 <button
                   key={user.id}
                   type="button"
                   onClick={() => handleSelect(user.id)}
-                  className="w-full text-left px-3 py-2 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
+                  className="w-full text-left px-3 py-2 hover:bg-accent focus:bg-accent focus:outline-none"
                 >
                   <div className="flex flex-col">
-                    <span className="text-sm font-medium text-gray-900">{user.name}</span>
-                    <span className="text-xs text-gray-500">{user.email}</span>
+                    <span className="text-sm font-medium text-foreground">{user.name}</span>
+                    <span className="text-xs text-muted-foreground">{user.email}</span>
                   </div>
                 </button>
               ))

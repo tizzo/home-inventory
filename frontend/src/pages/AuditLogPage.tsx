@@ -79,13 +79,13 @@ export default function AuditLogPage() {
   const getActionBadgeClass = (action: string): string => {
     switch (action) {
       case 'CREATE':
-        return 'bg-green-100 text-green-800';
+        return 'bg-green-500/15 text-green-600 dark:text-green-400';
       case 'UPDATE':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-blue-500/15 text-blue-600 dark:text-blue-400';
       case 'DELETE':
-        return 'bg-red-100 text-red-800';
+        return 'bg-red-500/15 text-red-600 dark:text-red-400';
       case 'MOVE':
-        return 'bg-purple-100 text-purple-800';
+        return 'bg-purple-500/15 text-purple-600 dark:text-purple-400';
       default:
         return 'bg-secondary text-secondary-foreground';
     }
@@ -111,7 +111,7 @@ export default function AuditLogPage() {
                 id="filter-entity-type"
                 value={filters.entity_type || ''}
                 onChange={(e) => handleFilterChange('entity_type', e.target.value || undefined)}
-                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:text-sm"
+                className="flex h-9 w-full rounded-md border border-input bg-background text-foreground px-3 py-1 text-base shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:text-sm"
               >
                 <option value="">All</option>
                 <option value="room">Room</option>
@@ -128,7 +128,7 @@ export default function AuditLogPage() {
                 id="filter-action"
                 value={filters.action || ''}
                 onChange={(e) => handleFilterChange('action', e.target.value || undefined)}
-                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:text-sm"
+                className="flex h-9 w-full rounded-md border border-input bg-background text-foreground px-3 py-1 text-base shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:text-sm"
               >
                 <option value="">All</option>
                 <option value="CREATE">Create</option>

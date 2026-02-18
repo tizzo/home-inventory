@@ -182,7 +182,7 @@ export default function FileUpload({
 
   return (
     <div className="mb-4">
-      <label className="block text-sm font-medium text-gray-700 mb-2">
+      <label className="block text-sm font-medium text-foreground mb-2">
         {label}
       </label>
 
@@ -195,8 +195,8 @@ export default function FileUpload({
           className={`
             relative border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-all
             ${isDragOver
-              ? 'border-blue-500 bg-blue-50'
-              : 'border-gray-300 bg-gray-50 hover:border-blue-400 hover:bg-blue-50'
+              ? 'border-primary bg-primary/5'
+              : 'border-border bg-muted hover:border-primary/50 hover:bg-primary/5'
             }
             ${uploading ? 'opacity-50 cursor-not-allowed' : ''}
           `}
@@ -211,7 +211,7 @@ export default function FileUpload({
           />
           <div className="flex flex-col items-center gap-3">
             <svg
-              className={`w-12 h-12 ${isDragOver ? 'text-blue-500' : 'text-gray-400'}`}
+              className={`w-12 h-12 ${isDragOver ? 'text-primary' : 'text-muted-foreground'}`}
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -224,14 +224,14 @@ export default function FileUpload({
               />
             </svg>
             <div>
-              <p className="text-sm font-semibold text-gray-700">
+              <p className="text-sm font-semibold text-foreground">
                 {isDragOver ? 'Drop file here' : 'Drag and drop file here'}
               </p>
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-muted-foreground mt-1">
                 or click to browse
               </p>
             </div>
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-muted-foreground">
               Max size: {maxSizeMB}MB
             </p>
           </div>
@@ -240,13 +240,13 @@ export default function FileUpload({
 
       {uploading && (
         <div className="mt-2">
-          <div className="flex items-center justify-between text-sm text-gray-600 mb-1">
+          <div className="flex items-center justify-between text-sm text-muted-foreground mb-1">
             <span>{fileName}</span>
             <span>{Math.round(progress)}%</span>
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-2">
+          <div className="w-full bg-muted rounded-full h-2">
             <div
-              className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+              className="bg-primary h-2 rounded-full transition-all duration-300"
               style={{ width: `${progress}%` }}
             />
           </div>
@@ -254,12 +254,12 @@ export default function FileUpload({
       )}
 
       {(fileName || currentFileUrl) && !uploading && (
-        <div className="mt-2 flex items-center justify-between bg-gray-50 p-3 rounded-md">
+        <div className="mt-2 flex items-center justify-between bg-muted p-3 rounded-md">
           <div className="flex items-center gap-2">
-            <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
-            <span className="text-sm text-gray-700">
+            <span className="text-sm text-foreground">
               {fileName || 'File uploaded'}
             </span>
           </div>
@@ -269,7 +269,7 @@ export default function FileUpload({
                 href={currentFileUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-sm text-blue-600 hover:text-blue-800"
+                className="text-sm text-primary hover:underline"
               >
                 View
               </a>
@@ -277,7 +277,7 @@ export default function FileUpload({
             <button
               type="button"
               onClick={handleClear}
-              className="text-sm text-red-600 hover:text-red-800"
+              className="text-sm text-destructive hover:underline"
             >
               Remove
             </button>

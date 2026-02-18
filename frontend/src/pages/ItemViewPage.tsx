@@ -68,7 +68,7 @@ export default function ItemViewPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-gray-600">Loading...</div>
+        <div className="text-muted-foreground">Loading...</div>
       </div>
     );
   }
@@ -76,7 +76,7 @@ export default function ItemViewPage() {
   if (!publicItem && !fullItem) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-gray-600">Item not found</div>
+        <div className="text-muted-foreground">Item not found</div>
       </div>
     );
   }
@@ -85,16 +85,16 @@ export default function ItemViewPage() {
   if (user && fullItem) {
     return (
       <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <div className="bg-white shadow-lg rounded-lg p-6">
+        <div className="bg-card shadow-lg rounded-lg p-6">
           {/* Header with breadcrumb, title, and edit button */}
           <div className="mb-6">
             {(parentContainer || parentShelf) && (
-              <div className="text-sm text-gray-500 mb-2">
-                <Link to="/items" className="hover:text-gray-700">Items</Link>
+              <div className="text-sm text-muted-foreground mb-2">
+                <Link to="/items" className="hover:text-foreground">Items</Link>
                 {parentContainer && (
                   <>
                     <span className="mx-2">›</span>
-                    <Link to={`/containers/${parentContainer.id}/edit`} className="hover:text-gray-700">
+                    <Link to={`/containers/${parentContainer.id}/edit`} className="hover:text-foreground">
                       {parentContainer.name}
                     </Link>
                   </>
@@ -102,7 +102,7 @@ export default function ItemViewPage() {
                 {parentShelf && !parentContainer && (
                   <>
                     <span className="mx-2">›</span>
-                    <Link to={`/shelves/${parentShelf.id}/edit`} className="hover:text-gray-700">
+                    <Link to={`/shelves/${parentShelf.id}/edit`} className="hover:text-foreground">
                       {parentShelf.name}
                     </Link>
                   </>
@@ -110,10 +110,10 @@ export default function ItemViewPage() {
               </div>
             )}
             <div className="flex items-center justify-between gap-4">
-              <h1 className="text-3xl font-bold text-gray-900 flex-1">{fullItem.name}</h1>
+              <h1 className="text-3xl font-bold text-foreground flex-1">{fullItem.name}</h1>
               <Link
                 to={`/items/${itemId}/edit`}
-                className="flex-shrink-0 inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors shadow-md hover:shadow-lg font-medium"
+                className="flex-shrink-0 inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground text-sm rounded-lg hover:opacity-90 transition-colors shadow-md hover:shadow-lg font-medium"
               >
                 <svg
                   width="16"
@@ -134,7 +134,7 @@ export default function ItemViewPage() {
             <div className="mb-8">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {photos.map((photo) => (
-                  <div key={photo.id} className="flex justify-center items-center p-4 bg-gray-50 rounded-xl">
+                  <div key={photo.id} className="flex justify-center items-center p-4 bg-muted rounded-xl">
                     <img
                       src={photo.thumbnail_url || photo.url}
                       alt={fullItem.name}
@@ -149,30 +149,30 @@ export default function ItemViewPage() {
 
           {fullItem.description && (
             <div className="mb-4">
-              <h2 className="text-sm font-semibold text-gray-500 uppercase mb-2">Description</h2>
-              <p className="text-gray-700">{fullItem.description}</p>
+              <h2 className="text-sm font-semibold text-muted-foreground uppercase mb-2">Description</h2>
+              <p className="text-foreground">{fullItem.description}</p>
             </div>
           )}
 
           <div className="grid grid-cols-2 gap-4 mb-6">
             {fullItem.barcode && (
               <div>
-                <h3 className="text-sm font-semibold text-gray-500 uppercase mb-1">Barcode</h3>
-                <p className="text-gray-700">{fullItem.barcode}</p>
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase mb-1">Barcode</h3>
+                <p className="text-foreground">{fullItem.barcode}</p>
               </div>
             )}
 
             {fullItem.acquired_date && (
               <div>
-                <h3 className="text-sm font-semibold text-gray-500 uppercase mb-1">Acquired Date</h3>
-                <p className="text-gray-700">{new Date(fullItem.acquired_date).toLocaleDateString()}</p>
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase mb-1">Acquired Date</h3>
+                <p className="text-foreground">{new Date(fullItem.acquired_date).toLocaleDateString()}</p>
               </div>
             )}
           </div>
 
           {(fullItem.product_link || fullItem.product_manual_s3_key || fullItem.receipt_s3_key) && (
-            <div className="border-t pt-6 mt-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Links & Documents</h2>
+            <div className="border-t border-border pt-6 mt-6">
+              <h2 className="text-lg font-semibold text-foreground mb-4">Links & Documents</h2>
               <div className="flex flex-wrap gap-3">
                 {fullItem.product_link && (
                   <a
@@ -225,11 +225,11 @@ export default function ItemViewPage() {
   // Public view - limited information
   if (publicItem) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-12 max-w-3xl">
-          <div className="bg-white shadow-2xl rounded-2xl overflow-hidden">
+          <div className="bg-card shadow-2xl rounded-2xl overflow-hidden">
             {photos.length > 0 && (
-              <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-8">
+              <div className="bg-primary p-8">
                 <div className="max-w-lg mx-auto bg-white rounded-xl shadow-lg p-4">
                   <img
                     src={photos[0].thumbnail_url || photos[0].url}
@@ -242,8 +242,8 @@ export default function ItemViewPage() {
 
             <div className="p-10 text-center">
               <div className="mb-8">
-                <h1 className="text-4xl font-bold text-gray-900 mb-4">{publicItem.name}</h1>
-                <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-100 text-blue-800 rounded-full">
+                <h1 className="text-4xl font-bold text-foreground mb-4">{publicItem.name}</h1>
+                <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 text-primary rounded-full">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                   </svg>
@@ -251,13 +251,13 @@ export default function ItemViewPage() {
                 </div>
               </div>
 
-              <div className="bg-gradient-to-r from-yellow-50 to-amber-50 border-2 border-yellow-300 rounded-xl p-6 mb-8 shadow-md">
+              <div className="bg-amber-500/10 border-2 border-amber-500/30 rounded-xl p-6 mb-8 shadow-md">
                 <div className="text-4xl mb-3">🎁</div>
-                <p className="text-xl font-bold text-yellow-900 mb-2">Found this item?</p>
-                <p className="text-yellow-800 mb-4">
+                <p className="text-xl font-bold text-foreground mb-2">Found this item?</p>
+                <p className="text-muted-foreground mb-4">
                   The owner is offering a reward for its safe return.
                 </p>
-                <p className="text-sm text-yellow-700">
+                <p className="text-sm text-muted-foreground">
                   Please contact them to arrange the return and receive your reward!
                 </p>
               </div>
@@ -265,7 +265,7 @@ export default function ItemViewPage() {
               <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
                 <Link
                   to={`/contact?item=${publicItem.id}`}
-                  className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 text-lg font-bold shadow-lg hover:shadow-xl transition-all"
+                  className="inline-flex items-center gap-2 px-8 py-4 bg-primary text-primary-foreground rounded-xl hover:opacity-90 text-lg font-bold shadow-lg hover:shadow-xl transition-all"
                 >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -278,7 +278,7 @@ export default function ItemViewPage() {
                     href={publicItem.product_link}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 px-8 py-4 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 text-lg font-semibold transition-colors"
+                    className="inline-flex items-center gap-2 px-8 py-4 bg-secondary text-secondary-foreground rounded-xl hover:opacity-90 text-lg font-semibold transition-colors"
                   >
                     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />

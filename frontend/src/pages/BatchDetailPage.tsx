@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useBatch, useDownloadLabelPdf } from '../hooks';
@@ -9,6 +10,7 @@ export default function BatchDetailPage() {
   const { data: batch, isLoading, error } = useBatch(batchId || '');
   const downloadPdf = useDownloadLabelPdf();
   const navigate = useNavigate();
+  const [reprintTemplate, setReprintTemplate] = useState('avery_18660');
 
   const getLabelLink = (label: { assigned_to_type?: string; assigned_to_id?: string }): string | null => {
     if (!label.assigned_to_type || !label.assigned_to_id) {
@@ -37,7 +39,7 @@ export default function BatchDetailPage() {
     try {
       const blob = await downloadPdf.mutateAsync({
         batchId,
-        template: 'avery_18660',
+        template: reprintTemplate,
       });
 
       // Create object URL and open in browser
@@ -104,12 +106,22 @@ export default function BatchDetailPage() {
           </div>
         </div>
 
-        <Button
-          onClick={handleReprint}
-          disabled={downloadPdf.isPending}
-        >
-          {downloadPdf.isPending ? 'Generating PDF...' : 'Re-print PDF'}
-        </Button>
+        <div className="flex items-center gap-3">
+          <select
+            value={reprintTemplate}
+            onChange={(e) => setReprintTemplate(e.target.value)}
+            className="flex h-9 rounded-md border border-input bg-background text-foreground px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          >
+            <option value="avery_18660">Avery 18660 (30/sheet)</option>
+            <option value="avery_94103">Avery 94103 (48/sheet, 1" square)</option>
+          </select>
+          <Button
+            onClick={handleReprint}
+            disabled={downloadPdf.isPending}
+          >
+            {downloadPdf.isPending ? 'Generating PDF...' : 'Re-print PDF'}
+          </Button>
+        </div>
       </div>
 
       {/* QR Code Labels */}

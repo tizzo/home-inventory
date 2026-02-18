@@ -3,7 +3,7 @@ use ::image::ImageEncoder;
 use ::image::Rgb;
 use anyhow::{Context, Result};
 use printpdf::*;
-use qrcode::QrCode;
+use qrcode::{EcLevel, QrCode};
 use std::io::{BufWriter, Write};
 
 use super::branding;
@@ -72,7 +72,8 @@ impl Avery94103 {
 
 /// Generate a QR code image from data
 pub fn generate_qr_code_image(data: &str, size_pixels: u32) -> Result<Vec<u8>> {
-    let qr = QrCode::new(data).context("Failed to generate QR code")?;
+    let qr = QrCode::with_error_correction_level(data, EcLevel::H)
+        .context("Failed to generate QR code")?;
 
     let image = qr
         .render::<Rgb<u8>>()
@@ -175,7 +176,6 @@ pub fn generate_label_pdf(labels: &[(String, i32)], family_initial: &str) -> Res
 
     let qr_size_pixels: u32 = 300;
     let qr_size_pt = 0.85 * 72.0;
-    let logo_size_pt = 0.35 * 72.0; // House logo size
     let logo_pixels: u32 = 128;
 
     let font = doc
@@ -220,13 +220,21 @@ pub fn generate_label_pdf(labels: &[(String, i32)], family_initial: &str) -> Res
             let qr_y = y + (label_height_pt - qr_size_pt) / 2.0;
             add_image_to_layer(&layer, &rgb_img, qr_x, qr_y, qr_size_pt, 300.0);
 
-            // Place house logo next to QR code
-            let logo_x = qr_x + qr_size_pt + 4.0;
-            let logo_y = y + (label_height_pt - logo_size_pt) / 2.0;
-            add_image_to_layer(&layer, &logo_img, logo_x, logo_y, logo_size_pt, 300.0);
+            // Overlay house logo centered on QR code
+            let overlay_size_pt = qr_size_pt * 0.22; // ~22% of QR size, safe for H-level EC
+            let overlay_x = qr_x + (qr_size_pt - overlay_size_pt) / 2.0;
+            let overlay_y = qr_y + (qr_size_pt - overlay_size_pt) / 2.0;
+            add_image_to_layer(
+                &layer,
+                &logo_img,
+                overlay_x,
+                overlay_y,
+                overlay_size_pt,
+                300.0,
+            );
 
-            // Branding text to the right of logo
-            let text_x = logo_x + logo_size_pt + 4.0;
+            // Branding text to the right of QR code
+            let text_x = qr_x + qr_size_pt + 8.0;
 
             // Line 1: "HOME INVENTORY  #123"
             let line1 = format!("HOME INVENTORY  #{}", number);
@@ -280,8 +288,9 @@ pub fn generate_label_pdf_94103(labels: &[(String, i32)], family_initial: &str) 
         return Err(anyhow::anyhow!("No labels provided"));
     }
 
-    // Suppress unused variable warning - initial is used for rectangular template only
-    let _ = family_initial;
+    // Pre-render house logo for QR overlay
+    let logo_pixels: u32 = 128;
+    let logo_img = branding::render_house_logo(family_initial, logo_pixels);
 
     let (doc, page1, layer1) = PdfDocument::new(
         "Avery 94103 Labels",
@@ -354,6 +363,19 @@ pub fn generate_label_pdf_94103(labels: &[(String, i32)], family_initial: &str) 
                 + (label_height_pt - top_text_margin - bottom_text_margin - qr_size_pt) / 2.0;
             add_image_to_layer(&layer, &rgb_img, qr_x, qr_y, qr_size_pt, 300.0);
 
+            // Overlay house logo centered on QR code
+            let overlay_size_pt = qr_size_pt * 0.22;
+            let overlay_x = qr_x + (qr_size_pt - overlay_size_pt) / 2.0;
+            let overlay_y = qr_y + (qr_size_pt - overlay_size_pt) / 2.0;
+            add_image_to_layer(
+                &layer,
+                &logo_img,
+                overlay_x,
+                overlay_y,
+                overlay_size_pt,
+                300.0,
+            );
+
             // --- "HOME INVENTORY" across top ---
             let top_text = "HOME INVENTORY";
             let top_font_size = 5.0;
@@ -387,7 +409,7 @@ pub fn generate_label_pdf_94103(labels: &[(String, i32)], family_initial: &str) 
             let left_text = "REWARD";
             let side_font_size = 4.5;
             // Position: left edge of label, vertically centered
-            let left_text_x_pt = x + 5.0;
+            let left_text_x_pt = x + 3.5;
             let left_text_y_pt = y + label_height_pt / 2.0 - 8.0;
 
             layer.save_graphics_state();
@@ -402,7 +424,7 @@ pub fn generate_label_pdf_94103(labels: &[(String, i32)], family_initial: &str) 
             // --- "SCAN IF FOUND" rotated 90° CW on right edge ---
             // Rotation: text reads top-to-bottom
             let right_text = "SCAN IF FOUND";
-            let right_text_x_pt = x + label_width_pt - 2.0;
+            let right_text_x_pt = x + label_width_pt - 3.5;
             let right_text_y_pt = y + label_height_pt / 2.0 + 14.0;
 
             layer.save_graphics_state();

@@ -67,7 +67,7 @@ fn draw_letter(img: &mut RgbImage, ch: char, size: u32) {
     let s = size as f32;
     // Letter area: centered in door, roughly (0.42, 0.68) to (0.58, 0.90)
     let cx = (s * 0.50) as i32;
-    let cy = (s * 0.78) as i32;
+    let cy = (s * 0.76) as i32; // Centered in door area (0.62-0.95), adjusted up for optical balance
     let half_w = (s * 0.07) as i32;
     let half_h = (s * 0.09) as i32;
 

@@ -4,55 +4,77 @@ use ::image::{Rgb, RgbImage};
 const BRAND_BLUE: Rgb<u8> = Rgb([37, 99, 235]);
 const WHITE: Rgb<u8> = Rgb([255, 255, 255]);
 
-/// Render a house logo as a PNG image with a letter centered inside.
-/// Returns raw RGB pixel data and dimensions for embedding in PDFs.
-pub fn render_house_logo(letter: &str, size: u32) -> RgbImage {
-    let mut img = RgbImage::from_pixel(size, size, WHITE);
-    let s = size as f32;
-
-    // Draw filled roof triangle: peak at (0.5, 0.08), base at (0.05, 0.48) to (0.95, 0.48)
+/// Check if a point is inside the house silhouette (roof triangle + body rect).
+fn is_inside_house(px: f32, py: f32, s: f32) -> bool {
+    // Roof triangle: peak at (0.5, 0.08), base at (0.05, 0.48) to (0.95, 0.48)
     let peak_x = s * 0.5;
     let peak_y = s * 0.08;
     let base_y = s * 0.48;
     let left_x = s * 0.05;
     let right_x = s * 0.95;
 
-    for py in (peak_y as u32)..=(base_y as u32) {
-        let t = (py as f32 - peak_y) / (base_y - peak_y);
+    let in_roof = if py >= peak_y && py <= base_y {
+        let t = (py - peak_y) / (base_y - peak_y);
         let xl = peak_x + t * (left_x - peak_x);
         let xr = peak_x + t * (right_x - peak_x);
-        for px in (xl as u32)..=(xr as u32).min(size - 1) {
-            img.put_pixel(px.min(size - 1), py, BRAND_BLUE);
+        px >= xl && px <= xr
+    } else {
+        false
+    };
+
+    // Body rect: (0.15, 0.45) to (0.85, 0.95)
+    let in_body = px >= s * 0.15 && px <= s * 0.85 && py >= s * 0.45 && py <= s * 0.95;
+
+    in_roof || in_body
+}
+
+/// Render a house logo as a PNG image with a letter centered on the house body.
+/// The house is a solid blue silhouette (roof + body, no door) with a white stroke
+/// outline, and the letter is drawn large and white directly on the house.
+/// The background is transparent (white, to blend with QR codes).
+pub fn render_house_logo(letter: &str, size: u32) -> RgbImage {
+    let mut img = RgbImage::from_pixel(size, size, WHITE);
+    let s = size as f32;
+
+    let stroke = (s * 0.04).max(1.0);
+
+    // Draw white stroke outline first (pixels near the edge of the house shape)
+    for py in 0..size {
+        for px in 0..size {
+            let fpx = px as f32;
+            let fpy = py as f32;
+            if !is_inside_house(fpx, fpy, s) {
+                // Check if any neighbor within stroke distance is inside the house
+                let mut near_house = false;
+                let steps = (stroke.ceil() as i32) + 1;
+                'outer: for dy in -steps..=steps {
+                    for dx in -steps..=steps {
+                        let nx = fpx + dx as f32;
+                        let ny = fpy + dy as f32;
+                        if (dx as f32).hypot(dy as f32) <= stroke && is_inside_house(nx, ny, s) {
+                            near_house = true;
+                            break 'outer;
+                        }
+                    }
+                }
+                if near_house {
+                    img.put_pixel(px, py, WHITE);
+                }
+            }
         }
     }
 
-    // Draw filled house body: rect from (0.15, 0.45) to (0.85, 0.95)
-    let body_left = (s * 0.15) as u32;
-    let body_right = (s * 0.85) as u32;
-    let body_top = (s * 0.45) as u32;
-    let body_bottom = (s * 0.95) as u32;
-
-    for py in body_top..=body_bottom.min(size - 1) {
-        for px in body_left..=body_right.min(size - 1) {
-            img.put_pixel(px, py, BRAND_BLUE);
+    // Draw filled house silhouette (roof + body, single color, no door)
+    for py in 0..size {
+        for px in 0..size {
+            if is_inside_house(px as f32, py as f32, s) {
+                img.put_pixel(px, py, BRAND_BLUE);
+            }
         }
     }
 
-    // Draw door area (darker blue): rect from (0.38, 0.62) to (0.62, 0.95)
-    let door_color = Rgb([30, 64, 175]); // #1e40af
-    let door_left = (s * 0.38) as u32;
-    let door_right = (s * 0.62) as u32;
-    let door_top = (s * 0.62) as u32;
-    let door_bottom = (s * 0.95) as u32;
-
-    for py in door_top..=door_bottom.min(size - 1) {
-        for px in door_left..=door_right.min(size - 1) {
-            img.put_pixel(px, py, door_color);
-        }
-    }
-
-    // Draw letter centered in door area using a simple bitmap approach
-    // For small sizes, we just draw a simple block letter
+    // Draw letter centered on the house body (larger, no door box)
+    // Letter area: centered roughly at (0.5, 0.72), bigger than before
     if !letter.is_empty() {
         let ch = letter.chars().next().unwrap_or('H');
         draw_letter(&mut img, ch, size);
@@ -61,23 +83,18 @@ pub fn render_house_logo(letter: &str, size: u32) -> RgbImage {
     img
 }
 
-/// Draw a single capital letter centered in the door area of the house logo.
-/// Uses simple pixel patterns that work at small sizes.
+/// Draw a single capital letter centered on the house body.
+/// Uses simple pixel patterns - larger than before for visibility.
 fn draw_letter(img: &mut RgbImage, ch: char, size: u32) {
     let s = size as f32;
-    // Letter area: centered in door, roughly (0.42, 0.68) to (0.58, 0.90)
     let cx = (s * 0.50) as i32;
-    let cy = (s * 0.76) as i32; // Centered in door area (0.62-0.95), adjusted up for optical balance
-    let half_w = (s * 0.07) as i32;
-    let half_h = (s * 0.09) as i32;
-
-    // Simple approach: draw the letter as a series of rectangles
-    // This gives us a clean look at any size
-    let t = (s * 0.02).max(1.0) as i32; // stroke thickness
+    let cy = (s * 0.72) as i32;
+    let half_w = (s * 0.10) as i32;
+    let half_h = (s * 0.13) as i32;
+    let t = (s * 0.03).max(1.0) as i32; // stroke thickness
 
     match ch {
         'A' => {
-            // Left leg, right leg, crossbar
             draw_vbar(img, cx - half_w, cy - half_h, cy + half_h, t, size);
             draw_vbar(img, cx + half_w - t, cy - half_h, cy + half_h, t, size);
             draw_hbar(img, cx - half_w, cx + half_w, cy, t, size);
@@ -99,7 +116,6 @@ fn draw_letter(img: &mut RgbImage, ch: char, size: u32) {
             draw_hbar(img, cx - half_w, cx + half_w, cy - half_h, t, size);
         }
         _ => {
-            // Fallback: draw the letter as a filled rectangle outline (like a box with the initial)
             draw_vbar(img, cx - half_w, cy - half_h, cy + half_h, t, size);
             draw_vbar(img, cx + half_w - t, cy - half_h, cy + half_h, t, size);
             draw_hbar(img, cx - half_w, cx + half_w, cy - half_h, t, size);

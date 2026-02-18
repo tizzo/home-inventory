@@ -133,8 +133,9 @@ export function NavBar() {
           {/* Logo / Brand */}
           <Link
             to="/"
-            className="text-xl font-bold text-primary hover:opacity-80 transition-opacity"
+            className="flex items-center gap-2 text-xl font-bold text-primary hover:opacity-80 transition-opacity"
           >
+            <img src="/logo.svg" alt="" className="h-8 w-8" />
             Home Inventory
           </Link>
 

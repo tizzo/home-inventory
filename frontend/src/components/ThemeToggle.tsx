@@ -104,7 +104,7 @@ export function ThemeToggleDropdown() {
         <Button
           variant="ghost"
           size="icon"
-          className="relative h-9 w-9 overflow-hidden"
+          className="relative h-9 w-9 overflow-hidden text-foreground"
           aria-label="Toggle theme"
         >
           {/* Sun icon - visible in dark mode */}

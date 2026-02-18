@@ -135,8 +135,8 @@ export function NavBar() {
             to="/"
             className="flex items-center gap-2 text-xl font-bold text-primary hover:opacity-80 transition-opacity"
           >
-            <img src="/logo.svg" alt="" className="h-8 w-8" />
-            Home Inventory
+            <img src="/logo.svg" alt="" className="h-7 w-auto" />
+            <span className="leading-none">Home Inventory</span>
           </Link>
 
           {/* Desktop Navigation */}

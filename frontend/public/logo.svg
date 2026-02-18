@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 90 92" fill="none">
   <!-- House as single unified path (roof + body, no internal seam) -->
-  <path d="M50,8 L95,48 L85,48 L85,95 L15,95 L15,48 L5,48 Z" fill="#2563eb" stroke="white" stroke-width="3" stroke-linejoin="round"/>
-  <!-- Letter centered on house body (serif, large, white) -->
-  <text x="50" y="84" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-weight="bold" font-size="36" fill="white">H</text>
+  <path d="M45,2 L89,44 L79,44 L79,90 L11,90 L11,44 L1,44 Z" fill="#2563eb" stroke="white" stroke-width="3" stroke-linejoin="round"/>
+  <!-- Letter centered in full house shape -->
+  <text x="45" y="72" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-weight="bold" font-size="38" fill="white">H</text>
 </svg>

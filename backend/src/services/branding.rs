@@ -88,7 +88,9 @@ pub fn render_house_logo(letter: &str, size: u32) -> RgbImage {
 fn draw_letter(img: &mut RgbImage, ch: char, size: u32) {
     let s = size as f32;
     let cx = (s * 0.50) as i32;
-    let cy = (s * 0.72) as i32;
+    // Center vertically in full house: roof peak at 0.08, body bottom at 0.95
+    // Visual center of house shape ≈ 0.55 (biased down since roof is narrow)
+    let cy = (s * 0.58) as i32;
     let half_w = (s * 0.10) as i32;
     let half_h = (s * 0.13) as i32;
     let t = (s * 0.03).max(1.0) as i32; // stroke thickness

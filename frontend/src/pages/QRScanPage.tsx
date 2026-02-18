@@ -7,7 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import type { LabelResponse } from '../types/generated';
 
 export default function QRScanPage() {
-  const [scanning, setScanning] = useState(false);
+  const [scanning, setScanning] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [scannedLabelId, setScannedLabelId] = useState<string | null>(null);
   const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
@@ -193,17 +193,6 @@ export default function QRScanPage() {
 
       <Card>
         <CardContent className="p-6">
-          {!scanning && !scannedLabelId && (
-            <div>
-              <p className="text-muted-foreground mb-4">
-                Scan a QR code label to navigate to the assigned entity.
-              </p>
-              <Button onClick={startScanning} disabled={scanning}>
-                Start Scanning
-              </Button>
-            </div>
-          )}
-
           {scanning && (
             <div className="flex flex-col items-center">
               <div
@@ -229,6 +218,7 @@ export default function QRScanPage() {
                 onClick={() => {
                   setError(null);
                   setScannedLabelId(null);
+                  startScanning();
                 }}
               >
                 Try Again

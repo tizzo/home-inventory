@@ -35,6 +35,22 @@ pub struct HealthResponse {
     database: String,
 }
 
+/// Serve the logo SVG dynamically with the family initial from env var
+async fn serve_logo_svg(State(state): State<Arc<AppState>>) -> axum::response::Response {
+    let letter = &state.family_initial;
+    let svg = format!(
+        r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 90 92" fill="none">
+  <path d="M45,2 L89,44 L79,44 L79,90 L11,90 L11,44 L1,44 Z" fill="#2563eb" stroke="white" stroke-width="3" stroke-linejoin="round"/>
+  <text x="45" y="72" text-anchor="middle" font-family="Georgia,'Times New Roman',serif" font-weight="bold" font-size="38" fill="white">{letter}</text>
+</svg>"##
+    );
+    axum::response::Response::builder()
+        .header("Content-Type", "image/svg+xml")
+        .header("Cache-Control", "public, max-age=3600")
+        .body(axum::body::Body::from(svg))
+        .unwrap()
+}
+
 /// Health check endpoint
 /// Verifies both application and database connectivity
 pub async fn health_check(
@@ -192,7 +208,8 @@ pub async fn create_app(db: PgPool) -> anyhow::Result<Router> {
         .route(
             "/api/items/:id/public",
             get(crate::routes::items::get_item_public),
-        );
+        )
+        .route("/api/logo.svg", get(serve_logo_svg));
 
     let protected_contact_routes = Router::new().route(
         "/api/contact",

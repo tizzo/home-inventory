@@ -42,14 +42,15 @@ export default function BatchDetailPage() {
         template: reprintTemplate,
       });
 
-      // Create object URL and open in browser
+      // Trigger download via hidden anchor element
       const url = window.URL.createObjectURL(blob);
-      window.open(url, '_blank');
-
-      // Clean up after a delay
-      setTimeout(() => {
-        window.URL.revokeObjectURL(url);
-      }, 100);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `labels-${batchId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
     } catch (err) {
       console.error('Failed to download PDF:', err);
       alert('Failed to download PDF. Please try again.');

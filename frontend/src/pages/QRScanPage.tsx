@@ -2,6 +2,8 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Html5Qrcode } from 'html5-qrcode';
 import { useLabel } from '../hooks';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import type { LabelResponse } from '../types/generated';
 
 export default function QRScanPage() {
@@ -183,83 +185,76 @@ export default function QRScanPage() {
   }, [stopScanning]);
 
   return (
-    <div className="page">
-      <div className="page-header">
-        <h1>QR Code Scanner</h1>
+    <div>
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <h1 className="text-2xl font-bold">QR Code Scanner</h1>
       </div>
 
-      <div className="form">
-        {!scanning && !scannedLabelId && (
-          <div>
-            <p>Scan a QR code label to navigate to the assigned entity.</p>
-            <div className="form-actions">
-              <button
-                className="btn btn-primary"
-                onClick={startScanning}
-                disabled={scanning}
-              >
-                📷 Start Scanning
-              </button>
+      <Card>
+        <CardContent className="p-6">
+          {!scanning && !scannedLabelId && (
+            <div>
+              <p className="text-muted-foreground mb-4">
+                Scan a QR code label to navigate to the assigned entity.
+              </p>
+              <Button onClick={startScanning} disabled={scanning}>
+                Start Scanning
+              </Button>
             </div>
-          </div>
-        )}
+          )}
 
-        {scanning && (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <div
-              id="qr-reader"
-              style={{
-                width: '100%',
-                maxWidth: '600px',
-                margin: '0 auto',
-              }}
-            />
-            <div className="form-actions" style={{ marginTop: '1rem' }}>
-              <button
-                className="btn btn-secondary"
+          {scanning && (
+            <div className="flex flex-col items-center">
+              <div
+                id="qr-reader"
+                className="w-full max-w-[600px] mx-auto"
+              />
+              <Button
+                variant="secondary"
                 onClick={stopScanning}
                 disabled={!scanning}
+                className="mt-4"
               >
                 Stop Scanning
-              </button>
+              </Button>
             </div>
-          </div>
-        )}
+          )}
 
-        {error && (
-          <div className="error-message" style={{ marginTop: '1rem' }}>
-            <p>{error}</p>
-            <button
-              className="btn btn-secondary"
-              onClick={() => {
-                setError(null);
-                setScannedLabelId(null);
-              }}
-            >
-              Try Again
-            </button>
-          </div>
-        )}
+          {error && (
+            <div className="mt-4">
+              <p className="text-destructive mb-4">{error}</p>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setError(null);
+                  setScannedLabelId(null);
+                }}
+              >
+                Try Again
+              </Button>
+            </div>
+          )}
 
-        {scannedLabelId && isLoadingLabel && (
-          <div style={{ marginTop: '1rem' }}>
-            <p>Loading label information...</p>
-          </div>
-        )}
+          {scannedLabelId && isLoadingLabel && (
+            <div className="mt-4 text-muted-foreground">
+              Loading label information...
+            </div>
+          )}
 
-        {scannedLabelId && label && (
-          <div style={{ marginTop: '1rem' }}>
-            <p>
-              Label #{label.number} scanned!{' '}
-              {label.assigned_to_type
-                ? `Assigned to ${label.assigned_to_type}`
-                : 'Not assigned'}
-            </p>
-            <p>Navigating...</p>
-          </div>
-        )}
-      </div>
+          {scannedLabelId && label && (
+            <div className="mt-4 text-muted-foreground">
+              <p>
+                Label #{label.number} scanned!{' '}
+                {label.assigned_to_type
+                  ? `Assigned to ${label.assigned_to_type}`
+                  : 'Not assigned'}
+              </p>
+              <p>Navigating...</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
-

@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { photosApi } from '../api';
 import { useCreatePhoto } from '../hooks';
 import type { CreatePhotoRequest } from '../types/generated';
+import { Button } from '@/components/ui/button';
 
 interface PhotoUploadProps {
   entityType: string;
@@ -138,26 +139,32 @@ export default function PhotoUpload({
   };
 
   return (
-    <div className="photo-upload">
+    <div className="mt-4">
       <input
         ref={fileInputRef}
         type="file"
         accept="image/*"
+        capture="environment"
         onChange={handleFileSelect}
         disabled={uploading}
-        style={{ display: 'none' }}
+        className="hidden"
         id={`photo-upload-${entityId}`}
       />
-      <label
-        htmlFor={`photo-upload-${entityId}`}
-        className={`btn btn-secondary ${uploading ? 'disabled' : ''}`}
+      <Button
+        type="button"
+        variant="secondary"
+        disabled={uploading}
+        className="w-full sm:w-auto h-11"
+        asChild
       >
-        {uploading ? `Uploading... ${Math.round(progress)}%` : '📷 Upload Photo'}
-      </label>
+        <label htmlFor={`photo-upload-${entityId}`} className="cursor-pointer">
+          {uploading ? `Uploading... ${Math.round(progress)}%` : 'Upload Photo'}
+        </label>
+      </Button>
       {uploading && (
-        <div className="upload-progress">
+        <div className="mt-2 h-1 bg-muted rounded-full overflow-hidden">
           <div
-            className="upload-progress-bar"
+            className="h-full bg-primary transition-all duration-300"
             style={{ width: `${progress}%` }}
           />
         </div>

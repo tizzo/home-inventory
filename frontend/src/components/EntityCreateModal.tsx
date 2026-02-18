@@ -2,6 +2,10 @@ import { useState, useEffect } from 'react';
 import Modal from './Modal';
 import EntityField from './EntityField';
 import type { EntityType } from './EntitySelector';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 
 interface FormField {
   name: string;
@@ -133,21 +137,22 @@ export default function EntityCreateModal({
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title={title}>
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} className="space-y-4">
         {/* Parent Type Selector (for multiple parent types) */}
         {parentTypes && parentTypes.length > 1 && (
-          <div className="form-group">
-            <label>Location Type</label>
-            <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+          <div className="space-y-2">
+            <Label>Location Type</Label>
+            <div className="flex flex-wrap gap-4">
               {parentTypes.map((pt) => (
-                <label key={pt.type}>
+                <label key={pt.type} className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="radio"
                     value={pt.type}
                     checked={selectedParentType === pt.type}
                     onChange={() => handleParentTypeChange(pt.type)}
+                    className="h-4 w-4 text-primary"
                   />
-                  {' '}{pt.displayName}
+                  <span className="text-sm">{pt.displayName}</span>
                 </label>
               ))}
             </div>
@@ -177,13 +182,13 @@ export default function EntityCreateModal({
 
         {/* Dynamic Form Fields */}
         {fields.map((field) => (
-          <div key={field.name} className="form-group">
-            <label htmlFor={`create-${field.name}`}>
+          <div key={field.name} className="space-y-2">
+            <Label htmlFor={`create-${field.name}`}>
               {field.label}
-              {field.required && ' *'}
-            </label>
+              {field.required && <span className="text-destructive ml-1">*</span>}
+            </Label>
             {field.type === 'textarea' ? (
-              <textarea
+              <Textarea
                 id={`create-${field.name}`}
                 value={formData[field.name] || ''}
                 onChange={(e) =>
@@ -192,9 +197,10 @@ export default function EntityCreateModal({
                 required={field.required}
                 placeholder={field.placeholder}
                 rows={field.rows || 3}
+                className="min-h-[80px]"
               />
             ) : (
-              <input
+              <Input
                 id={`create-${field.name}`}
                 type={field.type}
                 value={formData[field.name] || ''}
@@ -208,21 +214,22 @@ export default function EntityCreateModal({
           </div>
         ))}
 
-        <div className="form-actions">
-          <button
+        <div className="flex gap-3 pt-4 border-t border-border">
+          <Button
             type="submit"
-            className="btn btn-primary"
             disabled={isPending}
+            className="flex-1"
           >
             {isPending ? 'Creating...' : 'Create'}
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
-            className="btn btn-secondary"
+            variant="outline"
             onClick={handleClose}
+            className="flex-1"
           >
             Cancel
-          </button>
+          </Button>
         </div>
       </form>
     </Modal>

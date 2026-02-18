@@ -11,6 +11,11 @@ import {
   usePhotos,
 } from '../hooks';
 import { Modal, PhotoUpload, PhotoGallery, Pagination, MoveModal, EntityCreateModal } from '../components';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent } from '@/components/ui/card';
 import type {
   UpdateShelvingUnitRequest,
   ShelvingUnitResponse,
@@ -131,7 +136,7 @@ export default function ShelvingUnitsPage() {
     });
   };
 
-  if (isLoading) return <div className="loading">Loading shelving units...</div>;
+  if (isLoading) return <div className="text-center py-12 text-muted-foreground">Loading shelving units...</div>;
 
   // Unit card component with photos
   function UnitCard({
@@ -156,91 +161,94 @@ export default function ShelvingUnitsPage() {
     const room = rooms.find((r) => r.id === unit.room_id);
 
     return (
-      <div className="room-card">
-        <div className="card-header">
-          <h3>{unit.name}</h3>
-          <div className="card-actions">
-            <button
-              className="btn btn-secondary btn-sm"
-              onClick={onEdit}
-              disabled={updateUnitPending}
-            >
-              Edit
-            </button>
-            <button
-              className="btn btn-secondary btn-sm"
-              onClick={onMove}
-              disabled={moveUnitPending}
-            >
-              Move
-            </button>
-            <button
-              className="btn btn-danger btn-sm"
-              onClick={onDelete}
-              disabled={deleteUnitPending}
-            >
-              Delete
-            </button>
+      <Card className="overflow-hidden hover:shadow-lg transition-shadow">
+        <CardContent className="p-4">
+          <div className="flex justify-between items-start gap-2 mb-3">
+            <h3 className="font-semibold text-lg truncate flex-1">{unit.name}</h3>
+            <div className="flex gap-1 flex-shrink-0 flex-wrap justify-end">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onEdit}
+                disabled={updateUnitPending}
+              >
+                Edit
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onMove}
+                disabled={moveUnitPending}
+              >
+                Move
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={onDelete}
+                disabled={deleteUnitPending}
+              >
+                Delete
+              </Button>
+            </div>
           </div>
-        </div>
-        {firstPhoto && (
-          <div className="room-photo-preview">
-            <img
-              src={firstPhoto.thumbnail_url || firstPhoto.url}
-              alt={unit.name}
-              onClick={() => window.open(firstPhoto.url, '_blank')}
-              loading="lazy"
-            />
-            {photos && photos.length > 1 && (
-              <div className="photo-count-badge">+{photos.length - 1}</div>
+          {firstPhoto && (
+            <div className="relative aspect-video rounded-lg overflow-hidden mb-3 bg-muted cursor-pointer hover:opacity-90 transition-opacity">
+              <img
+                src={firstPhoto.thumbnail_url || firstPhoto.url}
+                alt={unit.name}
+                onClick={() => window.open(firstPhoto.url, '_blank')}
+                loading="lazy"
+                className="w-full h-full object-cover"
+              />
+              {photos && photos.length > 1 && (
+                <div className="absolute bottom-2 right-2 bg-black/70 text-white px-2 py-0.5 rounded text-xs font-semibold">
+                  +{photos.length - 1}
+                </div>
+              )}
+            </div>
+          )}
+          {room && (
+            <div className="text-sm text-muted-foreground mb-2">
+              <strong>Room:</strong>{' '}
+              <Link to={`/rooms/${room.id}`} className="hover:text-foreground">{room.name}</Link>
+            </div>
+          )}
+          {unit.description && (
+            <p className="text-muted-foreground text-sm mb-3 line-clamp-2">{unit.description}</p>
+          )}
+          <div className="text-xs text-muted-foreground mb-3">
+            <span>Created: {new Date(unit.created_at).toLocaleDateString()}</span>
+            {unit.updated_at !== unit.created_at && (
+              <span className="ml-2">
+                Updated: {new Date(unit.updated_at).toLocaleDateString()}
+              </span>
             )}
           </div>
-        )}
-        {room && (
-          <div className="room-meta">
-            <small>
-              <strong>Room:</strong>{' '}
-              <Link to={`/rooms/${room.id}`}>{room.name}</Link>
-            </small>
+          <div className="pt-3 border-t border-border">
+            <Button
+              variant="secondary"
+              size="sm"
+              asChild
+            >
+              <Link to={`/units/${unit.id}/shelves`}>
+                View Shelves
+              </Link>
+            </Button>
           </div>
-        )}
-        {unit.description && (
-          <p className="room-description">{unit.description}</p>
-        )}
-        <div className="room-meta">
-          <small>
-            Created: {new Date(unit.created_at).toLocaleDateString()}
-          </small>
-          {unit.updated_at !== unit.created_at && (
-            <>
-              {' • '}
-              <small>
-                Updated: {new Date(unit.updated_at).toLocaleDateString()}
-              </small>
-            </>
-          )}
-        </div>
-        <div className="card-actions" style={{ marginTop: '0.5rem' }}>
-          <Link
-            to={`/units/${unit.id}/shelves`}
-            className="btn btn-secondary btn-sm"
-          >
-            View Shelves
-          </Link>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <div className="page">
-      <div className="page-header">
-        <div>
-          <h1>{roomId ? 'Shelving Units' : 'All Shelving Units'}</h1>
-        </div>
-        <button className="btn btn-primary" onClick={openCreateModal}>
+    <div>
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <h1 className="text-2xl font-bold">{roomId ? 'Shelving Units' : 'All Shelving Units'}</h1>
+        <Button onClick={openCreateModal}>
           Add Shelving Unit
-        </button>
+        </Button>
       </div>
 
       {/* Create Modal */}
@@ -277,10 +285,10 @@ export default function ShelvingUnitsPage() {
         onClose={closeEditModal}
         title="Edit Shelving Unit"
       >
-        <form onSubmit={handleEdit}>
-          <div className="form-group">
-            <label htmlFor="edit-name">Shelving Unit Name *</label>
-            <input
+        <form onSubmit={handleEdit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="edit-name">Shelving Unit Name *</Label>
+            <Input
               id="edit-name"
               type="text"
               value={editFormData.name}
@@ -293,9 +301,9 @@ export default function ShelvingUnitsPage() {
             />
           </div>
 
-          <div className="form-group">
-            <label htmlFor="edit-description">Description</label>
-            <textarea
+          <div className="space-y-2">
+            <Label htmlFor="edit-description">Description</Label>
+            <Textarea
               id="edit-description"
               value={editFormData.description}
               onChange={(e) =>
@@ -310,7 +318,7 @@ export default function ShelvingUnitsPage() {
           </div>
 
           {editingUnit && (
-            <div className="form-group">
+            <div>
               <PhotoGallery
                 entityType="shelving_unit"
                 entityId={editingUnit.id}
@@ -325,21 +333,22 @@ export default function ShelvingUnitsPage() {
             </div>
           )}
 
-          <div className="form-actions">
-            <button
+          <div className="flex gap-3 pt-4 border-t border-border">
+            <Button
               type="submit"
-              className="btn btn-primary"
               disabled={updateUnit.isPending}
+              className="flex-1"
             >
               {updateUnit.isPending ? 'Saving...' : 'Save Changes'}
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
-              className="btn btn-secondary"
+              variant="outline"
               onClick={closeEditModal}
+              className="flex-1"
             >
               Cancel
-            </button>
+            </Button>
           </div>
         </form>
       </Modal>
@@ -359,11 +368,10 @@ export default function ShelvingUnitsPage() {
       )}
 
       {/* Units Grid */}
-      <div className="rooms-grid">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {units.length === 0 ? (
-          <p className="empty-state">
-            No shelving units yet. Click "Add Shelving Unit" to create your first
-            one.
+          <p className="col-span-full text-center py-12 text-muted-foreground">
+            No shelving units yet. Click "Add Shelving Unit" to create your first one.
           </p>
         ) : (
           units.map((unit) => (

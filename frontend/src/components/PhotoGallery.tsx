@@ -1,4 +1,5 @@
 import { usePhotos, useDeletePhoto } from '../hooks';
+import { Button } from '@/components/ui/button';
 
 interface PhotoGalleryProps {
   entityType: string;
@@ -28,11 +29,11 @@ export default function PhotoGallery({
   };
 
   if (isLoading) {
-    return <div className="photo-gallery-loading">Loading photos...</div>;
+    return <div className="p-4 text-center text-muted-foreground">Loading photos...</div>;
   }
 
   if (error) {
-    return <div className="photo-gallery-error">Error loading photos: {error.message}</div>;
+    return <div className="p-4 text-center text-destructive">Error loading photos: {error.message}</div>;
   }
 
   if (!photos || photos.length === 0) {
@@ -40,25 +41,30 @@ export default function PhotoGallery({
   }
 
   return (
-    <div className="photo-gallery">
-      <h3>Photos</h3>
-      <div className="photo-grid">
+    <div className="mt-6 pt-6 border-t border-border">
+      <h3 className="text-sm font-medium text-muted-foreground mb-4">
+        Photos ({photos.length})
+      </h3>
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
         {photos.map((photo) => (
-          <div key={photo.id} className="photo-item">
+          <div key={photo.id} className="relative group aspect-square">
             <img
               src={photo.thumbnail_url || photo.url}
               alt={`Photo for ${entityType}`}
               loading="lazy"
               onClick={() => window.open(photo.url, '_blank')}
+              className="w-full h-full object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
             />
-            <button
-              className="photo-delete"
+            <Button
+              variant="destructive"
+              size="icon"
               onClick={() => handleDelete(photo.id)}
               disabled={deletePhoto.isPending}
               aria-label="Delete photo"
+              className="absolute top-1 right-1 h-7 w-7 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
             >
-              ×
-            </button>
+              <span className="text-sm">&times;</span>
+            </Button>
           </div>
         ))}
       </div>

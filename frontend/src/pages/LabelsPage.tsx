@@ -2,6 +2,10 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useGenerateLabels, useDownloadLabelPdf, useBatches } from '../hooks';
 import { Pagination } from '../components';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent } from '@/components/ui/card';
 import type { GenerateLabelsRequest } from '../types/generated';
 
 export default function LabelsPage() {
@@ -54,138 +58,147 @@ export default function LabelsPage() {
   };
 
   return (
-    <div className="page">
-      <div className="page-header">
-        <h1>QR Code Labels</h1>
+    <div>
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <h1 className="text-2xl font-bold">QR Code Labels</h1>
       </div>
 
-      <div className="form">
-        <h2>Generate Labels</h2>
-        <form onSubmit={handleGenerate}>
-          <div className="form-group">
-            <label htmlFor="count">Number of Labels *</label>
-            <input
-              id="count"
-              type="number"
-              min="1"
-              max="1000"
-              value={formData.count}
-              onChange={(e) =>
-                setFormData({ ...formData, count: parseInt(e.target.value) || 0 })
-              }
-              required
-            />
-            <small>Maximum 1000 labels per batch</small>
-          </div>
+      {/* Generate Labels Form */}
+      <Card className="mb-6">
+        <CardContent className="p-6">
+          <h2 className="text-lg font-semibold mb-4">Generate Labels</h2>
+          <form onSubmit={handleGenerate} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="count">Number of Labels *</Label>
+              <Input
+                id="count"
+                type="number"
+                min="1"
+                max="1000"
+                value={formData.count}
+                onChange={(e) =>
+                  setFormData({ ...formData, count: parseInt(e.target.value) || 0 })
+                }
+                required
+              />
+              <p className="text-xs text-muted-foreground">Maximum 1000 labels per batch</p>
+            </div>
 
-          <div className="form-group">
-            <label htmlFor="template">Template</label>
-            <select
-              id="template"
-              value={formData.template || 'avery_18660'}
-              onChange={(e) => {
-                const newTemplate = e.target.value;
-                // Update count to match template's labels per sheet
-                const labelsPerSheet = newTemplate === 'avery_94103' ? 48 : 30;
-                setFormData({
-                  ...formData,
-                  template: newTemplate,
-                  count: labelsPerSheet,
-                });
-              }}
-            >
-              <option value="avery_18660">Avery 18660 (30 per sheet)</option>
-              <option value="avery_94103">Avery Presta 94103 (48 per sheet, 1" square)</option>
-            </select>
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="template">Template</Label>
+              <select
+                id="template"
+                value={formData.template || 'avery_18660'}
+                onChange={(e) => {
+                  const newTemplate = e.target.value;
+                  // Update count to match template's labels per sheet
+                  const labelsPerSheet = newTemplate === 'avery_94103' ? 48 : 30;
+                  setFormData({
+                    ...formData,
+                    template: newTemplate,
+                    count: labelsPerSheet,
+                  });
+                }}
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+              >
+                <option value="avery_18660">Avery 18660 (30 per sheet)</option>
+                <option value="avery_94103">Avery Presta 94103 (48 per sheet, 1" square)</option>
+              </select>
+            </div>
 
-          <div className="form-actions">
-            <button
+            <Button
               type="submit"
-              className="btn btn-primary"
               disabled={generateLabels.isPending}
             >
               {generateLabels.isPending ? 'Generating...' : 'Generate Labels'}
-            </button>
-          </div>
-        </form>
-      </div>
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
 
+      {/* Download PDF Section */}
       {lastBatchId && (
-        <div className="form" style={{ marginTop: '2rem' }}>
-          <h2>Download PDF</h2>
-          <p>
-            Labels generated successfully! Batch ID: <code>{lastBatchId}</code>
-          </p>
-          <div className="form-actions">
-            <button
-              className="btn btn-primary"
+        <Card className="mb-6">
+          <CardContent className="p-6">
+            <h2 className="text-lg font-semibold mb-4">Download PDF</h2>
+            <p className="text-muted-foreground mb-4">
+              Labels generated successfully! Batch ID: <code className="bg-muted px-1 py-0.5 rounded text-sm">{lastBatchId}</code>
+            </p>
+            <Button
               onClick={() => handleDownloadPdf(lastBatchId)}
               disabled={downloadPdf.isPending}
             >
-              {downloadPdf.isPending ? 'Downloading...' : '📥 Download PDF'}
-            </button>
-          </div>
-        </div>
+              {downloadPdf.isPending ? 'Downloading...' : 'Download PDF'}
+            </Button>
+          </CardContent>
+        </Card>
       )}
 
       {/* Batches Table */}
-      <div className="form" style={{ marginTop: '2rem' }}>
-        <h2>Label Batches</h2>
-        {batchesError ? (
-          <div className="error">
-            Error loading batches: {batchesError.message}
-          </div>
-        ) : batchesLoading ? (
-          <div className="loading">Loading batches...</div>
-        ) : !batches || batches.length === 0 ? (
-          <div className="empty-state">No batches found. Generate labels to create a batch.</div>
-        ) : (
-          <div className="table-container">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Batch ID</th>
-                  <th>Created</th>
-                  <th>Label Count</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {batches.map((batch) => (
-                  <tr key={batch.batch_id}>
-                    <td>
-                      <code style={{ fontSize: '0.875rem' }}>
-                        {batch.batch_id.substring(0, 8)}...
-                      </code>
-                    </td>
-                    <td>{new Date(batch.created_at).toLocaleString()}</td>
-                    <td>{batch.labels.length}</td>
-                    <td>
-                      <Link
-                        to={`/labels/batches/${batch.batch_id}`}
-                        className="btn btn-primary btn-sm"
-                      >
-                        View Details
-                      </Link>
-                    </td>
+      <Card>
+        <CardContent className="p-6">
+          <h2 className="text-lg font-semibold mb-4">Label Batches</h2>
+          {batchesError ? (
+            <div className="text-destructive">
+              Error loading batches: {batchesError.message}
+            </div>
+          ) : batchesLoading ? (
+            <div className="text-center py-12 text-muted-foreground">Loading batches...</div>
+          ) : !batches || batches.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              No batches found. Generate labels to create a batch.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="text-left py-3 px-2 font-medium">Batch ID</th>
+                    <th className="text-left py-3 px-2 font-medium">Created</th>
+                    <th className="text-left py-3 px-2 font-medium">Label Count</th>
+                    <th className="text-left py-3 px-2 font-medium">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+                </thead>
+                <tbody>
+                  {batches.map((batch) => (
+                    <tr key={batch.batch_id} className="border-b border-border hover:bg-muted/50">
+                      <td className="py-3 px-2">
+                        <code className="text-xs bg-muted px-1 py-0.5 rounded">
+                          {batch.batch_id.substring(0, 8)}...
+                        </code>
+                      </td>
+                      <td className="py-3 px-2">{new Date(batch.created_at).toLocaleString()}</td>
+                      <td className="py-3 px-2">{batch.labels.length}</td>
+                      <td className="py-3 px-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          asChild
+                        >
+                          <Link to={`/labels/batches/${batch.batch_id}`}>
+                            View Details
+                          </Link>
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
 
-        {/* Pagination */}
-        {batchesResponse && batchesResponse.total > 0 && (
-          <Pagination
-            total={batchesResponse.total}
-            limit={batchesResponse.limit}
-            offset={batchesResponse.offset}
-            onPageChange={(newOffset) => setPagination({ ...pagination, offset: newOffset })}
-          />
-        )}
-      </div>
+          {/* Pagination */}
+          {batchesResponse && batchesResponse.total > 0 && (
+            <Pagination
+              total={batchesResponse.total}
+              limit={batchesResponse.limit}
+              offset={batchesResponse.offset}
+              onPageChange={(newOffset) => setPagination({ ...pagination, offset: newOffset })}
+            />
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

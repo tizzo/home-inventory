@@ -1,4 +1,5 @@
 import EntitySelector, { type EntityType } from './EntitySelector';
+import { Label } from '@/components/ui/label';
 
 interface EntityFieldProps {
   label: string;
@@ -24,11 +25,11 @@ export default function EntityField({
   helpText,
 }: EntityFieldProps) {
   return (
-    <div className="form-group">
-      <label>
+    <div className="space-y-2">
+      <Label>
         {label}
-        {required && ' *'}
-      </label>
+        {required && <span className="text-destructive ml-1">*</span>}
+      </Label>
       <EntitySelector
         entityType={entityType}
         value={value}
@@ -36,7 +37,9 @@ export default function EntityField({
         required={required}
         placeholder={placeholder}
       />
-      {helpText && <small className="help-text">{helpText}</small>}
+      {helpText && (
+        <p className="text-sm text-muted-foreground">{helpText}</p>
+      )}
     </div>
   );
 }

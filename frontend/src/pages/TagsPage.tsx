@@ -3,6 +3,10 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useTags, useCreateTag, useUpdateTag, useDeleteTag } from '../hooks';
 import { Modal, Pagination } from '../components';
 import { useToast } from '../context/ToastContext';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent } from '@/components/ui/card';
 import type { CreateTagRequest, UpdateTagRequest } from '../types/generated';
 
 export default function TagsPage() {
@@ -108,75 +112,81 @@ export default function TagsPage() {
     setCreateFormData({ name: '' });
   };
 
-  if (isLoading) return <div className="loading">Loading tags...</div>;
-  if (error) return <div className="error">Error: {error.message}</div>;
+  if (isLoading) return <div className="text-center py-12 text-muted-foreground">Loading tags...</div>;
+  if (error) return <div className="text-destructive">Error: {error.message}</div>;
 
   return (
-    <div className="page">
-      <div className="page-header">
-        <h1>Tags</h1>
-        <button className="btn btn-primary" onClick={openCreateModal}>
+    <div>
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <h1 className="text-2xl font-bold">Tags</h1>
+        <Button onClick={openCreateModal}>
           Create Tag
-        </button>
+        </Button>
       </div>
 
       {tags.length === 0 ? (
-        <div className="empty-state">
-          <p>No tags found. Create your first tag to get started.</p>
+        <div className="text-center py-12 text-muted-foreground">
+          No tags found. Create your first tag to get started.
         </div>
       ) : (
-        <>
-          <div className="table-container">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Created</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {tags.map((tag) => (
-                  <tr key={tag.id}>
-                    <td>
-                      <span className="tag" style={{ fontSize: '1rem', padding: '0.25rem 0.5rem' }}>
-                        {tag.name}
-                      </span>
-                    </td>
-                    <td>{new Date(tag.created_at).toLocaleDateString()}</td>
-                    <td>
-                      <button
-                        className="btn btn-secondary btn-sm"
-                        onClick={() => openEditModal(tag.id)}
-                        disabled={updateTag.isPending}
-                      >
-                        Edit
-                      </button>
-                      <button
-                        className="btn btn-danger btn-sm"
-                        onClick={() => handleDelete(tag.id, tag.name)}
-                        disabled={deleteTag.isPending}
-                        style={{ marginLeft: '0.5rem' }}
-                      >
-                        Delete
-                      </button>
-                    </td>
+        <Card>
+          <CardContent className="p-6">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="text-left py-3 px-2 font-medium">Name</th>
+                    <th className="text-left py-3 px-2 font-medium">Created</th>
+                    <th className="text-left py-3 px-2 font-medium">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {tags.map((tag) => (
+                    <tr key={tag.id} className="border-b border-border hover:bg-muted/50">
+                      <td className="py-3 px-2">
+                        <span className="bg-secondary text-secondary-foreground px-2 py-1 rounded text-sm">
+                          {tag.name}
+                        </span>
+                      </td>
+                      <td className="py-3 px-2">{new Date(tag.created_at).toLocaleDateString()}</td>
+                      <td className="py-3 px-2">
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openEditModal(tag.id)}
+                            disabled={updateTag.isPending}
+                          >
+                            Edit
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => handleDelete(tag.id, tag.name)}
+                            disabled={deleteTag.isPending}
+                          >
+                            Delete
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
-          {/* Pagination */}
-          {tagsResponse && tagsResponse.total > 0 && (
-            <Pagination
-              total={tagsResponse.total}
-              limit={tagsResponse.limit}
-              offset={tagsResponse.offset}
-              onPageChange={(newOffset) => setPagination({ ...pagination, offset: newOffset })}
-            />
-          )}
-        </>
+            {/* Pagination */}
+            {tagsResponse && tagsResponse.total > 0 && (
+              <Pagination
+                total={tagsResponse.total}
+                limit={tagsResponse.limit}
+                offset={tagsResponse.offset}
+                onPageChange={(newOffset) => setPagination({ ...pagination, offset: newOffset })}
+              />
+            )}
+          </CardContent>
+        </Card>
       )}
 
       {/* Create Modal */}
@@ -185,10 +195,10 @@ export default function TagsPage() {
         onClose={closeCreateModal}
         title="Create Tag"
       >
-        <form onSubmit={handleCreate}>
-          <div className="form-group">
-            <label htmlFor="create-name">Name *</label>
-            <input
+        <form onSubmit={handleCreate} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="create-name">Name *</Label>
+            <Input
               id="create-name"
               type="text"
               value={createFormData.name}
@@ -196,24 +206,26 @@ export default function TagsPage() {
               required
               maxLength={100}
               placeholder="e.g., electronics, kitchen, furniture"
+              autoFocus
             />
-            <small>Tag names must be unique and up to 100 characters</small>
+            <p className="text-xs text-muted-foreground">Tag names must be unique and up to 100 characters</p>
           </div>
-          <div className="form-actions">
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={closeCreateModal}
-            >
-              Cancel
-            </button>
-            <button
+          <div className="flex gap-3 pt-4 border-t border-border">
+            <Button
               type="submit"
-              className="btn btn-primary"
               disabled={createTag.isPending}
+              className="flex-1"
             >
               {createTag.isPending ? 'Creating...' : 'Create Tag'}
-            </button>
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={closeCreateModal}
+              className="flex-1"
+            >
+              Cancel
+            </Button>
           </div>
         </form>
       </Modal>
@@ -225,34 +237,36 @@ export default function TagsPage() {
           onClose={closeEditModal}
           title="Edit Tag"
         >
-          <form onSubmit={handleEdit}>
-            <div className="form-group">
-              <label htmlFor="edit-name">Name *</label>
-              <input
+          <form onSubmit={handleEdit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-name">Name *</Label>
+              <Input
                 id="edit-name"
                 type="text"
                 value={editFormData.name || ''}
                 onChange={(e) => setEditFormData({ name: e.target.value })}
                 required
                 maxLength={100}
+                autoFocus
               />
-              <small>Tag names must be unique and up to 100 characters</small>
+              <p className="text-xs text-muted-foreground">Tag names must be unique and up to 100 characters</p>
             </div>
-            <div className="form-actions">
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={closeEditModal}
-              >
-                Cancel
-              </button>
-              <button
+            <div className="flex gap-3 pt-4 border-t border-border">
+              <Button
                 type="submit"
-                className="btn btn-primary"
                 disabled={updateTag.isPending}
+                className="flex-1"
               >
                 {updateTag.isPending ? 'Updating...' : 'Update Tag'}
-              </button>
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={closeEditModal}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
             </div>
           </form>
         </Modal>

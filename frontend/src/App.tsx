@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { ToastProvider } from './context/ToastContext';
+import { ThemeProvider } from './context/ThemeContext';
 import {
   HomePage,
   RoomsPage,
@@ -19,11 +20,9 @@ import {
   ItemImportDraftPage,
   ContactPage,
 } from './pages';
-import { LoginButton } from './components/LoginButton';
+import { NavBar } from './components/NavBar';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import './App.css';
-
-
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -34,117 +33,17 @@ const queryClient = new QueryClient({
   },
 });
 
-import { useAuth } from './hooks/useAuth';
-
-function NavBar() {
-  const location = useLocation();
-  const { user } = useAuth();
-
-  return (
-    <nav className="navbar">
-      <div className="nav-container">
-        <Link to="/" className="nav-brand">
-          🏠 Home Inventory
-        </Link>
-        <ul className="nav-menu">
-          <li>
-            <Link
-              to="/"
-              className={location.pathname === '/' ? 'active' : ''}
-            >
-              Home
-            </Link>
-          </li>
-
-          {user && (
-            <>
-              <li>
-                <Link
-                  to="/rooms"
-                  className={location.pathname.startsWith('/rooms') ? 'active' : ''}
-                >
-                  Rooms
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/units"
-                  className={location.pathname.startsWith('/units') ? 'active' : ''}
-                >
-                  Units
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/shelves"
-                  className={location.pathname.startsWith('/shelves') ? 'active' : ''}
-                >
-                  Shelves
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/containers"
-                  className={location.pathname.startsWith('/containers') ? 'active' : ''}
-                >
-                  Containers
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/items"
-                  className={location.pathname.startsWith('/items') ? 'active' : ''}
-                >
-                  Items
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/labels"
-                  className={location.pathname.startsWith('/labels') ? 'active' : ''}
-                >
-                  Labels
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/tags"
-                  className={location.pathname.startsWith('/tags') ? 'active' : ''}
-                >
-                  Tags
-                </Link>
-              </li>
-            </>
-          )}
-
-          <li className="auth-nav-item">
-            <LoginButton />
-          </li>
-          <li>
-            <Link
-              to="/scan"
-              className={location.pathname.startsWith('/scan') ? 'active' : ''}
-            >
-              📷 Scan
-            </Link>
-          </li>
-        </ul>
-
-      </div>
-    </nav>
-  );
-}
-
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <ToastProvider>
-        <BrowserRouter>
-          <div className="app">
+    <ThemeProvider>
+      <QueryClientProvider client={queryClient}>
+        <ToastProvider>
+          <BrowserRouter>
+          <div className="min-h-screen flex flex-col bg-background">
             <NavBar />
 
-            <main className="main-content">
+            <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 py-6">
               <Routes>
                 <Route path="/" element={<HomePage />} />
 
@@ -235,15 +134,16 @@ function App() {
               </Routes>
             </main>
 
-            <footer className="footer">
+            <footer className="bg-background border-t border-border py-6 mt-8 text-center text-muted-foreground">
               <p>
                 Home Inventory System | Built with React + TypeScript + Rust
               </p>
             </footer>
           </div>
-        </BrowserRouter>
-      </ToastProvider>
-    </QueryClientProvider>
+          </BrowserRouter>
+        </ToastProvider>
+      </QueryClientProvider>
+    </ThemeProvider>
   );
 }
 

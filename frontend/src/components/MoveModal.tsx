@@ -2,6 +2,8 @@ import { useState } from 'react';
 import Modal from './Modal';
 import EntityField from './EntityField';
 import type { EntityType } from './EntitySelector';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 
 interface LocationTypeOption {
   type: EntityType;
@@ -88,22 +90,23 @@ export default function MoveModal({
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title={title}>
-      <form onSubmit={handleSubmit}>
-        <p>Move "{entityName}" to a different location:</p>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <p className="text-sm text-muted-foreground">Move &ldquo;{entityName}&rdquo; to a different location:</p>
 
         {locationTypes && locationTypes.length > 1 && (
-          <div className="form-group">
-            <label>Location Type</label>
-            <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+          <div className="space-y-2">
+            <Label>Location Type</Label>
+            <div className="flex flex-wrap gap-4">
               {locationTypes.map((locType) => (
-                <label key={locType.type}>
+                <label key={locType.type} className="flex items-center gap-2 cursor-pointer min-h-[44px] px-2">
                   <input
                     type="radio"
                     value={locType.type}
                     checked={selectedLocationType === locType.type}
                     onChange={() => handleLocationTypeChange(locType.type)}
+                    className="h-4 w-4 text-primary"
                   />
-                  {' '}{locType.displayName}
+                  <span className="text-sm">{locType.displayName}</span>
                 </label>
               ))}
             </div>
@@ -120,21 +123,22 @@ export default function MoveModal({
           helpText="Type to search or click the camera icon to scan a QR code"
         />
 
-        <div className="form-actions">
-          <button
+        <div className="flex gap-3 pt-4 border-t border-border">
+          <Button
             type="submit"
-            className="btn btn-primary"
             disabled={isPending || !targetId}
+            className="flex-1"
           >
             {isPending ? 'Moving...' : 'Move'}
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
-            className="btn btn-secondary"
+            variant="outline"
             onClick={handleClose}
+            className="flex-1"
           >
             Cancel
-          </button>
+          </Button>
         </div>
       </form>
     </Modal>

@@ -134,7 +134,7 @@ function App() {
               </Routes>
             </main>
 
-            <footer className="bg-background border-t border-border py-6 mt-8 text-center text-muted-foreground">
+            <footer className="hidden sm:block bg-background border-t border-border py-6 mt-8 text-center text-muted-foreground">
               <p>
                 Home Inventory System | Built with React + TypeScript + Rust
               </p>

@@ -377,7 +377,7 @@ export default function EntitySelector({
 
           {/* Dropdown */}
           {isOpen && !showScanner && (
-            <div className="absolute top-full left-0 right-0 z-50 bg-background border border-border rounded-md mt-1 max-h-[300px] overflow-y-auto shadow-lg">
+            <div className="absolute top-full left-0 right-0 z-50 bg-background border border-border rounded-md mt-1 max-h-[200px] sm:max-h-[300px] overflow-y-auto shadow-lg">
               {filteredEntities.length === 0 ? (
                 <div className="p-4 text-center text-muted-foreground">
                   {searchQuery ? 'No matches found' : 'No entities available'}
@@ -388,7 +388,7 @@ export default function EntitySelector({
                     key={entity.id}
                     type="button"
                     onClick={() => handleSelect(entity)}
-                    className={`w-full px-3 py-2 text-left border-b border-border last:border-b-0 hover:bg-accent transition-colors ${
+                    className={`w-full px-3 py-2 min-h-[44px] flex items-center text-left border-b border-border last:border-b-0 hover:bg-accent transition-colors ${
                       entity.id === value ? 'bg-primary/10' : ''
                     }`}
                   >
@@ -427,7 +427,7 @@ export default function EntitySelector({
           <div
             id={`qr-scanner-${entityType}`}
             ref={scannerElementRef}
-            className="w-full max-w-[400px] mx-auto"
+            className="w-full max-w-full sm:max-w-[400px] mx-auto"
           />
           <p className="text-sm text-muted-foreground mt-2">
             Point camera at label QR code

@@ -144,7 +144,7 @@ export default function EntityCreateModal({
             <Label>Location Type</Label>
             <div className="flex flex-wrap gap-4">
               {parentTypes.map((pt) => (
-                <label key={pt.type} className="flex items-center gap-2 cursor-pointer">
+                <label key={pt.type} className="flex items-center gap-2 cursor-pointer min-h-[44px] px-2">
                   <input
                     type="radio"
                     value={pt.type}

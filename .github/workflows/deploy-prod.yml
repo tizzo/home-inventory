@@ -15,15 +15,11 @@ permissions:
 
 jobs:
   build-lambda:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@v4
 
       - uses: moonrepo/setup-rust@v1
-        with:
-          targets: aarch64-unknown-linux-gnu
-
-      - uses: goto-bus-stop/setup-zig@v2
 
       - name: Install cargo-lambda
         run: pip install cargo-lambda
@@ -35,9 +31,9 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             backend/target
-          key: ${{ runner.os }}-cargo-lambda-${{ hashFiles('backend/Cargo.lock') }}
+          key: ${{ runner.os }}-${{ runner.arch }}-cargo-lambda-${{ hashFiles('backend/Cargo.lock') }}
           restore-keys: |
-            ${{ runner.os }}-cargo-lambda-
+            ${{ runner.os }}-${{ runner.arch }}-cargo-lambda-
 
       - name: Build Lambda function
         working-directory: backend

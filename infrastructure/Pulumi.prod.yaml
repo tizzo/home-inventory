@@ -14,3 +14,4 @@ config:
   home-inventory-infrastructure:westClusterArn: arn:aws:dsql:us-east-2:168450803450:cluster/hbtqmt72rcirbbxtuxhbki2axm
   home-inventory-infrastructure:recaptchaSecretKey:
     secure: v1:cPFZtvnOhpwlzIdT:0W0E8AGRAzjjdM8gH+asL5q5G1E8DjJV7zWyG5P9Oy2MwfRID+idaAqLXusTZ9XoQspjj4/g0OY=
+  home-inventory-infrastructure:allowedEmails: howard@howardtyson.com

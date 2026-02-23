@@ -44,6 +44,7 @@ export function createLambdaFunctions(
           RECAPTCHA_SECRET_KEY: config.recaptchaSecretKey,
           S3_BUCKET: storage.photoBucket.id,
           S3_REGION: "us-east-1",
+          ALLOWED_EMAILS: config.allowedEmails,
           RUST_LOG: "info",
           // AWS_LAMBDA_FUNCTION_NAME is automatically set by AWS Lambda
         },
@@ -69,6 +70,7 @@ export function createLambdaFunctions(
           RECAPTCHA_SECRET_KEY: config.recaptchaSecretKey,
           S3_BUCKET: storage.photoBucketReplica.id,
           S3_REGION: "us-east-2",
+          ALLOWED_EMAILS: config.allowedEmails,
           RUST_LOG: "info",
           // AWS_LAMBDA_FUNCTION_NAME is automatically set by AWS Lambda
         },

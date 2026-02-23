@@ -18,6 +18,7 @@ const stackConfig: StackConfig = {
   googleClientSecret: config.requireSecret("googleClientSecret"),
   anthropicApiKey: config.requireSecret("anthropicApiKey"),
   recaptchaSecretKey: config.getSecret("recaptchaSecretKey") || pulumi.output(""),
+  allowedEmails: config.get("allowedEmails") || "",
 };
 
 // Create AWS providers for each region with default tags

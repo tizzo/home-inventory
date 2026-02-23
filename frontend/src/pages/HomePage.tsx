@@ -1,10 +1,24 @@
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 
 export default function HomePage() {
+  const [searchParams] = useSearchParams();
+  const loginError = searchParams.get('error');
+
   return (
     <div>
+      {loginError === 'not_allowed' && (
+        <div className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-lg text-center">
+          <p className="text-destructive font-medium">
+            Your account is not authorized to access this application.
+          </p>
+          <p className="text-sm text-muted-foreground mt-1">
+            Contact an administrator to request access.
+          </p>
+        </div>
+      )}
+
       {/* Hero Section */}
       <div className="text-center py-8 mb-8">
         <h1 className="text-3xl font-bold mb-4">Home Inventory System</h1>

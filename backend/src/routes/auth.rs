@@ -114,6 +114,20 @@ async fn auth_callback(
         }
     };
 
+    // Check email allowlist
+    match crate::routes::allowed_emails::is_email_allowed(&state.db, &google_user.email).await {
+        Ok(true) => {}
+        Ok(false) => {
+            tracing::warn!("Login denied for non-allowed email: {}", google_user.email);
+            let redirect_url = format!("{}/?error=not_allowed", &state.app_base_url);
+            return Redirect::to(&redirect_url).into_response();
+        }
+        Err(e) => {
+            tracing::error!("Failed to check email allowlist: {:?}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR, "Database error").into_response();
+        }
+    }
+
     // Upsert user in database
     // Function to ensure user exists
     let user_id = match upsert_user(&state.db, &google_user).await {

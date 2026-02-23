@@ -1,0 +1,144 @@
+use crate::app::AppState;
+use crate::models::allowed_email::{AllowedEmail, AllowedEmailResponse, CreateAllowedEmailRequest};
+use crate::routes::auth::UserSession;
+use axum::{
+    extract::{Path, State},
+    http::StatusCode,
+    response::IntoResponse,
+    routing::{delete, get, post},
+    Json, Router,
+};
+use std::sync::Arc;
+use tower_sessions::Session;
+use uuid::Uuid;
+
+pub fn allowed_email_routes() -> Router<Arc<AppState>> {
+    Router::new()
+        .route("/api/allowed-emails", get(list_allowed_emails))
+        .route("/api/allowed-emails", post(add_allowed_email))
+        .route("/api/allowed-emails/:id", delete(remove_allowed_email))
+}
+
+async fn list_allowed_emails(
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<Vec<AllowedEmailResponse>>, StatusCode> {
+    let emails = sqlx::query_as::<_, AllowedEmail>(
+        "SELECT id, email, added_by, created_at FROM allowed_emails ORDER BY created_at ASC",
+    )
+    .fetch_all(&state.db)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to list allowed emails: {:?}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    Ok(Json(emails.into_iter().map(Into::into).collect()))
+}
+
+async fn add_allowed_email(
+    State(state): State<Arc<AppState>>,
+    session: Session,
+    Json(body): Json<CreateAllowedEmailRequest>,
+) -> Result<impl IntoResponse, StatusCode> {
+    let user: UserSession = session
+        .get("user")
+        .await
+        .unwrap_or(None)
+        .ok_or(StatusCode::UNAUTHORIZED)?;
+
+    let email = body.email.trim().to_lowercase();
+    if email.is_empty() {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
+    let id = Uuid::new_v4();
+    let row = sqlx::query_as::<_, AllowedEmail>(
+        r#"
+        INSERT INTO allowed_emails (id, email, added_by)
+        VALUES ($1, $2, $3)
+        ON CONFLICT (email) DO NOTHING
+        RETURNING id, email, added_by, created_at
+        "#,
+    )
+    .bind(id)
+    .bind(&email)
+    .bind(user.user_id)
+    .fetch_optional(&state.db)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to add allowed email: {:?}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    match row {
+        Some(ae) => Ok((StatusCode::CREATED, Json(AllowedEmailResponse::from(ae)))),
+        None => Err(StatusCode::CONFLICT),
+    }
+}
+
+async fn remove_allowed_email(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<Uuid>,
+) -> Result<StatusCode, StatusCode> {
+    let result = sqlx::query("DELETE FROM allowed_emails WHERE id = $1")
+        .bind(id)
+        .execute(&state.db)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to remove allowed email: {:?}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    if result.rows_affected() == 0 {
+        Err(StatusCode::NOT_FOUND)
+    } else {
+        Ok(StatusCode::NO_CONTENT)
+    }
+}
+
+/// Seed allowed emails from ALLOWED_EMAILS env var on startup
+pub async fn seed_allowed_emails(pool: &sqlx::PgPool) {
+    let emails_str = match std::env::var("ALLOWED_EMAILS") {
+        Ok(s) if !s.is_empty() => s,
+        _ => return,
+    };
+
+    for email in emails_str.split(',') {
+        let email = email.trim().to_lowercase();
+        if email.is_empty() {
+            continue;
+        }
+        let id = Uuid::new_v4();
+        match sqlx::query(
+            "INSERT INTO allowed_emails (id, email) VALUES ($1, $2) ON CONFLICT (email) DO NOTHING",
+        )
+        .bind(id)
+        .bind(&email)
+        .execute(pool)
+        .await
+        {
+            Ok(_) => tracing::info!("Allowed email seeded: {}", email),
+            Err(e) => tracing::warn!("Failed to seed allowed email {}: {:?}", email, e),
+        }
+    }
+}
+
+/// Check if an email is in the allowlist. Returns true if allowed.
+/// If the table is empty, allows everyone (no restriction).
+pub async fn is_email_allowed(pool: &sqlx::PgPool, email: &str) -> Result<bool, sqlx::Error> {
+    let count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM allowed_emails")
+        .fetch_one(pool)
+        .await?;
+
+    // If no emails in allowlist, allow everyone
+    if count.0 == 0 {
+        return Ok(true);
+    }
+
+    let exists: Option<(i64,)> = sqlx::query_as("SELECT 1 FROM allowed_emails WHERE email = $1")
+        .bind(email.to_lowercase())
+        .fetch_optional(pool)
+        .await?;
+
+    Ok(exists.is_some())
+}

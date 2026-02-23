@@ -15,3 +15,4 @@ export type { MoveShelfRequest, MoveContainerRequest, MoveItemRequest } from './
 export { itemImportDraftsApi } from './itemImportDrafts';
 export { contactApi } from './contact';
 export { usersApi } from './users';
+export { allowedEmailsApi } from './allowedEmails';

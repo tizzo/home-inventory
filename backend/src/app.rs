@@ -229,6 +229,7 @@ pub async fn create_app(db: PgPool) -> anyhow::Result<Router> {
         .merge(crate::routes::move_routes())
         .merge(crate::routes::audit_routes())
         .merge(crate::routes::user_routes())
+        .merge(crate::routes::allowed_email_routes())
         .merge(protected_contact_routes)
         .route_layer(axum::middleware::from_fn(
             crate::middleware::auth::auth_guard,

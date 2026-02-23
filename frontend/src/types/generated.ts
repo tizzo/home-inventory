@@ -148,6 +148,24 @@ export interface CreateUserRequest {
 	google_id: string;
 }
 
+export interface AllowedEmail {
+	id: string;
+	email: string;
+	added_by?: string;
+	created_at: Date;
+}
+
+export interface AllowedEmailResponse {
+	id: string;
+	email: string;
+	added_by?: string;
+	created_at: Date;
+}
+
+export interface CreateAllowedEmailRequest {
+	email: string;
+}
+
 export interface ContactSubmission {
 	id: string;
 	name: string;

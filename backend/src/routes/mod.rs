@@ -1,3 +1,4 @@
+pub mod allowed_emails;
 pub mod audit;
 pub mod auth;
 pub mod contact;
@@ -14,6 +15,7 @@ pub mod tags;
 pub mod users;
 
 // Re-export for convenience
+pub use allowed_emails::*;
 pub use audit::*;
 pub use auth::*;
 pub use containers::*;

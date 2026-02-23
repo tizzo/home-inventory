@@ -14,3 +14,4 @@ export { default as TagsPage } from './TagsPage';
 export { default as QRScanPage } from './QRScanPage';
 export { default as ItemImportDraftPage } from './ItemImportDraftPage';
 export { default as ContactPage } from './ContactPage';
+export { default as AllowedEmailsPage } from './AllowedEmailsPage';

@@ -181,6 +181,11 @@ export function NavBar() {
                       Audit Logs
                     </Link>
                   </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/allowed-emails" className="cursor-pointer">
+                      Allowed Emails
+                    </Link>
+                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     onClick={() => logout()}
@@ -260,6 +265,14 @@ export function NavBar() {
                         to="/audit"
                         label="Audit Logs"
                         isActive={isActive('/audit')}
+                        onClick={() => setMobileMenuOpen(false)}
+                      />
+                    )}
+                    {user && (
+                      <MobileNavLink
+                        to="/allowed-emails"
+                        label="Allowed Emails"
+                        isActive={isActive('/allowed-emails')}
                         onClick={() => setMobileMenuOpen(false)}
                       />
                     )}

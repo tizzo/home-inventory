@@ -9,3 +9,4 @@ export * from './useTags';
 export * from './useAudit';
 export * from './useMove';
 export * from './useItemImportDrafts';
+export * from './useAllowedEmails';

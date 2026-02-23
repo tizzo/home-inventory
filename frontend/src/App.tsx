@@ -19,6 +19,7 @@ import {
   QRScanPage,
   ItemImportDraftPage,
   ContactPage,
+  AllowedEmailsPage,
 } from './pages';
 import { NavBar } from './components/NavBar';
 import { ProtectedRoute } from './components/ProtectedRoute';
@@ -130,6 +131,7 @@ function App() {
                   <Route path="/audit" element={<AuditLogPage />} />
                   <Route path="/scan" element={<QRScanPage />} />
                   <Route path="/drafts/:draftId" element={<ItemImportDraftPage />} />
+                  <Route path="/allowed-emails" element={<AllowedEmailsPage />} />
                 </Route>
               </Routes>
             </main>

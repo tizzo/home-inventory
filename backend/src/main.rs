@@ -45,6 +45,9 @@ async fn main() -> anyhow::Result<()> {
         }
     }
 
+    // Seed allowed emails from env var
+    routes::allowed_emails::seed_allowed_emails(&pool).await;
+
     tracing::info!("Creating Axum application...");
 
     // Create the Axum application

@@ -1,3 +1,4 @@
+pub mod allowed_email;
 pub mod audit;
 pub mod contact;
 pub mod container;
@@ -14,6 +15,8 @@ pub mod user;
 
 // Re-export types for convenience
 // Suppress unused warnings for now as these will be used when we add routes
+#[allow(unused_imports)]
+pub use allowed_email::*;
 #[allow(unused_imports)]
 pub use audit::*;
 #[allow(unused_imports)]

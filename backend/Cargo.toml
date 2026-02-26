@@ -101,5 +101,5 @@ path = "src/bin/generate_types.rs"
 
 [profile.release]
 strip = true
-lto = true
-codegen-units = 1
+lto = "thin"
+codegen-units = 16

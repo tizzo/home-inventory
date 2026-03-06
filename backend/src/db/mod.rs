@@ -97,6 +97,24 @@ pub async fn init_pool(database_url: &str) -> Result<PgPool, sqlx::Error> {
 ///
 /// Note: Locking is disabled because DSQL doesn't support pg_advisory_lock.
 pub async fn run_migrations(pool: &PgPool) -> Result<(), sqlx::migrate::MigrateError> {
+    // Clean up stale migration entries from the old migrations/ directory.
+    // The _sqlx_migrations table may contain entries (e.g. 20240101000000) that
+    // don't exist in migrations-v2/. sqlx aborts if it finds applied migrations
+    // missing from the resolved set, so we remove them first.
+    let known_versions: Vec<i64> = sqlx::migrate!("./migrations-v2")
+        .migrations
+        .iter()
+        .map(|m| m.version)
+        .collect();
+
+    if let Err(e) = sqlx::query("DELETE FROM _sqlx_migrations WHERE version != ALL($1)")
+        .bind(&known_versions)
+        .execute(pool)
+        .await
+    {
+        tracing::warn!("Failed to clean stale migration entries: {}", e);
+    }
+
     sqlx::migrate!("./migrations-v2")
         .set_locking(false)
         .run(pool)

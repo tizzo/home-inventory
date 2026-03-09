@@ -96,7 +96,7 @@ pub async fn init_pool(database_url: &str) -> Result<PgPool, sqlx::Error> {
 /// - AWS Aurora DSQL (single statement per transaction requirement)
 ///
 /// Note: Locking is disabled because DSQL doesn't support pg_advisory_lock.
-pub async fn run_migrations(pool: &PgPool) -> Result<(), sqlx::migrate::MigrateError> {
+pub async fn run_migrations(pool: &PgPool) -> anyhow::Result<()> {
     // Clean up stale migration entries from the old migrations/ directory.
     // The _sqlx_migrations table may contain entries (e.g. 20240101000000) that
     // don't exist in migrations-v2/. sqlx aborts if it finds applied migrations
@@ -107,18 +107,94 @@ pub async fn run_migrations(pool: &PgPool) -> Result<(), sqlx::migrate::MigrateE
         .map(|m| m.version)
         .collect();
 
-    if let Err(e) = sqlx::query("DELETE FROM _sqlx_migrations WHERE version != ALL($1)")
+    match sqlx::query("DELETE FROM _sqlx_migrations WHERE version != ALL($1)")
         .bind(&known_versions)
         .execute(pool)
         .await
     {
-        tracing::warn!("Failed to clean stale migration entries: {}", e);
+        Ok(result) => {
+            if result.rows_affected() > 0 {
+                tracing::info!(
+                    "Cleaned {} stale migration entries from _sqlx_migrations",
+                    result.rows_affected()
+                );
+            }
+        }
+        Err(e) => {
+            tracing::warn!("Failed to clean stale migration entries: {}", e);
+        }
     }
 
-    sqlx::migrate!("./migrations-v2")
-        .set_locking(false)
-        .run(pool)
-        .await
+    // Try sqlx's built-in migrate runner first (works on local PostgreSQL).
+    // On DSQL this fails with "ddl and dml not supported in same transaction"
+    // because sqlx mixes CREATE TABLE with INSERT into _sqlx_migrations.
+    let mut migrator = sqlx::migrate!("./migrations-v2");
+    match migrator.set_locking(false).run(pool).await {
+        Ok(()) => return Ok(()),
+        Err(e) => {
+            let err_str = e.to_string();
+            if !err_str.contains("ddl and dml") && !err_str.contains("same transaction") {
+                return Err(e.into());
+            }
+            tracing::warn!(
+                "sqlx migrate failed on DSQL ({}), falling back to manual runner",
+                err_str
+            );
+        }
+    }
+
+    // Fallback: run each migration as separate statements so DDL and DML
+    // never share a DSQL implicit transaction.
+    run_migrations_manually(pool, &migrator).await
+}
+
+async fn run_migrations_manually(
+    pool: &PgPool,
+    migrator: &sqlx::migrate::Migrator,
+) -> anyhow::Result<()> {
+    use sqlx::Row;
+
+    for migration in migrator.migrations.iter() {
+        let applied: bool =
+            sqlx::query("SELECT EXISTS(SELECT 1 FROM _sqlx_migrations WHERE version = $1)")
+                .bind(migration.version)
+                .fetch_one(pool)
+                .await
+                .map(|row| row.get::<bool, _>(0))
+                .unwrap_or(false);
+
+        if applied {
+            continue;
+        }
+
+        tracing::info!(
+            "Applying migration {}: {}",
+            migration.version,
+            migration.description
+        );
+
+        let sql: &str = &migration.sql;
+
+        sqlx::query(sql).execute(pool).await.map_err(|e| {
+            tracing::error!("Migration {} failed: {:?}", migration.version, e);
+            anyhow::anyhow!("migration {} failed: {}", migration.version, e)
+        })?;
+
+        // Record as applied (separate statement = separate DSQL implicit tx)
+        let checksum: &[u8] = &migration.checksum;
+        sqlx::query(
+            "INSERT INTO _sqlx_migrations (version, description, installed_on, success, checksum, execution_time) VALUES ($1, $2, NOW(), TRUE, $3, 0) ON CONFLICT (version) DO NOTHING",
+        )
+        .bind(migration.version)
+        .bind(migration.description.as_ref())
+        .bind(checksum)
+        .execute(pool)
+        .await?;
+
+        tracing::info!("✓ Migration {} applied", migration.version);
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]

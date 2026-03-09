@@ -125,27 +125,18 @@ pub async fn run_migrations(pool: &PgPool) -> anyhow::Result<()> {
         }
     }
 
-    // Try sqlx's built-in migrate runner first (works on local PostgreSQL).
-    // On DSQL this fails with "ddl and dml not supported in same transaction"
-    // because sqlx mixes CREATE TABLE with INSERT into _sqlx_migrations.
     let mut migrator = sqlx::migrate!("./migrations-v2");
-    match migrator.set_locking(false).run(pool).await {
-        Ok(()) => return Ok(()),
-        Err(e) => {
-            let err_str = e.to_string();
-            if !err_str.contains("ddl and dml") && !err_str.contains("same transaction") {
-                return Err(e.into());
-            }
-            tracing::warn!(
-                "sqlx migrate failed on DSQL ({}), falling back to manual runner",
-                err_str
-            );
-        }
+
+    // On DSQL (Lambda), always use the manual runner because sqlx's built-in
+    // runner mixes DDL and DML in the same transaction which DSQL rejects.
+    if std::env::var("AWS_LAMBDA_FUNCTION_NAME").is_ok() {
+        tracing::info!("DSQL detected, using manual migration runner");
+        return run_migrations_manually(pool, &migrator).await;
     }
 
-    // Fallback: run each migration as separate statements so DDL and DML
-    // never share a DSQL implicit transaction.
-    run_migrations_manually(pool, &migrator).await
+    // Local PostgreSQL: use sqlx's built-in runner
+    migrator.set_locking(false).run(pool).await?;
+    Ok(())
 }
 
 async fn run_migrations_manually(

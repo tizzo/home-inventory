@@ -175,10 +175,27 @@ async fn run_migrations_manually(
 
         let sql: &str = &migration.sql;
 
-        sqlx::query(sql).execute(pool).await.map_err(|e| {
-            tracing::error!("Migration {} failed: {:?}", migration.version, e);
-            anyhow::anyhow!("migration {} failed: {}", migration.version, e)
-        })?;
+        match sqlx::query(sql).execute(pool).await {
+            Ok(_) => {}
+            Err(e) => {
+                let err_str = e.to_string();
+                // Treat "already exists" as success — the object was created by
+                // a previous manual migration run that didn't record in _sqlx_migrations.
+                if err_str.contains("already exists") {
+                    tracing::info!(
+                        "Migration {}: object already exists, recording as applied",
+                        migration.version
+                    );
+                } else {
+                    tracing::error!("Migration {} failed: {:?}", migration.version, e);
+                    return Err(anyhow::anyhow!(
+                        "migration {} failed: {}",
+                        migration.version,
+                        e
+                    ));
+                }
+            }
+        }
 
         // Record as applied (separate statement = separate DSQL implicit tx)
         let checksum: &[u8] = &migration.checksum;

@@ -177,6 +177,14 @@ async fn run_migrations_manually(
                         "Migration {}: object already exists, recording as applied",
                         migration.version
                     );
+                } else if err_str.contains("not supported") {
+                    // DSQL doesn't support some features (e.g. sort order on
+                    // index keys). Skip these non-critical migrations gracefully.
+                    tracing::warn!(
+                        "Migration {}: skipped (unsupported on DSQL: {})",
+                        migration.version,
+                        err_str
+                    );
                 } else {
                     tracing::error!("Migration {} failed: {:?}", migration.version, e);
                     return Err(anyhow::anyhow!(

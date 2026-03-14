@@ -185,6 +185,14 @@ async fn run_migrations_manually(
                         migration.version,
                         err_str
                     );
+                } else if err_str.contains("does not exist") {
+                    // Column or relation doesn't exist — schema mismatch between
+                    // migrations and actual DSQL state. Skip gracefully.
+                    tracing::warn!(
+                        "Migration {}: skipped (object does not exist: {})",
+                        migration.version,
+                        err_str
+                    );
                 } else {
                     tracing::error!("Migration {} failed: {:?}", migration.version, e);
                     return Err(anyhow::anyhow!(

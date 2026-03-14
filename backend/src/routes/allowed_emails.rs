@@ -126,7 +126,7 @@ pub async fn seed_allowed_emails(pool: &sqlx::PgPool) {
 /// Check if an email is in the allowlist. Returns true if allowed.
 /// If the table is empty, allows everyone (no restriction).
 pub async fn is_email_allowed(pool: &sqlx::PgPool, email: &str) -> Result<bool, sqlx::Error> {
-    let count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM allowed_emails")
+    let count: (i32,) = sqlx::query_as("SELECT COUNT(*)::int FROM allowed_emails")
         .fetch_one(pool)
         .await?;
 
@@ -135,7 +135,7 @@ pub async fn is_email_allowed(pool: &sqlx::PgPool, email: &str) -> Result<bool, 
         return Ok(true);
     }
 
-    let exists: Option<(i64,)> = sqlx::query_as("SELECT 1 FROM allowed_emails WHERE email = $1")
+    let exists: Option<(i32,)> = sqlx::query_as("SELECT 1 FROM allowed_emails WHERE email = $1")
         .bind(email.to_lowercase())
         .fetch_optional(pool)
         .await?;

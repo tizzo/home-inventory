@@ -56,12 +56,11 @@ async fn main() -> anyhow::Result<()> {
     match routes::allowed_emails::count_allowed_emails(&pool).await {
         Ok(0) => {
             print_bootstrap_help();
-            std::process::exit(1);
+            return Err(anyhow::anyhow!("No bootstrap user configured"));
         }
         Ok(n) => tracing::info!("Allowlist configured with {} email(s)", n),
         Err(e) => {
-            tracing::error!("Failed to verify allowlist configuration: {:?}", e);
-            return Err(anyhow::anyhow!("Could not verify allowlist configuration"));
+            return Err(anyhow::Error::new(e).context("Failed to verify allowlist configuration"));
         }
     }
 

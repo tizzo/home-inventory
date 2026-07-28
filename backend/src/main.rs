@@ -48,6 +48,23 @@ async fn main() -> anyhow::Result<()> {
     // Seed allowed emails from env var
     routes::allowed_emails::seed_allowed_emails(&pool).await;
 
+    // Require at least one bootstrap user. The allowlist fails closed, so an
+    // empty allowlist would lock everyone out. Refuse to start and explain how
+    // to fix it rather than come up in an unusable (or, historically, fail-open)
+    // state. Note we check the table, not the env var: a prior deploy may have
+    // already populated it, in which case ALLOWED_EMAILS is not required again.
+    match routes::allowed_emails::count_allowed_emails(&pool).await {
+        Ok(0) => {
+            print_bootstrap_help();
+            std::process::exit(1);
+        }
+        Ok(n) => tracing::info!("Allowlist configured with {} email(s)", n),
+        Err(e) => {
+            tracing::error!("Failed to verify allowlist configuration: {:?}", e);
+            return Err(anyhow::anyhow!("Could not verify allowlist configuration"));
+        }
+    }
+
     tracing::info!("Creating Axum application...");
 
     // Create the Axum application
@@ -77,4 +94,28 @@ async fn main() -> anyhow::Result<()> {
         axum::serve(listener, app).await?;
         Ok(())
     }
+}
+
+/// Print operator instructions when no bootstrap user is configured.
+fn print_bootstrap_help() {
+    tracing::error!("No bootstrap user configured — refusing to start.");
+    eprintln!(
+        "\n\
+        ============================================================\n\
+         STARTUP ERROR: No bootstrap user configured\n\
+        ============================================================\n\
+        The email allowlist is empty. For security, logins fail closed,\n\
+        so no one would be able to sign in.\n\
+        \n\
+        Set the ALLOWED_EMAILS environment variable to a comma-separated\n\
+        list of Google account emails permitted to log in, then restart:\n\
+        \n\
+            ALLOWED_EMAILS=\"you@example.com,teammate@example.com\"\n\
+        \n\
+        These are seeded into the allowed_emails table on startup. Once at\n\
+        least one email exists (via the env var or already in the table),\n\
+        this check passes and the variable is no longer required on later\n\
+        startups.\n\
+        ============================================================\n"
+    );
 }

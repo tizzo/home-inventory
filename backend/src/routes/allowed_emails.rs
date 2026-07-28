@@ -123,18 +123,19 @@ pub async fn seed_allowed_emails(pool: &sqlx::PgPool) {
     }
 }
 
-/// Check if an email is in the allowlist. Returns true if allowed.
-/// If the table is empty, allows everyone (no restriction).
-pub async fn is_email_allowed(pool: &sqlx::PgPool, email: &str) -> Result<bool, sqlx::Error> {
+/// Count the number of emails currently in the allowlist.
+pub async fn count_allowed_emails(pool: &sqlx::PgPool) -> Result<i32, sqlx::Error> {
     let count: (i32,) = sqlx::query_as("SELECT COUNT(*)::int FROM allowed_emails")
         .fetch_one(pool)
         .await?;
+    Ok(count.0)
+}
 
-    // If no emails in allowlist, allow everyone
-    if count.0 == 0 {
-        return Ok(true);
-    }
-
+/// Check if an email is in the allowlist. Returns true if allowed.
+/// Fails closed: an empty allowlist admits no one. A bootstrap user must be
+/// configured via `ALLOWED_EMAILS` (see `seed_allowed_emails`) before anyone
+/// can log in.
+pub async fn is_email_allowed(pool: &sqlx::PgPool, email: &str) -> Result<bool, sqlx::Error> {
     let exists: Option<(i32,)> = sqlx::query_as("SELECT 1 FROM allowed_emails WHERE email = $1")
         .bind(email.to_lowercase())
         .fetch_optional(pool)

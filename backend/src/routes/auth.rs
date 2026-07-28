@@ -119,7 +119,7 @@ async fn auth_callback(
         Ok(true) => {}
         Ok(false) => {
             tracing::warn!("Login denied for non-allowed email: {}", google_user.email);
-            let redirect_url = format!("{}/?error=not_allowed", &state.app_base_url);
+            let redirect_url = format!("{}/?error=not_allowed", state.app_base_url);
             return Redirect::to(&redirect_url).into_response();
         }
         Err(e) => {

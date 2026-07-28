@@ -124,6 +124,11 @@ pub async fn seed_allowed_emails(pool: &sqlx::PgPool) {
 }
 
 /// Count the number of emails currently in the allowlist.
+///
+/// The `::int` cast (and `i32` return) are required for Aurora DSQL, which
+/// returns INT4 for `COUNT(*)` where PostgreSQL returns INT8. Decoding it as
+/// `i64` triggers a type-decode error at runtime (see commit that fixed the
+/// "Database error" on login). Do not change this to `i64`.
 pub async fn count_allowed_emails(pool: &sqlx::PgPool) -> Result<i32, sqlx::Error> {
     let count: (i32,) = sqlx::query_as("SELECT COUNT(*)::int FROM allowed_emails")
         .fetch_one(pool)

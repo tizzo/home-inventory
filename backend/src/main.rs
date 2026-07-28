@@ -96,6 +96,11 @@ async fn main() -> anyhow::Result<()> {
 }
 
 /// Print operator instructions when no bootstrap user is configured.
+///
+/// Each line uses a string-continuation escape (trailing `\`), which makes Rust
+/// strip the source newline and the leading indentation of the next line. The
+/// source indentation below is therefore cosmetic and does NOT appear in the
+/// output — explicit `\n` sequences provide the only line breaks emitted.
 fn print_bootstrap_help() {
     tracing::error!("No bootstrap user configured — refusing to start.");
     eprintln!(

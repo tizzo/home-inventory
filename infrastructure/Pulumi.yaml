@@ -5,3 +5,5 @@ runtime:
     typescript: true
     tsConfigPath: tsconfig.json
 description: AWS infrastructure for home inventory application with multi-region deployment
+backend:
+  url: s3://howardtyson-pulumi-state?region=us-east-1

@@ -27,7 +27,7 @@ infrastructure/
 ├── index.ts              # Main Pulumi program
 ├── src/
 │   ├── types.ts          # TypeScript type definitions
-│   ├── iam.ts            # IAM roles and OIDC provider
+│   ├── iam.ts            # Lambda and S3 replication roles
 │   ├── database.ts       # Aurora DSQL multi-region
 │   ├── storage.ts        # S3 buckets (frontend + photos)
 │   ├── lambda.ts         # Lambda functions + API Gateway
@@ -40,99 +40,36 @@ infrastructure/
 
 ## Initial Setup
 
-### Step 1: Create S3 Bucket and KMS Key for Pulumi
+### State, secrets and deploy access
 
-```bash
-# Create S3 bucket for Pulumi state (one-time setup)
-aws s3 mb s3://home-inventory-pulumi-state --region us-east-1 --profile howardtyson
+These are shared with every personal Pulumi repo and live in [`tizzo/aws-foundation`](https://github.com/tizzo/aws-foundation), not here:
 
-# Enable versioning
-aws s3api put-bucket-versioning \
-  --bucket home-inventory-pulumi-state \
-  --versioning-configuration Status=Enabled \
-  --profile howardtyson
+- State: `s3://howardtyson-pulumi-state` (set as `backend.url` in `Pulumi.yaml`, so no `pulumi login`)
+- Secrets: KMS `alias/howardtyson-pulumi-secrets` (set in `Pulumi.prod.yaml`)
+- CI deploy role: `gha-home-inventory`, assumable only by jobs in the `production` GitHub environment, which deploys only from `main`. It can manage only this stack's resources, and the Lambda and S3 replication roles it creates must carry the `home-inventory-service-role-boundary` permissions boundary. If the stack needs a new kind of resource, widen the role in aws-foundation first, then merge here.
 
-# Enable encryption
-aws s3api put-bucket-encryption \
-  --bucket home-inventory-pulumi-state \
-  --server-side-encryption-configuration '{"Rules": [{"ApplyServerSideEncryptionByDefault": {"SSEAlgorithm": "AES256"}}]}' \
-  --profile howardtyson
+Local runs need admin credentials (`aws login --profile howardtyson-root-temp`; see aws-foundation's README).
 
-# Create KMS key for Pulumi secrets encryption
-KEY_ID=$(aws kms create-key \
-  --description "Pulumi secrets encryption for home-inventory" \
-  --profile howardtyson \
-  --query 'KeyMetadata.KeyId' \
-  --output text)
-
-# Create KMS alias
-aws kms create-alias \
-  --alias-name alias/pulumi-home-inventory \
-  --target-key-id $KEY_ID \
-  --profile howardtyson
-```
-
-**Note:** This S3 bucket stores Pulumi state files, and KMS encrypts secrets. This is the open-source approach and does NOT use Pulumi Cloud.
-
-### Step 2: Install Dependencies
+### Step 1: Install Dependencies
 
 ```bash
 cd infrastructure
 npm install
 ```
 
-### Step 3: Login to Pulumi with S3 Backend
-
-```bash
-# Export AWS credentials for Pulumi
-export AWS_PROFILE=howardtyson
-export AWS_REGION=us-east-1
-
-# Login to S3 backend (NOT Pulumi Cloud)
-pulumi login s3://home-inventory-pulumi-state
-```
-
-**Important:** Pulumi needs AWS credentials to access the S3 bucket. Make sure to export `AWS_PROFILE` and `AWS_REGION` before running `pulumi login`.
-
-### Step 4: Create Pulumi Stack with KMS Encryption
-
-```bash
-# Create stack with KMS secrets encryption
-pulumi stack init prod --secrets-provider="awskms://alias/pulumi-home-inventory?region=us-east-1"
-```
-
-**Note:** This configures Pulumi to use AWS KMS for encrypting secrets instead of a passphrase.
-
-### Step 5: Configure Stack
+### Step 2: Configure Stack
 
 ```bash
 # AWS settings
 pulumi config set aws:region us-east-1
-pulumi config set aws:profile howardtyson
 
-# Domain and GitHub repo
+# Domain
 pulumi config set domainName your-domain.com
-pulumi config set githubRepo owner/home-inventory
 
 # Secrets (encrypted in Pulumi.prod.yaml with AWS KMS)
 pulumi config set --secret googleClientId "YOUR_GOOGLE_CLIENT_ID"
 pulumi config set --secret googleClientSecret "YOUR_GOOGLE_CLIENT_SECRET"
 pulumi config set --secret anthropicApiKey "YOUR_ANTHROPIC_API_KEY"
-```
-
-**Important:** Your Pulumi state and secrets are stored in:
-- State: `s3://home-inventory-pulumi-state/` (versioned, encrypted)
-- Config: `Pulumi.prod.yaml` (local file, commit to git)
-- Secrets: Encrypted with AWS KMS key `alias/pulumi-home-inventory`
-
-**IAM Permissions Required:**
-Your AWS IAM user/role needs these KMS permissions:
-```json
-{
-  "Effect": "Allow",
-  "Action": ["kms:Decrypt", "kms:Encrypt", "kms:DescribeKey"],
-  "Resource": "arn:aws:kms:us-east-1:ACCOUNT_ID:key/KEY_ID"
-}
 ```
 
 ### Step 6: Build Lambda ZIP
@@ -193,14 +130,12 @@ The deployment is automated via GitHub Actions:
    - Uses OIDC for AWS authentication (no long-lived credentials)
    - Builds Lambda + frontend, deploys via Pulumi
 
-**Required GitHub Secrets:**
-- `GITHUB_ACTIONS_ROLE_ARN`: IAM role ARN (output from Pulumi)
+The AWS role ARN is in the workflow. **Required `production` environment secrets:**
 - `FRONTEND_BUCKET_NAME`: S3 bucket name (output from Pulumi)
 - `CLOUDFRONT_DISTRIBUTION_ID`: CloudFront distribution ID (output from Pulumi)
 
 Get these values:
 ```bash
-pulumi stack output githubActionsRoleArn
 pulumi stack output frontendBucketName
 pulumi stack output cloudFrontDistributionId
 ```
@@ -214,7 +149,6 @@ pulumi stack output
 
 Important outputs:
 - `websiteUrl`: Main website URL (https://your-domain.com)
-- `githubActionsRoleArn`: IAM role for GitHub Actions OIDC
 - `apiEndpointEast`: API Gateway endpoint (us-east-1)
 - `apiEndpointWest`: API Gateway endpoint (us-east-2)
 - `dsqlEndpointEast`: DSQL cluster endpoint (us-east-1)
@@ -277,8 +211,8 @@ error: problem logging in: read ".pulumi/meta.yaml": blob (key ".pulumi/meta.yam
 export AWS_PROFILE=howardtyson
 export AWS_REGION=us-east-1
 
-# Then run pulumi login
-pulumi login s3://home-inventory-pulumi-state
+# Then run pulumi as usual (the backend is set in Pulumi.yaml)
+pulumi preview -s prod
 ```
 
 **Alternative:** Add to your `~/.bashrc` or `~/.zshrc`:

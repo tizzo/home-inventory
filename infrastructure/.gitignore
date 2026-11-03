@@ -8,6 +8,6 @@ dist/
 
 # Commit Pulumi config files (secrets are encrypted with AWS KMS)
 # Pulumi.*.yaml files should be committed to share configuration
-# State itself is stored in S3: s3://home-inventory-pulumi-state
+# State itself is stored in S3: s3://howardtyson-pulumi-state (see Pulumi.yaml)
 
 .env

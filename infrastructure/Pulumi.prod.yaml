@@ -1,17 +1,16 @@
-secretsprovider: awskms://alias/pulumi-home-inventory?region=us-east-1
-encryptedkey: AQICAHgDDgi3caQzg46G94N+iyAQ46qNNDa2AD6alEyAmz+ibgFWkiM6KqakkNDo1b943wEXAAAAfjB8BgkqhkiG9w0BBwagbzBtAgEAMGgGCSqGSIb3DQEHATAeBglghkgBZQMEAS4wEQQMyCqMdPHAkgu4V9abAgEQgDudG1xSK0FB3n3koS406EPNZXYIec8TX39Hpt1Et39JyzGuUSsATI4mzCyPiBvchUrz1xmPS1aZ/WVOJw==
+secretsprovider: awskms://alias/howardtyson-pulumi-secrets?region=us-east-1
+encryptedkey: AQICAHhscBFowxEQ3zlLVBpfupJRK1mzuxVuvq0oc6HmjbxzkwGAhdFnqBFiAcmr0Jt7R7lMAAAAfjB8BgkqhkiG9w0BBwagbzBtAgEAMGgGCSqGSIb3DQEHATAeBglghkgBZQMEAS4wEQQMrKx3ZGcSqzk0mVNSAgEQgDvIpmnBWPXMBd7rNdX90VpiL5H4226NdrQmzjSKEB/IeJO0d89ctHfDdbK4GuNksCASSopkdHRiBeinkQ==
 config:
   aws:region: us-east-1
   home-inventory-infrastructure:domainName: inventory.howardandcara.com
-  home-inventory-infrastructure:githubRepo: tizzo/home-inventory
   home-inventory-infrastructure:googleClientId:
-    secure: v1:EeL/Wx0TFEavzJ7c:iJ9Na6dfLNddPebYPz2qt5K8IaMN2vp/pAscxwW7hiARD1/oqLW5bongFW7PtfTKWY5rpo+HNp3+TeJeS7C7g5MZKViHKmMpvdSpAfcLoC3lY+MCOHSM3g==
+    secure: v1:LAhBSjuSeWe0w7C4:P428PD2XjxzJF3mllXEfoFIUXBbXH87uvoPXkULqhrbL60NZ8aJX0+wXFLtq5pqStoYy7Sdx6vnyEUYtyzHUut5slegGH3MONImgGvUFIoImn0tvMZsVLQ==
   home-inventory-infrastructure:googleClientSecret:
-    secure: v1:KpSVwzhop14ehC2x:eTAWi/2aSIMmuj0Y/SZKNqwC1eFCOI11n5q/KtUmyxfdx0uHDpfVeoDFk2an9oxJNEbL
+    secure: v1:H17Xzbhpcx9qc5r/:xFdE6NCoBr8aBKmXysrEigeuucG7TXmp7kCzOMzBnoGeQTrta9R0Z2v2RWpRMQZn9ira
   home-inventory-infrastructure:anthropicApiKey:
-    secure: v1:Ix4ENBTQV9cPOQF5:KujDTj1B8ndpmZssGtY8H8u2KRCvXh/lw3DTnH1ad3tVllRmok8FZLRpCKRZmU7OWzaZh/9vy9Z4fA2+ABtz0DrEhl5jFX6o1MRZ8sPp+H+2EymVyPHAClfkBD2TyH4hPRW2ksE4V5x7UnfpkT6r+UizNHp5JDNff2vWbw==
+    secure: v1:TkycAqvCTOp2oE6M:lNrSMC0msk5QhSc/it/mJglxp/xfYC3t6WEQGiRgnnbakAyAQboERymqkjgGn/HcC8EYxUtclFBkxMkAvCz4rCsGaxk6LaJj72vh2yvnBv9FQzRrBCUf0SxZfvUiIhsgBcb55dKLLx6+9AmBGSNXMfSVdr8tnLxDiTjvUg==
   home-inventory-infrastructure:eastClusterArn: arn:aws:dsql:us-east-1:168450803450:cluster/qztqmt73cfahn2wcry72xe554q
   home-inventory-infrastructure:westClusterArn: arn:aws:dsql:us-east-2:168450803450:cluster/hbtqmt72rcirbbxtuxhbki2axm
   home-inventory-infrastructure:recaptchaSecretKey:
-    secure: v1:cPFZtvnOhpwlzIdT:0W0E8AGRAzjjdM8gH+asL5q5G1E8DjJV7zWyG5P9Oy2MwfRID+idaAqLXusTZ9XoQspjj4/g0OY=
+    secure: v1:bJ5ty4UYEZvZqR41:4SOYNnlBQkF4pQNfaUX8wmxuUhIQwDcjuf1LBzFAd4x8r+0R2RCMgxrlGv9iGd+AkCWJopV30m0=
   home-inventory-infrastructure:allowedEmails: howard@howardtyson.com

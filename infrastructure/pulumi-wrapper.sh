@@ -5,8 +5,7 @@ set -euo pipefail
 export AWS_PROFILE="${AWS_PROFILE:-howardtyson}"
 export AWS_REGION="${AWS_REGION:-us-east-1}"
 
-# Set Pulumi S3 backend (eliminates need for 'pulumi login')
-export PULUMI_BACKEND_URL="${PULUMI_BACKEND_URL:-s3://home-inventory-pulumi-state}"
+# The state backend is set in Pulumi.yaml (the shared howardtyson-pulumi-state bucket)
 
 # Change to infrastructure directory (where Pulumi.yaml lives)
 cd "$(dirname "$0")" || {

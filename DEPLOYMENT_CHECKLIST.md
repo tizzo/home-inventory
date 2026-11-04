@@ -1,5 +1,7 @@
 # AWS Deployment Checklist
 
+> **Superseded for state, secrets and CI access:** the stack now uses the shared `howardtyson-pulumi-state` backend, KMS `alias/howardtyson-pulumi-secrets` and the `gha-home-inventory` deploy role from `tizzo/aws-foundation`. See `infrastructure/README.md`; ignore the bucket, KMS and role setup steps below.
+
 Quick reference checklist for deploying the home inventory application to AWS.
 
 ## ✅ Prerequisites Completed

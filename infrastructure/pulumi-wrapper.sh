@@ -1,12 +1,22 @@
 #! /usr/bin/env bash
 set -euo pipefail
 
-# Set AWS credentials
-export AWS_PROFILE="${AWS_PROFILE:-howardtyson}"
+# Admin credentials from an `aws login` session (see infrastructure/README.md).
+# They are exported as plain env vars rather than via AWS_PROFILE, because the
+# aws-native provider would otherwise record the profile name in stack state
+# and CI (which has no such profile) would then diff against it.
+profile="${PULUMI_AWS_PROFILE:-howardtyson-root-temp}"
+# Assigned separately so a failed export (e.g. an expired login) stops here;
+# `eval "$(...)"` would succeed on empty output and fall back to ambient creds.
+if ! creds="$(aws configure export-credentials --profile "$profile" --format env)" || [[ -z "$creds" ]]; then
+  echo "Error: no credentials for profile $profile; run: aws login --profile $profile" >&2
+  exit 1
+fi
+eval "$creds"
+unset AWS_PROFILE
 export AWS_REGION="${AWS_REGION:-us-east-1}"
 
-# Set Pulumi S3 backend (eliminates need for 'pulumi login')
-export PULUMI_BACKEND_URL="${PULUMI_BACKEND_URL:-s3://home-inventory-pulumi-state}"
+# The state backend is set in Pulumi.yaml (the shared howardtyson-pulumi-state bucket)
 
 # Change to infrastructure directory (where Pulumi.yaml lives)
 cd "$(dirname "$0")" || {

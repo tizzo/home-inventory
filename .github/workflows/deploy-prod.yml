@@ -10,7 +10,6 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  id-token: write
   contents: read
 
 jobs:
@@ -80,7 +79,14 @@ jobs:
   deploy-infrastructure:
     needs: [build-lambda, build-frontend]
     runs-on: ubuntu-latest
+    # The AWS role (gha-home-inventory, defined in tizzo/aws-foundation) trusts
+    # only jobs in this environment, and the environment deploys only from main.
+    # Keep id-token here, not at the workflow level, so build jobs and their
+    # third-party actions and dependencies never get a token.
     environment: production
+    permissions:
+      id-token: write
+      contents: read
     steps:
       - uses: actions/checkout@v4
 
@@ -99,7 +105,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-to-assume: arn:aws:iam::168450803450:role/github-actions/gha-home-inventory
           aws-region: us-east-1
 
       - uses: pulumi/actions@v5
@@ -108,15 +114,11 @@ jobs:
         working-directory: infrastructure
         run: npm ci
 
-      - name: Pulumi Login (S3 backend)
-        run: pulumi login s3://home-inventory-pulumi-state
-        working-directory: infrastructure
-
       - name: Pulumi Up
         run: pulumi up --stack prod --yes
         working-directory: infrastructure
-        # Note: GitHub Actions uses OIDC role which has KMS permissions
-        # No passphrase needed - secrets decrypted via AWS KMS
+        # State backend and KMS secrets provider come from Pulumi.yaml and
+        # Pulumi.prod.yaml; the role can use both.
 
       - name: Deploy frontend to S3
         run: |

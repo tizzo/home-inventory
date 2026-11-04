@@ -13,7 +13,6 @@ const config = new pulumi.Config();
 
 const stackConfig: StackConfig = {
   domainName: config.require("domainName"),
-  githubRepo: config.require("githubRepo"),
   googleClientId: config.requireSecret("googleClientId"),
   googleClientSecret: config.requireSecret("googleClientSecret"),
   anthropicApiKey: config.requireSecret("anthropicApiKey"),
@@ -51,7 +50,6 @@ const photoBucketArnPlaceholder = pulumi.output(
 );
 
 const iamOutputs = createIAMResources(
-  stackConfig,
   photoBucketArnPlaceholder,
   databaseOutputs.dsqlClusterEast.arn,
   databaseOutputs.dsqlClusterWest.arn,
@@ -82,7 +80,6 @@ const cloudFrontOutputs = createCloudFront(
 createMonitoring(providers, lambdaOutputs);
 
 // Export important values for GitHub Actions and manual reference
-export const githubActionsRoleArn = iamOutputs.githubActionsRole.arn;
 export const frontendBucketName = storageOutputs.frontendBucket.id;
 export const photoBucketName = storageOutputs.photoBucket.id;
 export const cloudFrontDistributionId = cloudFrontOutputs.distributionId;

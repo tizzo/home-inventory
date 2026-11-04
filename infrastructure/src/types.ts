@@ -3,7 +3,6 @@ import * as aws from "@pulumi/aws";
 
 export interface StackConfig {
   domainName: string;
-  githubRepo: string;
   googleClientId: pulumi.Output<string>;
   googleClientSecret: pulumi.Output<string>;
   anthropicApiKey: pulumi.Output<string>;
@@ -47,7 +46,6 @@ export interface LambdaOutputs {
 
 export interface IAMOutputs {
   lambdaRole: aws.iam.Role;
-  githubActionsRole: aws.iam.Role;
   s3ReplicationRole: aws.iam.Role;
 }
 

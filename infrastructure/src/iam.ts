@@ -1,9 +1,11 @@
 import * as pulumi from "@pulumi/pulumi";
 import * as aws from "@pulumi/aws";
-import { StackConfig, IAMOutputs, RegionProviders } from "./types.js";
+import { IAMOutputs, RegionProviders } from "./types.js";
+
+const SERVICE_ROLE_BOUNDARY =
+  "arn:aws:iam::168450803450:policy/home-inventory-service-role-boundary";
 
 export function createIAMResources(
-  config: StackConfig,
   photoBucketArn: pulumi.Output<string>,
   dsqlClusterEastArn: pulumi.Output<string>,
   dsqlClusterWestArn: pulumi.Output<string>,
@@ -12,6 +14,9 @@ export function createIAMResources(
   // Lambda execution role
   // Note: IAM is global but we use east provider to apply default tags
   const lambdaRole = new aws.iam.Role("lambda-execution-role", {
+    // Capped by a boundary managed in aws-foundation; the CI deploy role may only
+    // create or change roles that carry it.
+    permissionsBoundary: SERVICE_ROLE_BOUNDARY,
     assumeRolePolicy: JSON.stringify({
       Version: "2012-10-17",
       Statement: [
@@ -76,66 +81,15 @@ export function createIAMResources(
     policyArn: "arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess",
   }, { provider: providers.east });
 
-  // GitHub OIDC provider
-  const githubOIDC = new aws.iam.OpenIdConnectProvider("github-oidc", {
-    url: "https://token.actions.githubusercontent.com",
-    clientIdLists: ["sts.amazonaws.com"],
-    thumbprintLists: ["6938fd4d98bab03faadb97b34396831e3780aea1"],
-  }, { provider: providers.east });
-
-  // GitHub Actions role
-  const githubActionsRole = new aws.iam.Role("github-actions-role", {
-    assumeRolePolicy: pulumi.interpolate`{
-      "Version": "2012-10-17",
-      "Statement": [{
-        "Effect": "Allow",
-        "Principal": { "Federated": "${githubOIDC.arn}" },
-        "Action": "sts:AssumeRoleWithWebIdentity",
-        "Condition": {
-          "StringEquals": {
-            "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
-          },
-          "StringLike": {
-            "token.actions.githubusercontent.com:sub": "repo:${config.githubRepo}:*"
-          }
-        }
-      }]
-    }`,
-  }, { provider: providers.east });
-
-  // Broad permissions for initial deployment (narrow down later)
-  new aws.iam.RolePolicyAttachment("github-admin", {
-    role: githubActionsRole.name,
-    policyArn: "arn:aws:iam::aws:policy/AdministratorAccess",
-  }, { provider: providers.east });
-
-  // KMS permissions for Pulumi secrets encryption/decryption
-  new aws.iam.RolePolicy("github-kms-policy", {
-    role: githubActionsRole.id,
-    policy: JSON.stringify({
-      Version: "2012-10-17",
-      Statement: [
-        {
-          Effect: "Allow",
-          Action: ["kms:Decrypt", "kms:Encrypt", "kms:DescribeKey"],
-          Resource: "arn:aws:kms:*:*:key/*",
-          Condition: {
-            StringEquals: {
-              "kms:RequestAlias": "alias/pulumi-home-inventory",
-            },
-          },
-        },
-        {
-          Effect: "Allow",
-          Action: ["kms:ListAliases"],
-          Resource: "*",
-        },
-      ],
-    }),
-  }, { provider: providers.east });
+  // GitHub Actions deploys through the gha-home-inventory role in
+  // tizzo/aws-foundation, which also scopes what it may manage here. The GitHub
+  // OIDC provider is shared by every repo, so this stack no longer owns it.
 
   // S3 replication role
   const s3ReplicationRole = new aws.iam.Role("s3-replication-role", {
+    // Capped by a boundary managed in aws-foundation; the CI deploy role may only
+    // create or change roles that carry it.
+    permissionsBoundary: SERVICE_ROLE_BOUNDARY,
     assumeRolePolicy: JSON.stringify({
       Version: "2012-10-17",
       Statement: [
@@ -150,7 +104,6 @@ export function createIAMResources(
 
   return {
     lambdaRole,
-    githubActionsRole,
     s3ReplicationRole,
   };
 }

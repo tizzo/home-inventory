@@ -6,10 +6,13 @@ set -euo pipefail
 # aws-native provider would otherwise record the profile name in stack state
 # and CI (which has no such profile) would then diff against it.
 profile="${PULUMI_AWS_PROFILE:-howardtyson-root-temp}"
-eval "$(aws configure export-credentials --profile "$profile" --format env)" || {
-  echo "Error: no credentials for profile $profile; run: aws login --profile $profile"
+# Assigned separately so a failed export (e.g. an expired login) stops here;
+# `eval "$(...)"` would succeed on empty output and fall back to ambient creds.
+if ! creds="$(aws configure export-credentials --profile "$profile" --format env)" || [[ -z "$creds" ]]; then
+  echo "Error: no credentials for profile $profile; run: aws login --profile $profile" >&2
   exit 1
-}
+fi
+eval "$creds"
 unset AWS_PROFILE
 export AWS_REGION="${AWS_REGION:-us-east-1}"
 

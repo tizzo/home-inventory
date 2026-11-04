@@ -48,7 +48,14 @@ These are shared with every personal Pulumi repo and live in [`tizzo/aws-foundat
 - Secrets: KMS `alias/howardtyson-pulumi-secrets` (set in `Pulumi.prod.yaml`)
 - CI deploy role: `gha-home-inventory`, assumable only by jobs in the `production` GitHub environment, which deploys only from `main`. It can manage only this stack's resources, and the Lambda and S3 replication roles it creates must carry the `home-inventory-service-role-boundary` permissions boundary. If the stack needs a new kind of resource, widen the role in aws-foundation first, then merge here.
 
-Local runs need admin credentials (`aws login --profile howardtyson-root-temp`; see aws-foundation's README).
+Local runs need admin credentials (the everyday `howardtyson` profile is the limited `site-publisher` and cannot manage this stack). Log in, then run Pulumi through the wrapper, which exports that session's credentials:
+
+```bash
+aws login --profile howardtyson-root-temp
+./pulumi-wrapper.sh preview -s prod
+```
+
+Set `PULUMI_AWS_PROFILE` to use a different admin profile. Avoid running plain `pulumi` with `AWS_PROFILE` set: the aws-native provider records the profile name in state, and CI then sees a spurious diff.
 
 ### Step 1: Install Dependencies
 
@@ -207,18 +214,8 @@ error: problem logging in: read ".pulumi/meta.yaml": blob (key ".pulumi/meta.yam
 
 **Solution:**
 ```bash
-# Export AWS credentials before running pulumi commands
-export AWS_PROFILE=howardtyson
-export AWS_REGION=us-east-1
-
-# Then run pulumi as usual (the backend is set in Pulumi.yaml)
-pulumi preview -s prod
-```
-
-**Alternative:** Add to your `~/.bashrc` or `~/.zshrc`:
-```bash
-export AWS_PROFILE=howardtyson
-export AWS_REGION=us-east-1
+aws login --profile howardtyson-root-temp
+./pulumi-wrapper.sh preview -s prod
 ```
 
 ### Lambda "bootstrap: no such file or directory"

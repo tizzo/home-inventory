@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use std::env;
 use std::sync::Arc;
-use tower_http::cors::{Any, CorsLayer};
+use tower_http::cors::CorsLayer;
 use tower_sessions::{Expiry, SessionManagerLayer};
 use tower_sessions_sqlx_store::PostgresStore;
 
@@ -171,11 +171,19 @@ pub async fn create_app(db: PgPool) -> anyhow::Result<Router> {
         family_initial,
     });
 
-    // Configure CORS for local development
+    // Restrict CORS to the frontend origin. Production serves the frontend and
+    // API from the same origin, so this only matters for cross-origin callers.
     let cors = CorsLayer::new()
-        .allow_origin(Any)
+        .allow_origin(
+            state
+                .app_base_url
+                .trim_end_matches('/')
+                .parse::<header::HeaderValue>()
+                .map_err(|e| anyhow::anyhow!("APP_BASE_URL is not a valid origin: {}", e))?,
+        )
         .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE])
-        .allow_headers([header::CONTENT_TYPE, header::AUTHORIZATION]);
+        .allow_headers([header::CONTENT_TYPE, header::AUTHORIZATION])
+        .allow_credentials(true);
 
     use tower_sessions::cookie::SameSite;
 
@@ -193,9 +201,15 @@ pub async fn create_app(db: PgPool) -> anyhow::Result<Router> {
         }
     }
 
+    // Only send the session cookie over HTTPS when the app is served over HTTPS.
+    // Local development runs on plain http://localhost.
+    let cookie_secure = state.app_base_url.starts_with("https://");
+
+    // SameSite must stay Lax: the OAuth callback is a cross-site redirect from
+    // Google and needs the session cookie to verify the CSRF token.
     let session_layer = SessionManagerLayer::new(session_store)
-        .with_secure(false) // Keep false for localhost (http)
-        .with_same_site(SameSite::Lax) // Allow cookies on redirects from external sites
+        .with_secure(cookie_secure)
+        .with_same_site(SameSite::Lax)
         .with_expiry(Expiry::OnInactivity(time::Duration::days(1)));
 
     // Public routes (no authentication required)

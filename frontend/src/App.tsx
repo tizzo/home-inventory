@@ -5,6 +5,9 @@ import { ThemeProvider } from './context/ThemeContext';
 import {
   HomePage,
   RoomsPage,
+  FloorPlansPage,
+  FloorPlanUploadPage,
+  FloorPlanDetailPage,
   ShelvingUnitsPage,
   ShelvesPage,
   ContainersPage,
@@ -54,6 +57,10 @@ function App() {
 
                 {/* Protected Routes */}
                 <Route element={<ProtectedRoute />}>
+                  <Route path="/floor-plans" element={<FloorPlansPage />} />
+                  <Route path="/floor-plans/new" element={<FloorPlanUploadPage />} />
+                  <Route path="/floor-plans/:id" element={<FloorPlanDetailPage />} />
+                  <Route path="/floor-plans/:id/edit" element={<FloorPlanDetailPage />} />
                   <Route path="/rooms" element={<RoomsPage />} />
                   <Route path="/rooms/:roomId/edit" element={<RoomsPage />} />
                   <Route path="/units" element={<ShelvingUnitsPage />} />

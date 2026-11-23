@@ -1,4 +1,5 @@
 export * from './useRooms';
+export * from './useFloorPlans';
 export * from './useShelvingUnits';
 export * from './useShelves';
 export * from './useContainers';

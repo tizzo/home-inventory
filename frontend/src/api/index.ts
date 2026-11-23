@@ -1,5 +1,6 @@
 export { default as apiClient } from './client';
 export { roomsApi } from './rooms';
+export { floorPlansApi } from './floorPlans';
 export { shelvingUnitsApi } from './shelvingUnits';
 export { shelvesApi } from './shelves';
 export { containersApi } from './containers';

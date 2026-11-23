@@ -117,6 +117,21 @@ All entity types have full CRUD operations implemented:
   - QR code scanning in EntitySelector
   - Label assignment to entities
 
+### Floor Plans
+- **Backend** ✓
+  - Floor plan image upload (PNG, JPEG, WebP up to 7 MB)
+  - Rooms link to a floor plan through `rooms.floor_plan_id`
+  - One position per shelving unit, always on its room's floor plan
+  - Positions are cleared when a unit or room is deleted, a unit changes
+    rooms, or a room is linked to a different plan
+  - AI placement suggestions (requires `ANTHROPIC_API_KEY`)
+
+- **Frontend** ✓
+  - `/floor-plans` list, `/floor-plans/new` upload
+  - `/floor-plans/:id` view with search (`?q=`) and unit selection (`?unit=`)
+  - `/floor-plans/:id/edit` to link rooms, place and drag units, review AI suggestions
+  - Links from room and shelving unit cards
+
 ### Reusable Components (100%)
 - **EntitySelector** ✓
   - Fuzzy search

@@ -64,6 +64,7 @@ npm run lint               # ESLint (fix new issues only)
 - ✅ AI-powered item recognition (Claude Vision)
 - ✅ Audit logging with user tracking
 - ✅ Move operations between locations
+- ✅ Floor plans with shelving unit placement and AI suggestions
 - ⏳ Tag management (backend ready, UI needed)
 - ⏳ Search/filtering (basic only)
 

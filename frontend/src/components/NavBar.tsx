@@ -27,6 +27,7 @@ interface NavLink {
 const navLinks: NavLink[] = [
   { to: '/', label: 'Home' },
   { to: '/rooms', label: 'Rooms', requiresAuth: true },
+  { to: '/floor-plans', label: 'Floor Plans', requiresAuth: true },
   { to: '/units', label: 'Units', requiresAuth: true },
   { to: '/shelves', label: 'Shelves', requiresAuth: true },
   { to: '/containers', label: 'Containers', requiresAuth: true },

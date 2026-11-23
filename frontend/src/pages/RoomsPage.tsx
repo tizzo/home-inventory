@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { useRooms, useCreateRoom, useUpdateRoom, useDeleteRoom, usePhotos } from '../hooks';
+import { useQueryClient } from '@tanstack/react-query';
+import { useRooms, useCreateRoom, useUpdateRoom, useDeleteRoom, usePhotos, useFloorPlans } from '../hooks';
 import { Modal, PhotoUpload, PhotoGallery, Pagination } from '../components';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,6 +16,8 @@ export default function RoomsPage() {
   const [pagination, setPagination] = useState({ limit: 50, offset: 0 });
   const { data: roomsResponse, isLoading, error } = useRooms(pagination);
   const rooms = roomsResponse?.data || [];
+  const { data: floorPlans } = useFloorPlans();
+  const queryClient = useQueryClient();
   const createRoom = useCreateRoom();
   const updateRoom = useUpdateRoom();
   const deleteRoom = useDeleteRoom();
@@ -24,9 +27,11 @@ export default function RoomsPage() {
     name: '',
     description: '',
   });
+  // floor_plan_id is always sent as a string: '' means "not on a floor plan"
   const [editFormData, setEditFormData] = useState<UpdateRoomRequest>({
     name: '',
     description: '',
+    floor_plan_id: '',
   });
 
   // Get the room being edited from URL - need to fetch it separately if not in current page
@@ -38,6 +43,7 @@ export default function RoomsPage() {
       setEditFormData({
         name: editingRoom.name,
         description: editingRoom.description || '',
+        floor_plan_id: editingRoom.floor_plan_id || '',
       });
     }
   }, [roomId, editingRoom]);
@@ -63,7 +69,9 @@ export default function RoomsPage() {
         id: roomId,
         data: editFormData,
       });
-      setEditFormData({ name: '', description: '' });
+      // The room may have joined or left a floor plan
+      queryClient.invalidateQueries({ queryKey: ['floor-plans'] });
+      setEditFormData({ name: '', description: '', floor_plan_id: '' });
       navigate('/rooms'); // Close modal by navigating back
     } catch (err) {
       console.error('Failed to update room:', err);
@@ -92,7 +100,7 @@ export default function RoomsPage() {
 
   const closeEditModal = () => {
     navigate('/rooms');
-    setEditFormData({ name: '', description: '' });
+    setEditFormData({ name: '', description: '', floor_plan_id: '' });
   };
 
   const openCreateModal = () => {
@@ -123,6 +131,7 @@ export default function RoomsPage() {
   }) {
     const { data: photos } = usePhotos('room', room.id);
     const firstPhoto = photos && photos.length > 0 ? photos[0] : null;
+    const floorPlan = floorPlans?.find((fp) => fp.id === room.floor_plan_id);
 
     return (
       <Card className="overflow-hidden hover:shadow-lg transition-shadow">
@@ -185,6 +194,11 @@ export default function RoomsPage() {
             <Link to={`/rooms/${room.id}/items`} className="text-xs px-2 py-1 rounded border border-border hover:bg-accent">
               Items
             </Link>
+            {floorPlan && (
+              <Link to={`/floor-plans/${floorPlan.id}`} className="text-xs px-2 py-1 rounded border border-border hover:bg-accent">
+                Floor Plan: {floorPlan.name}
+              </Link>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -296,6 +310,31 @@ export default function RoomsPage() {
               rows={3}
             />
           </div>
+
+          {floorPlans && floorPlans.length > 0 && (
+            <div className="space-y-2">
+              <Label htmlFor="edit-floor-plan">Floor Plan</Label>
+              <select
+                id="edit-floor-plan"
+                value={editFormData.floor_plan_id ?? ''}
+                onChange={(e) =>
+                  setEditFormData({ ...editFormData, floor_plan_id: e.target.value })
+                }
+                className="h-9 w-full rounded-md border border-input bg-transparent dark:bg-input/30 px-3 text-sm text-foreground shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+              >
+                <option value="">Not on a floor plan</option>
+                {floorPlans.map((fp) => (
+                  <option key={fp.id} value={fp.id}>
+                    {fp.name}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-muted-foreground">
+                Changing this clears where the room's shelving units were placed on
+                the previous plan.
+              </p>
+            </div>
+          )}
 
           {editingRoom && (
             <div>

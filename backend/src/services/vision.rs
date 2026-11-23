@@ -5,6 +5,13 @@ use std::env;
 
 use crate::models::{ItemImportDraftItem, LocationUpdateProposal};
 
+/// Model used for all vision requests.
+const VISION_MODEL: &str = "claude-sonnet-5-5";
+
+/// Output cap for a vision request. Thinking tokens count toward this, so it
+/// leaves room for reasoning plus the JSON answer.
+const VISION_MAX_TOKENS: u32 = 16000;
+
 pub struct VisionService {
     client: Client,
     api_key: String,
@@ -20,7 +27,13 @@ pub enum LocationType {
 struct AnthropicRequest {
     model: String,
     max_tokens: u32,
+    output_config: OutputConfig,
     messages: Vec<Message>,
+}
+
+#[derive(Debug, Serialize)]
+struct OutputConfig {
+    effort: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -49,6 +62,8 @@ struct ImageSource {
 #[derive(Debug, Deserialize)]
 struct AnthropicResponse {
     content: Vec<ResponseContent>,
+    #[serde(default)]
+    stop_reason: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -112,8 +127,12 @@ impl VisionService {
         content_blocks.push(Content::Text { text: prompt });
 
         let request = AnthropicRequest {
-            model: "claude-sonnet-4-20250514".to_string(),
-            max_tokens: 4096,
+            model: VISION_MODEL.to_string(),
+            max_tokens: VISION_MAX_TOKENS,
+            // Listing what is in a photo is a simple extraction task
+            output_config: OutputConfig {
+                effort: "low".to_string(),
+            },
             messages: vec![Message {
                 role: "user".to_string(),
                 content: content_blocks,
@@ -150,15 +169,34 @@ impl VisionService {
         }
 
         let anthropic_response: AnthropicResponse = response.json().await?;
-
-        let text = anthropic_response
-            .content
-            .into_iter()
-            .find_map(|c| c.text)
-            .ok_or_else(|| anyhow::anyhow!("No text response from Anthropic"))?;
+        let text = response_text(anthropic_response)?;
 
         parse_items_from_response(&text)
     }
+}
+
+/// Pull the answer text out of a response, turning refusals and truncated
+/// output into errors instead of trying to parse them.
+fn response_text(response: AnthropicResponse) -> anyhow::Result<String> {
+    match response.stop_reason.as_deref() {
+        Some("refusal") => {
+            return Err(anyhow::anyhow!(
+                "The AI service declined to analyze this image."
+            ));
+        }
+        Some("max_tokens") => {
+            return Err(anyhow::anyhow!(
+                "The AI response was cut off before it finished. Please try again."
+            ));
+        }
+        _ => {}
+    }
+
+    response
+        .content
+        .into_iter()
+        .find_map(|c| c.text)
+        .ok_or_else(|| anyhow::anyhow!("No text response from Anthropic"))
 }
 
 fn build_prompt(hint: Option<&str>, location_type: LocationType) -> String {
@@ -265,6 +303,32 @@ fn base64_encode(bytes: &[u8]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn response(json: &str) -> AnthropicResponse {
+        serde_json::from_str(json).unwrap()
+    }
+
+    #[test]
+    fn test_response_text_skips_thinking_blocks() {
+        let r = response(
+            r#"{"content":[{"type":"thinking","thinking":""},{"type":"text","text":"hello"}],"stop_reason":"end_turn"}"#,
+        );
+        assert_eq!(response_text(r).unwrap(), "hello");
+    }
+
+    #[test]
+    fn test_response_text_rejects_refusal() {
+        let r = response(r#"{"content":[],"stop_reason":"refusal"}"#);
+        assert!(response_text(r).is_err());
+    }
+
+    #[test]
+    fn test_response_text_rejects_truncated_output() {
+        let r = response(
+            r#"{"content":[{"type":"text","text":"{\"items\": ["}],"stop_reason":"max_tokens"}"#,
+        );
+        assert!(response_text(r).is_err());
+    }
 
     #[test]
     fn test_base64_encode() {

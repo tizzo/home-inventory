@@ -14,6 +14,7 @@ use crate::models::{
     BulkCreateItemsRequest, BulkCreateItemsResponse, CreateItemRequest, Item, ItemResponse,
     PaginatedResponse, PaginationQuery, PublicItemResponse, UpdateItemRequest,
 };
+use crate::services::s3::image_extension;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize)]
@@ -847,11 +848,10 @@ pub async fn get_file_upload_url(
     // Generate S3 key
     let file_extension = match payload.content_type.as_str() {
         "application/pdf" => "pdf",
-        ct if ct.starts_with("image/") => ct.strip_prefix("image/").unwrap_or("jpg"),
-        _ => {
+        ct => image_extension(ct).ok_or_else(|| {
             tracing::warn!("Unsupported content type: {}", payload.content_type);
-            return Err(StatusCode::BAD_REQUEST);
-        }
+            StatusCode::BAD_REQUEST
+        })?,
     };
 
     let s3_key = format!(

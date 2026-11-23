@@ -12,6 +12,7 @@ use uuid::Uuid;
 use crate::app::AppState;
 use crate::middleware::auth::AuthUser;
 use crate::models::{CreatePhotoRequest, Photo, PhotoResponse, PresignedUploadUrl};
+use crate::services::s3::image_extension;
 
 #[derive(Deserialize)]
 pub struct GetPhotosQuery {
@@ -26,6 +27,7 @@ pub struct UploadUrlRequest {
 
 /// Get presigned URL for uploading a photo
 pub async fn get_upload_url(
+    _user: AuthUser,
     State(state): State<Arc<AppState>>,
     Query(params): Query<GetPhotosQuery>,
     Json(payload): Json<UploadUrlRequest>,
@@ -36,6 +38,10 @@ pub async fn get_upload_url(
     })?;
 
     let content_type = &payload.content_type;
+    if image_extension(content_type).is_none() {
+        tracing::warn!("Unsupported photo content type: {}", content_type);
+        return Err(StatusCode::BAD_REQUEST);
+    }
 
     let (upload_url, s3_key) = state
         .s3

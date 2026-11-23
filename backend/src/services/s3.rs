@@ -10,6 +10,22 @@ pub struct S3Service {
     endpoint_url: Option<String>,
 }
 
+/// File extension for an allowed image upload content type.
+///
+/// Returns `None` for anything outside the allowlist so callers can reject the
+/// upload instead of storing a file of unknown type.
+pub fn image_extension(content_type: &str) -> Option<&'static str> {
+    match content_type {
+        "image/jpeg" | "image/jpg" => Some("jpg"),
+        "image/png" => Some("png"),
+        "image/webp" => Some("webp"),
+        "image/gif" => Some("gif"),
+        "image/heic" => Some("heic"),
+        "image/heif" => Some("heif"),
+        _ => None,
+    }
+}
+
 impl S3Service {
     pub async fn new() -> anyhow::Result<Self> {
         let bucket = env::var("S3_BUCKET").unwrap_or_else(|_| "home-inventory-photos".to_string());
@@ -83,15 +99,9 @@ impl S3Service {
         entity_id: Uuid,
         content_type: &str,
     ) -> anyhow::Result<(String, String)> {
-        // Generate unique S3 key
+        let extension = image_extension(content_type)
+            .ok_or_else(|| anyhow::anyhow!("Unsupported content type: {}", content_type))?;
         let file_id = Uuid::new_v4();
-        let extension = match content_type {
-            ct if ct.starts_with("image/jpeg") => "jpg",
-            ct if ct.starts_with("image/png") => "png",
-            ct if ct.starts_with("image/webp") => "webp",
-            ct if ct.starts_with("image/gif") => "gif",
-            _ => "bin",
-        };
         let s3_key = format!("{}/{}/{}.{}", entity_type, entity_id, file_id, extension);
 
         tracing::debug!(

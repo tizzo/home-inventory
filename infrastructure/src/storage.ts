@@ -2,6 +2,40 @@ import * as pulumi from "@pulumi/pulumi";
 import * as aws from "@pulumi/aws";
 import { StackConfig, RegionProviders, StorageOutputs, IAMOutputs } from "./types.js";
 
+
+// Refuse any request not made over HTTPS. Presigned URLs and CloudFront
+// (redirect-to-https) already use it; this rules out a misconfiguration.
+function denyInsecureTransport(bucketArn: string) {
+  return {
+    Sid: "DenyInsecureTransport",
+    Effect: "Deny",
+    Principal: "*",
+    Action: "s3:*",
+    Resource: [bucketArn, `${bucketArn}/*`],
+    Condition: { Bool: { "aws:SecureTransport": "false" } },
+  };
+}
+
+function tlsOnlyPolicy(
+  name: string,
+  bucket: aws.s3.BucketV2,
+  provider: aws.Provider
+) {
+  return new aws.s3.BucketPolicy(
+    name,
+    {
+      bucket: bucket.id,
+      policy: bucket.arn.apply((arn) =>
+        JSON.stringify({
+          Version: "2012-10-17",
+          Statement: [denyInsecureTransport(arn)],
+        })
+      ),
+    },
+    { provider }
+  );
+}
+
 export function createStorage(
   config: StackConfig,
   providers: RegionProviders,
@@ -51,6 +85,7 @@ export function createStorage(
                 Action: "s3:GetObject",
                 Resource: `${bucketArn}/*`,
               },
+              denyInsecureTransport(bucketArn),
             ],
           })
         ),
@@ -93,6 +128,9 @@ export function createStorage(
     },
     { provider: providers.west }
   );
+
+  tlsOnlyPolicy("photos-policy", photoBucket, providers.east);
+  tlsOnlyPolicy("photos-replica-policy", photoBucketReplica, providers.west);
 
   // S3 replication policy
   new aws.iam.RolePolicy("s3-replication-policy", {

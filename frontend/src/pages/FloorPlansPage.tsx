@@ -78,7 +78,7 @@ export default function FloorPlansPage() {
                   <Button variant="secondary" size="sm" asChild>
                     <Link to={`/floor-plans/${floorPlan.id}`}>View</Link>
                   </Button>
-                  <Button variant="outline" size="sm" asChild>
+                  <Button variant="outline" size="sm" className="text-foreground" asChild>
                     <Link to={`/floor-plans/${floorPlan.id}/edit`}>Place Units</Link>
                   </Button>
                   <Button

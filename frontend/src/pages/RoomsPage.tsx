@@ -320,7 +320,7 @@ export default function RoomsPage() {
                 onChange={(e) =>
                   setEditFormData({ ...editFormData, floor_plan_id: e.target.value })
                 }
-                className="h-9 w-full rounded-md border border-input bg-transparent dark:bg-input/30 px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                className="h-9 w-full rounded-md border border-input bg-transparent dark:bg-input/30 px-3 text-sm text-foreground shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
               >
                 <option value="">Not on a floor plan</option>
                 {floorPlans.map((fp) => (

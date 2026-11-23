@@ -102,7 +102,8 @@ export default function FloorPlanUploadPage() {
             onChange={handleFileChange}
             disabled={isUploading}
             required
-          />
+              className="text-foreground"
+            />
           <p className="text-xs text-muted-foreground">
             PNG, JPEG or WebP. Very large images are resized automatically.
           </p>
@@ -120,6 +121,7 @@ export default function FloorPlanUploadPage() {
           <Label htmlFor="floor-plan-name">Name *</Label>
           <Input
             id="floor-plan-name"
+            className="text-foreground"
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -134,6 +136,7 @@ export default function FloorPlanUploadPage() {
           <Label htmlFor="floor-plan-description">Description</Label>
           <Textarea
             id="floor-plan-description"
+            className="text-foreground"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Optional description"
@@ -152,7 +155,7 @@ export default function FloorPlanUploadPage() {
           <Button type="submit" disabled={isUploading || !file || !name.trim()} className="flex-1">
             {isUploading ? 'Uploading...' : 'Upload Floor Plan'}
           </Button>
-          <Button type="button" variant="outline" className="flex-1" asChild>
+          <Button type="button" variant="outline" className="flex-1 text-foreground" asChild>
             <Link to="/floor-plans">Cancel</Link>
           </Button>
         </div>

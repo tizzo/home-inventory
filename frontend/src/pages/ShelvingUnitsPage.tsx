@@ -236,7 +236,7 @@ export default function ShelvingUnitsPage() {
               </Link>
             </Button>
             {room?.floor_plan_id && (
-              <Button variant="outline" size="sm" asChild className="ml-2">
+              <Button variant="outline" size="sm" asChild className="ml-2 text-foreground">
                 <Link to={`/floor-plans/${room.floor_plan_id}?unit=${unit.id}`}>
                   Show on Floor Plan
                 </Link>

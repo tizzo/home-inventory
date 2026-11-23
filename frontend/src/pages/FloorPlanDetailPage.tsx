@@ -70,7 +70,7 @@ export default function FloorPlanDetailPage() {
     return (
       <div className="text-center py-12 space-y-4">
         <p className="text-destructive">This floor plan could not be loaded.</p>
-        <Button variant="outline" asChild>
+        <Button variant="outline" className="text-foreground" asChild>
           <Link to="/floor-plans">Back to Floor Plans</Link>
         </Button>
       </div>
@@ -201,7 +201,11 @@ export default function FloorPlanDetailPage() {
             <p className="text-muted-foreground text-sm mt-1">{floorPlan.description}</p>
           )}
         </div>
-        <Button variant={isEditing ? 'outline' : 'default'} asChild>
+        <Button
+          variant={isEditing ? 'outline' : 'default'}
+          className={isEditing ? 'text-foreground' : undefined}
+          asChild
+        >
           <Link to={otherMode}>{isEditing ? 'Done' : 'Place Units'}</Link>
         </Button>
       </div>
@@ -216,7 +220,7 @@ export default function FloorPlanDetailPage() {
           value={query}
           onChange={(e) => setParam('q', e.target.value)}
           placeholder="Search shelving units or rooms..."
-          className="max-w-sm"
+          className="max-w-sm text-foreground"
         />
         {query.trim() && (
           <p className="text-sm text-muted-foreground" aria-live="polite">
@@ -617,6 +621,7 @@ function DetailsForm({ floorPlan }: { floorPlan: FloorPlanResponse }) {
             <Label htmlFor="floor-plan-edit-name">Name *</Label>
             <Input
               id="floor-plan-edit-name"
+              className="text-foreground"
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -628,6 +633,7 @@ function DetailsForm({ floorPlan }: { floorPlan: FloorPlanResponse }) {
             <Label htmlFor="floor-plan-edit-description">Description</Label>
             <Textarea
               id="floor-plan-edit-description"
+              className="text-foreground"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={2}

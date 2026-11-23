@@ -1,6 +1,7 @@
 pub mod audit;
 pub mod branding;
 pub mod captcha;
+pub mod floor_plan;
 pub mod r#move;
 pub mod qr_pdf;
 pub mod s3;

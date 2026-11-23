@@ -23,6 +23,16 @@ pub async fn move_shelving_unit(
         return Err(StatusCode::BAD_REQUEST);
     }
 
+    let previous_room_id: Option<Uuid> =
+        sqlx::query_scalar("SELECT room_id FROM shelving_units WHERE id = $1")
+            .bind(unit_id)
+            .fetch_optional(db)
+            .await
+            .map_err(|e| {
+                tracing::error!("Failed to get shelving unit room: {:?}", e);
+                StatusCode::INTERNAL_SERVER_ERROR
+            })?;
+
     // Update shelving unit's room_id
     sqlx::query("UPDATE shelving_units SET room_id = $1, updated_at = NOW() WHERE id = $2")
         .bind(target_room_id)
@@ -33,6 +43,11 @@ pub async fn move_shelving_unit(
             tracing::error!("Failed to move shelving unit: {:?}", e);
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
+
+    // The unit is no longer where its floor plan marker says
+    if previous_room_id != Some(target_room_id) {
+        crate::services::floor_plan::clear_unit_position(db, unit_id).await;
+    }
 
     Ok(())
 }

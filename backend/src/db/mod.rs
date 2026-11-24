@@ -125,23 +125,58 @@ pub async fn run_migrations(pool: &PgPool) -> anyhow::Result<()> {
         }
     }
 
-    let mut migrator = sqlx::migrate!("./migrations-v2");
+    let migrator = sqlx::migrate!("./migrations-v2");
 
-    // On DSQL (Lambda), always use the manual runner because sqlx's built-in
-    // runner mixes DDL and DML in the same transaction which DSQL rejects.
-    if std::env::var("AWS_LAMBDA_FUNCTION_NAME").is_ok() {
+    // sqlx's built-in runner cannot be used on either database:
+    // - DSQL (Lambda) rejects it because it mixes DDL and DML in one transaction.
+    // - Plain PostgreSQL rejects the DSQL-only `CREATE INDEX ASYNC` syntax these
+    //   files use, so the SQL is rewritten before it is run locally.
+    let target = if std::env::var("AWS_LAMBDA_FUNCTION_NAME").is_ok() {
         tracing::info!("DSQL detected, using manual migration runner");
-        return run_migrations_manually(pool, &migrator).await;
-    }
+        MigrationTarget::Dsql
+    } else {
+        ensure_migrations_table(pool).await?;
+        MigrationTarget::Postgres
+    };
 
-    // Local PostgreSQL: use sqlx's built-in runner
-    migrator.set_locking(false).run(pool).await?;
+    run_migrations_manually(pool, &migrator, target).await
+}
+
+/// Which database the migrations are being applied to.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum MigrationTarget {
+    Dsql,
+    Postgres,
+}
+
+/// Create sqlx's bookkeeping table if this is a brand new local database.
+async fn ensure_migrations_table(pool: &PgPool) -> anyhow::Result<()> {
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS _sqlx_migrations (
+            version BIGINT PRIMARY KEY,
+            description TEXT NOT NULL,
+            installed_on TIMESTAMPTZ NOT NULL DEFAULT now(),
+            success BOOLEAN NOT NULL,
+            checksum BYTEA NOT NULL,
+            execution_time BIGINT NOT NULL
+        )
+        "#,
+    )
+    .execute(pool)
+    .await?;
     Ok(())
+}
+
+/// Rewrite DSQL-only syntax so a migration runs on plain PostgreSQL.
+fn postgres_compatible_sql(sql: &str) -> String {
+    sql.replace(" INDEX ASYNC ", " INDEX ")
 }
 
 async fn run_migrations_manually(
     pool: &PgPool,
     migrator: &sqlx::migrate::Migrator,
+    target: MigrationTarget,
 ) -> anyhow::Result<()> {
     use sqlx::Row;
 
@@ -164,9 +199,12 @@ async fn run_migrations_manually(
             migration.description
         );
 
-        let sql: &str = &migration.sql;
+        let sql = match target {
+            MigrationTarget::Dsql => migration.sql.to_string(),
+            MigrationTarget::Postgres => postgres_compatible_sql(&migration.sql),
+        };
 
-        match sqlx::query(sql).execute(pool).await {
+        match sqlx::query(&sql).execute(pool).await {
             Ok(_) => {}
             Err(e) => {
                 let err_str = e.to_string();
@@ -177,6 +215,15 @@ async fn run_migrations_manually(
                         "Migration {}: object already exists, recording as applied",
                         migration.version
                     );
+                } else if target == MigrationTarget::Postgres {
+                    // Locally there is no schema drift to tolerate, so any
+                    // other failure is a real error.
+                    tracing::error!("Migration {} failed: {:?}", migration.version, e);
+                    return Err(anyhow::anyhow!(
+                        "migration {} failed: {}",
+                        migration.version,
+                        e
+                    ));
                 } else if err_str.contains("not supported") {
                     // DSQL doesn't support some features (e.g. sort order on
                     // index keys). Skip these non-critical migrations gracefully.
@@ -224,6 +271,22 @@ async fn run_migrations_manually(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_postgres_compatible_sql_strips_async() {
+        assert_eq!(
+            postgres_compatible_sql("CREATE INDEX ASYNC idx_a ON t(a);"),
+            "CREATE INDEX idx_a ON t(a);"
+        );
+        assert_eq!(
+            postgres_compatible_sql("CREATE UNIQUE INDEX ASYNC idx_a ON t(a);"),
+            "CREATE UNIQUE INDEX idx_a ON t(a);"
+        );
+        assert_eq!(
+            postgres_compatible_sql("CREATE TABLE t (a INT);"),
+            "CREATE TABLE t (a INT);"
+        );
+    }
 
     #[tokio::test]
     #[ignore] // Only run when DATABASE_URL is set

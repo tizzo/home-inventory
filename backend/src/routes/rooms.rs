@@ -13,6 +13,7 @@ use crate::middleware::auth::AuthUser;
 use crate::models::{
     CreateRoomRequest, PaginatedResponse, PaginationQuery, Room, RoomResponse, UpdateRoomRequest,
 };
+use crate::services::floor_plan::clear_room_positions;
 
 /// Get all rooms
 pub async fn list_rooms(
@@ -146,11 +147,46 @@ pub async fn update_room(
         );
     }
 
+    // An empty floor_plan_id unlinks the room; a missing one leaves it alone
+    let floor_plan_change: Option<Option<Uuid>> = match payload.floor_plan_id.as_deref() {
+        None => None,
+        Some("") => Some(None),
+        Some(raw) => Some(Some(
+            Uuid::parse_str(raw).map_err(|_| StatusCode::BAD_REQUEST)?,
+        )),
+    }
+    .filter(|new_link| *new_link != existing.floor_plan_id);
+
+    if let Some(Some(floor_plan_id)) = floor_plan_change {
+        let exists = sqlx::query("SELECT id FROM floor_plans WHERE id = $1")
+            .bind(floor_plan_id)
+            .fetch_optional(&state.db)
+            .await
+            .map_err(|e| {
+                tracing::error!("Failed to verify floor plan: {:?}", e);
+                StatusCode::INTERNAL_SERVER_ERROR
+            })?
+            .is_some();
+        if !exists {
+            return Err(StatusCode::BAD_REQUEST);
+        }
+    }
+
+    if let Some(new_link) = floor_plan_change {
+        changes.insert(
+            "floor_plan_id".to_string(),
+            serde_json::json!({
+                "from": existing.floor_plan_id,
+                "to": new_link
+            }),
+        );
+    }
+
     // Update fields if provided
     let name = payload.name.unwrap_or(existing.name.clone());
     let description = payload.description.or(existing.description.clone());
 
-    let room = sqlx::query_as::<_, Room>(
+    let mut room = sqlx::query_as::<_, Room>(
         r#"
         UPDATE rooms
         SET name = $1, description = $2, updated_at = NOW()
@@ -167,6 +203,23 @@ pub async fn update_room(
         tracing::error!("Failed to update room: {:?}", e);
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
+
+    // The link is written separately so that ordinary room edits never touch
+    // the floor plan column. Positions belong to the old floor plan, so they
+    // are cleared whenever the link changes.
+    if let Some(new_link) = floor_plan_change {
+        sqlx::query("UPDATE rooms SET floor_plan_id = $1 WHERE id = $2")
+            .bind(new_link)
+            .bind(id)
+            .execute(&state.db)
+            .await
+            .map_err(|e| {
+                tracing::error!("Failed to update room floor plan: {:?}", e);
+                StatusCode::INTERNAL_SERVER_ERROR
+            })?;
+        clear_room_positions(&state.db, id).await;
+        room.floor_plan_id = new_link;
+    }
 
     // Log audit
     if !changes.is_empty() {
@@ -198,6 +251,8 @@ pub async fn delete_room(
         .log_delete("room", id, Some(user_id), None)
         .await
         .ok();
+
+    clear_room_positions(&state.db, id).await;
 
     let result = sqlx::query("DELETE FROM rooms WHERE id = $1")
         .bind(id)

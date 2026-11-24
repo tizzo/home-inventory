@@ -11,6 +11,10 @@ pub struct Room {
     pub name: String,
     pub description: Option<String>,
     pub label_id: Option<Uuid>,
+    /// Floor plan this room appears on. Defaults to none if the column is
+    /// absent so rooms keep working before the floor plan migration is applied.
+    #[sqlx(default)]
+    pub floor_plan_id: Option<Uuid>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub created_by: Uuid,
@@ -30,6 +34,9 @@ pub struct CreateRoomRequest {
 pub struct UpdateRoomRequest {
     pub name: Option<String>,
     pub description: Option<String>,
+    /// Floor plan to link the room to. An empty string unlinks it; leaving the
+    /// field out keeps the current link.
+    pub floor_plan_id: Option<String>,
 }
 
 #[typeshare]
@@ -39,6 +46,7 @@ pub struct RoomResponse {
     pub name: String,
     pub description: Option<String>,
     pub label_id: Option<Uuid>,
+    pub floor_plan_id: Option<Uuid>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -50,6 +58,7 @@ impl From<Room> for RoomResponse {
             name: room.name,
             description: room.description,
             label_id: room.label_id,
+            floor_plan_id: room.floor_plan_id,
             created_at: room.created_at,
             updated_at: room.updated_at,
         }

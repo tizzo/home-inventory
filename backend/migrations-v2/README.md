@@ -37,6 +37,10 @@ NNNN_description.sql
 | 0057-0058 | Product cache table |
 | 0059-0063 | Item import drafts table |
 | 0064-0066 | Contact submissions table |
+| 0067-0068 | Room indexes for containers and items |
+| 0069 | Allowed emails table |
+| 0070-0072 | Floor plans table + rooms.floor_plan_id |
+| 0073 | Shelving unit positions table |
 
 ## Running Migrations
 
@@ -78,7 +82,7 @@ The tower_sessions schema and table are created in migrations 0001-0002. This me
 ## Adding New Migrations
 
 When adding new migrations:
-1. Use the next sequence number (e.g., `0067_xxx.sql`)
+1. Use the next sequence number (e.g., `0074_xxx.sql`)
 2. Include `-- sqlx:no-transaction` at the top
 3. Use `CREATE INDEX ASYNC` instead of `CREATE INDEX`
 4. Avoid foreign key constraints

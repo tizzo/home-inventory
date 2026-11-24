@@ -179,6 +179,22 @@ impl S3Service {
         Ok(bytes)
     }
 
+    /// Size in bytes of a stored object, or `None` if it does not exist.
+    pub async fn object_size(&self, s3_key: &str) -> anyhow::Result<Option<i64>> {
+        match self
+            .client
+            .head_object()
+            .bucket(&self.bucket)
+            .key(s3_key)
+            .send()
+            .await
+        {
+            Ok(response) => Ok(Some(response.content_length().unwrap_or(0))),
+            Err(e) if e.as_service_error().is_some_and(|se| se.is_not_found()) => Ok(None),
+            Err(e) => Err(e.into()),
+        }
+    }
+
     /// Delete a file from S3
     pub async fn delete_file(&self, s3_key: &str) -> anyhow::Result<()> {
         self.client

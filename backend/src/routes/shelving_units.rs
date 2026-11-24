@@ -14,6 +14,7 @@ use crate::models::{
     CreateShelvingUnitRequest, PaginatedResponse, PaginationQuery, ShelvingUnit,
     ShelvingUnitResponse, UpdateShelvingUnitRequest,
 };
+use crate::services::floor_plan::clear_unit_position;
 
 /// Get all shelving units
 pub async fn list_shelving_units(
@@ -257,6 +258,11 @@ pub async fn update_shelving_unit(
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
 
+    // A unit that changed rooms is no longer where its floor plan marker says
+    if unit.room_id != existing.room_id {
+        clear_unit_position(&state.db, id).await;
+    }
+
     // Log audit
     if !changes.is_empty() {
         state
@@ -287,6 +293,8 @@ pub async fn delete_shelving_unit(
         .log_delete("shelving_unit", id, Some(user_id), None)
         .await
         .ok();
+
+    clear_unit_position(&state.db, id).await;
 
     let result = sqlx::query("DELETE FROM shelving_units WHERE id = $1")
         .bind(id)

@@ -132,6 +132,97 @@ export interface ShelfResponse {
 	updated_at: Date;
 }
 
+/** An uploaded floor plan image that rooms can be linked to. */
+export interface FloorPlan {
+	id: string;
+	name: string;
+	description?: string;
+	s3_key: string;
+	content_type: string;
+	file_size: number;
+	width: number;
+	height: number;
+	created_at: Date;
+	updated_at: Date;
+	created_by: string;
+}
+
+export interface FloorPlanResponse {
+	id: string;
+	name: string;
+	description?: string;
+	/** Presigned URL for viewing the image */
+	url: string;
+	content_type: string;
+	file_size: number;
+	width: number;
+	height: number;
+	created_at: Date;
+	updated_at: Date;
+}
+
+export interface FloorPlanUploadUrlRequest {
+	content_type: string;
+}
+
+export interface CreateFloorPlanRequest {
+	name: string;
+	description?: string;
+	/** Key returned by the upload-url endpoint */
+	s3_key: string;
+	content_type: string;
+	width: number;
+	height: number;
+}
+
+export interface UpdateFloorPlanRequest {
+	name?: string;
+	/** An empty string clears the description */
+	description?: string;
+}
+
+/**
+ * Where a shelving unit sits on its floor plan, as a percentage of the image
+ * measured from the top-left corner.
+ */
+export interface UnitPosition {
+	x_percent: number;
+	y_percent: number;
+}
+
+export interface FloorPlanUnit {
+	id: string;
+	name: string;
+	description?: string;
+	/** Missing when the unit has not been placed yet */
+	position?: UnitPosition;
+}
+
+export interface FloorPlanRoom {
+	id: string;
+	name: string;
+	units: FloorPlanUnit[];
+}
+
+/** A floor plan with every room linked to it and those rooms' shelving units. */
+export interface FloorPlanDetailResponse {
+	floor_plan: FloorPlanResponse;
+	rooms: FloorPlanRoom[];
+}
+
+export interface PlacementSuggestion {
+	shelving_unit_id: string;
+	x_percent: number;
+	y_percent: number;
+	/** "high", "medium" or "low" */
+	confidence: string;
+	reasoning: string;
+}
+
+export interface PlacementSuggestionsResponse {
+	suggestions: PlacementSuggestion[];
+}
+
 export interface User {
 	id: string;
 	email: string;
@@ -306,6 +397,11 @@ export interface Room {
 	name: string;
 	description?: string;
 	label_id?: string;
+	/**
+	 * Floor plan this room appears on. Defaults to none if the column is
+	 * absent so rooms keep working before the floor plan migration is applied.
+	 */
+	floor_plan_id?: string;
 	created_at: Date;
 	updated_at: Date;
 	created_by: string;
@@ -319,6 +415,11 @@ export interface CreateRoomRequest {
 export interface UpdateRoomRequest {
 	name?: string;
 	description?: string;
+	/**
+	 * Floor plan to link the room to. An empty string unlinks it; leaving the
+	 * field out keeps the current link.
+	 */
+	floor_plan_id?: string;
 }
 
 export interface RoomResponse {
@@ -326,6 +427,7 @@ export interface RoomResponse {
 	name: string;
 	description?: string;
 	label_id?: string;
+	floor_plan_id?: string;
 	created_at: Date;
 	updated_at: Date;
 }
